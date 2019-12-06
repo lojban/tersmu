@@ -93,7 +93,7 @@ listen h = flip evalStateT h $ forever $ do
     privmsg to s = reconnectingOnError $ write "PRIVMSG" (to ++ " :" ++ s)
 
     eval :: String -> StateT Handle IO ()
-    eval s = case s =~ ":([^!]+)!([^ ]+) PRIVMSG ([^ ]+) :(<[^> ]*>: )*(.*)" of
+    eval s = case s =~ ":([^!]+)!([^ ]+) PRIVMSG ([^ ]+) :(<[^>]*>: )*(.*)" of
 	[[_,user,_,to,_,msg]] -> let
 		isPrivate = to `elem` nicks
 		reply = privmsg $ if isPrivate then user else to
