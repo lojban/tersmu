@@ -205,8 +205,10 @@ class (Monad m,Applicative m) => ParseStateful m where
 	case mn of
 	    Just n -> return $ Var n
 	    Nothing -> do
-		fresh@(Var n) <- getFreshVar UnrestrictedDomain
-		modifyLambdas $ Map.insert pos n
+		fresh <- getFreshVar UnrestrictedDomain
+                case fresh of
+                    Var n -> modifyLambdas $ Map.insert pos n
+                    _ -> error "bad fresh var"
 		return fresh
     modifyLambdas :: (Map LambdaPos Int -> Map LambdaPos Int) -> m ()
     modifyLambdas f = modifyParseState $ \ps ->

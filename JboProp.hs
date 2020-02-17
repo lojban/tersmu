@@ -17,10 +17,9 @@ import JboSyntax
 
 import Bindful
 
-import Data.Functor.Identity (Identity)
 import Data.Maybe
 import Control.Applicative
-import Data.Foldable (traverse_, Foldable, sequenceA_)
+import Data.Foldable (traverse_, sequenceA_)
 import Control.Monad.Writer
 import Data.Data
 import Data.Generics.Schemes

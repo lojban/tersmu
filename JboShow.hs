@@ -121,7 +121,8 @@ instance JboShow JboMex where
 	    then "pe'o "++ops++" "++mss++" ku'e"
 	    else ops++"("++mss++")"
     logjboshow jbo (ConnectedMex fore con m m') = do
-	[ms,ms'] <- mapM (logjboshow jbo) [m,m']
+	ms <- (logjboshow jbo) m
+        ms' <- (logjboshow jbo) m'
 	cs <- logjboshowConn jbo "." con
 	if jbo
 	    then return $ "vei " ++ ms ++" ve'o " ++ cs ++ " vei " ++ ms' ++ " ve'o"
@@ -183,7 +184,8 @@ instance JboShow Lerfu where
 	    logjboshowlist jbo ls
 instance JboShow JboOperator where
     logjboshow jbo (ConnectedOperator _ con op op') = do
-	[ops,ops'] <- mapM (logjboshow jbo) [op,op']
+	ops <- (logjboshow jbo) op
+        ops' <- (logjboshow jbo) op'
 	cs <- logjboshowConn jbo "j" con
 	if jbo
 	    then return $ "ke " ++ ops ++ " ke'e " ++ cs ++ " ke " ++ ops' ++ " ke'e"
@@ -229,7 +231,8 @@ logjboshowJoik True qconn joik = return $ if joik == "??" then qconn else joik
 
 instance JboShow JboTag where
     logjboshow jbo (ConnectedTag con tag1 tag2) = do
-	[s1,s2] <- mapM (logjboshow jbo) [tag1,tag2]
+	s1 <- (logjboshow jbo) tag1
+        s2 <- (logjboshow jbo) tag2
 	conns <- logjboshowConn jbo "j" con
 	return $ if jbo
 	    then s1 ++ " " ++ conns ++ " " ++ s2
@@ -264,13 +267,15 @@ instance JboShow Abstractor where
     logjboshow _ (NU n) = return n
     logjboshow jbo (NegatedAbstractor a) = (++"nai") <$> logjboshow jbo a
     logjboshow jbo (LogConnectedAbstractor con a1 a2) = do
-	[s1,s2] <- mapM (logjboshow jbo) [a1,a2]
+	s1 <- (logjboshow jbo) a1
+        s2 <- (logjboshow jbo) a2
 	conns <- logjboshowLogConn jbo "j" con
 	return $ if jbo
 	    then s1 ++ " " ++ conns ++ " " ++ s2
 	    else "({" ++ conns ++ "}(" ++ s1 ++ "," ++ s2 ++ "))"
     logjboshow jbo (JoiConnectedAbstractor joik a1 a2) = do
-	[s1,s2] <- mapM (logjboshow jbo) [a1,a2]
+	s1 <- (logjboshow jbo) a1
+        s2 <- (logjboshow jbo) a2
 	joiks <- logjboshowJoik jbo "je'i" joik
 	return $ if jbo
 	    then s1 ++ " " ++ joiks ++ " " ++ s2
@@ -321,7 +326,8 @@ instance JboShow JboRel where
 	((seToStr n ++ " ") ++) <$> logjboshow jbo r
     -}
     logjboshow jbo (TanruConnective con p p') = do
-	[ps,ps'] <- mapM (logjboshow jbo) [p,p']
+	ps <- (logjboshow jbo) p
+        ps' <- (logjboshow jbo) p'
 	cs <- logjboshowConn jbo "j" con
 	if jbo
 	    then return $ "ke " ++ ps ++ " ke'e " ++ cs ++ " ke " ++ ps' ++ " ke'e"
@@ -452,7 +458,8 @@ instance JboShow JboTerm where
     logjboshow jbo (UnboundSumbasti sa) = logjboshow jbo sa
     logjboshow _ (NonAnaph s) = return s
     logjboshow jbo (JoikedTerms joik t1 t2) = do
-	[ts1,ts2] <- mapM (logjboshow jbo) [t1,t2]
+	ts1 <- (logjboshow jbo) t1
+        ts2 <- (logjboshow jbo) t2
 	joiks <- logjboshowJoik jbo "ji" joik
 	return $ if jbo then ts1 ++ " " ++ joiks ++ " ke " ++ ts2 ++ " ke'e"
 	    else "(" ++ ts1 ++ " {" ++ joiks ++ "} " ++ ts2 ++ ")"

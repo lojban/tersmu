@@ -321,7 +321,8 @@ parseSumti s = do
 		JboConnJoik mtag joik -> do
 		    when (isJust mtag) $ warning
 			"Ignoring tag on non-logically connected sumti"
-		    [o1,o2] <- mapM parseSumti [s1,s2]
+		    o1 <- parseSumti s1
+                    o2 <- parseSumti s2
 		    return $ JoikedTerms joik o1 o2
 	    jrels <- parseRels rels
 	    return (o,jrels)
@@ -668,11 +669,13 @@ selbriToPred sb = vPredToPred <$> selbriToVPred sb
 
 subsentToPred :: Subsentence -> ParseM r JboPred
 subsentToPred ss = do
-    fresh@(Var n) <- getFreshVar UnrestrictedDomain
+    fresh <- getFreshVar UnrestrictedDomain
     b <- partiallyRunSubBridiM $ do
 	modifyVarBindings $ setShunting RelVar fresh
 	parseSubsentence ss
-    reffed <- referenced n
+    reffed <- case fresh of
+        Var n -> referenced n
+        _ -> error "bad fresh var"
     let p = bridiToJboVPred b $ if reffed then [] else [fresh]
     return $ \o -> subTerm fresh o p
 
