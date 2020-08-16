@@ -1,0 +1,155 @@
+
+Context:
+
+[Add cabal file
+Martin Bays <mbays@freeshell.org>**20200816103334
+ Ignore-this: 26361168d0dadcb14d0f5703f556372d
+] 
+
+[wrap use of Monad(fail) in #if for GHC-8.8+
+Martin Bays <mbays@freeshell.org>**20200816101829
+ Ignore-this: d8bafe79704e91f9cdfa90aacee57576
+ 
+ per https://gitlab.haskell.org/ghc/ghc/-/wikis/proposal/monad-fail
+] 
+
+[split out fail into MonadFail instance of Parser for MFP
+Martin Bays <mbays@freeshell.org>**20200816090536
+ Ignore-this: 3fed033419adb9d14b43817e31d05d7e
+] 
+
+[get rid of '<>' synonym for '++' in WriteParser
+Martin Bays <mbays@freeshell.org>**20190809191759
+ Ignore-this: 97a21e968de848228c48cca9c7c6a9ac
+] 
+
+[avoid using fail in Parser monad
+Martin Bays <mbays@freeshell.org>**20190809191640
+ Ignore-this: e247c61ca90387f57a4e3796cea4391c
+] 
+
+[add 'negate' non-implementaiton for instance Num Cost
+Martin Bays <mbays@freeshell.org>**20190809185328
+ Ignore-this: 684e1726e2bd4349452758d9b7ae6348
+] 
+
+[Add Applicative instance, for ghc-7.10 compatibility
+Martin Bays <mbays@freeshell.org>**20151018074046
+ Ignore-this: ccb4e4962dd55c7c1d2c9e2bde0ace3e
+ 
+] 
+
+[Use hierarchical libraries
+Martin Bays <mbays@freeshell.org>**20151018074040
+ Ignore-this: b969d45c8fce8d0ee360b3aac8f2ce2d
+ 
+] 
+
+[indent produced code properly
+Martin Bays <mbays@freeshell.org>**20140917012453
+ Ignore-this: cda7d8dd5c64127f2a1ee2c7b5878952
+] 
+
+[don't allow 0 subderivs
+Martin Bays <mbays@freeshell.org>**20140917012428
+ Ignore-this: 6f84e7eb3e40ee5b7e459670cefdb1c4
+] 
+
+[don't flatten semantic predicates
+Martin Bays <mbays@freeshell.org>**20140917012257
+ Ignore-this: f8b4828e28f8011a91c08f920b75ec7f
+] 
+
+[add --2010 mode to spit out 2010 compliant code
+John Meacham <john@repetae.net>**20140521002233
+ Ignore-this: 65833e869a4be14e2dd915530f39ea72
+] 
+
+[make tail recursion work properly for error rules, improve error rules
+John Meacham <john@repetae.net>**20140520235320
+ Ignore-this: cc8f339a7168edb99f291fa8c0fad54d
+] 
+
+[pass through error information
+John Meacham <john@repetae.net>**20140520041042
+ Ignore-this: 6ffac3cdaca0b76f8822d2f0ef8d315e
+] 
+
+[create PappyBasic for simple generated parsers with no monad needed
+John Meacham <john@repetae.net>**20140429020616
+ Ignore-this: 4a0453818154c8a8ab3a7582054ef787
+] 
+
+[fix whitespace
+John Meacham <john@repetae.net>**20140428110018
+ Ignore-this: e8f90753ba3a1c0c411a9f83779fce29
+] 
+
+[no longer require List import for better compatibility
+John Meacham <john@repetae.net>**20140428032558
+ Ignore-this: 69d16c6fd496ac1ca2b34472aee84df
+] 
+
+[add GetOpt to make it haskell 98 compliant
+John Meacham <john@repetae.net>**20130708084755
+ Ignore-this: edf4409b0f026cb0f838458a58944bc6
+] 
+
+[add LICENSE file
+John Meacham <john@repetae.net>**20090924184929
+ Ignore-this: 19272d315fa21930466dd6d88428db10
+] 
+
+[allow export of sublists such as data constructors, field names, and class methods or the .. wildcard
+John Meacham <john@repetae.net>**20081108002108] 
+
+[add 'Pos' predefined rule that always matches and returns the current position in the file
+John Meacham <john@repetae.net>**20081107153352] 
+
+[add support for parsing streams of something other than 'Char'
+John Meacham <john@repetae.net>**20080401054718] 
+
+[make examples/Arith.pappy compile to a stand alone program
+John Meacham <john@repetae.net>**20080329132336] 
+
+[infer "()" in more places, don't require explicit -> () productions when the type is ()
+John Meacham <john@repetae.net>**20080321075251] 
+
+[add 'import' statement to import other grammars
+John Meacham <john@repetae.net>**20080321061649] 
+
+[add install makefile target
+John Meacham <john@repetae.net>**20080321015009] 
+
+[add support for standalone parsers, in addition to ones that use an external pappy library
+John Meacham <john@repetae.net>**20080321014719] 
+
+[add ability for pappy to spit out PappyParse.hs and PappyPos.hs if needed
+John Meacham <john@repetae.net>**20080321013032] 
+
+[use System.Console.GetOpts for option parsing
+John Meacham <john@repetae.net>**20080321011908] 
+
+[allow recognition of bare () as a type or value
+John Meacham <john@repetae.net>**20071028004803] 
+
+[switch to internal names that won't conflict with user defined ones
+John Meacham <john@repetae.net>**20061101015943] 
+
+[allow optional export list on generated parser
+John Meacham <john@repetae.net>**20061101015705] 
+
+[turn Grammar into a real data type instead of a tuple
+John Meacham <john@repetae.net>**20061025020915] 
+
+[move modules that are included in pappy generated parser to Pappy module namespace.
+John Meacham <john@repetae.net>**20061025011516] 
+
+[add makefile rule to run pappy against examples
+John Meacham <john@repetae.net>**20061025010951] 
+
+[import Char in Arith example
+John Meacham <john@repetae.net>**20061025010751] 
+
+[initial import
+John Meacham <john@repetae.net>**20061025005920] 

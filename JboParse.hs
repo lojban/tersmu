@@ -362,7 +362,7 @@ parseSumti s = do
 	    o <- quantify m (andMPred $ sr:rps)
 	    return (o,jrels)
     o <- foldM doRel o jrels
-    -- |TODO: make this an option?
+    -- TODO: make this an option?
     -- o <- bindUnbound o
     updateReferenced o
     return o
