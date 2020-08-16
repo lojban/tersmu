@@ -1,7 +1,7 @@
 name:                tersmu
 version:             0.2.2
 synopsis:            A semantic parser for lojban
-homepage:            http://mbays.freeshell.org/tersmu
+homepage:            https://mbays.sdf.org/tersmu
 license:             GPL-3
 license-file:        COPYING
 author:              Martin Bays

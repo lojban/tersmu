@@ -15,7 +15,7 @@ mkDerivation {
   executableHaskellDepends = [
     base containers mtl process syb transformers
   ];
-  homepage = "http://mbays.freeshell.org/tersmu";
+  homepage = "https://mbays.sdf.org/tersmu";
   description = "A semantic parser for lojban";
   license = stdenv.lib.licenses.gpl3;
 }
