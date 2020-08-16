@@ -2,7 +2,7 @@
 
 let pappysrc = fetchdarcs {
       url = "http://mbays.freeshell.org/pappy";
-      context = ./pappy.context;
+      context = ./nix/pappy.context;
       sha256 = "16d5j7bis2i8fr7hj3458r9grh91mm6k6b27z4srhi3ppmbx21sh";
     };
 
