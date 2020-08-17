@@ -3,7 +3,7 @@
 stdenv.mkDerivation {
   name = "tersmu-src";
 
-  src = ./.;
+  src = ./..;
   # fetchFromGitLab {
   #   owner = "zugz";
   #   repo = "tersmu";
