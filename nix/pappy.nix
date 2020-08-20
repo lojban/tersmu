@@ -19,5 +19,6 @@ let pappysrc = fetchdarcs {
         homepage = "http://pdos.csail.mit.edu/~baford/packrat/thesis/";
         description = "Packrat parsing; linear-time parsers for grammars in TDPL";
         license = stdenv.lib.licenses.bsd3;
+        maintainer = (import ./nix/maintainers.nix).lboklin;
       };
     }

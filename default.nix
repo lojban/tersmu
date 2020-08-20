@@ -18,4 +18,5 @@ mkDerivation {
   homepage = "https://mbays.sdf.org/tersmu";
   description = "A semantic parser for lojban";
   license = stdenv.lib.licenses.gpl3;
+  maintainer = (import ./nix/maintainers.nix).lboklin;
 }

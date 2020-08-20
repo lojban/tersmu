@@ -26,4 +26,5 @@ stdenv.mkDerivation {
   installPhase = ''
     cp -r . $out/
   '';
+  meta.maintainer = (import ./maintainers.nix).lboklin;
 }
