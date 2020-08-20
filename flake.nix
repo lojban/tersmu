@@ -1,5 +1,5 @@
 {
-  description = "Tersmu flake";
+  description = "tersmu flake";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/release-20.03";
 
