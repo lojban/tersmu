@@ -6,9 +6,11 @@ let pappysrc = fetchdarcs {
       sha256 = "16d5j7bis2i8fr7hj3458r9grh91mm6k6b27z4srhi3ppmbx21sh";
     };
 
+    version = "0.1.0.3";
+
  in stdenv.mkDerivation {
       name = "pappy";
-      version = "0.1.0.3";
+      inherit version;
       src = "${pappysrc}/pappy";
       buildInputs = [ perl ghc ];
       installPhase = ''
@@ -16,6 +18,7 @@ let pappysrc = fetchdarcs {
         cp -r /build/pappy/pappy $out/bin/
       '';
       meta = {
+        inherit version;
         homepage = "http://pdos.csail.mit.edu/~baford/packrat/thesis/";
         description = "Packrat parsing; linear-time parsers for grammars in TDPL";
         license = stdenv.lib.licenses.bsd3;
