@@ -31,8 +31,7 @@ import TersmuIRC
 -- import Debug.Trace
 -- traceIt x = traceShow x x
  
---server = "morgan.freenode.net"
-server = "irc.freenode.org"
+server = "irc.libera.chat"
 port   = 6667
 chans   = ["#lojban", "#ckule"]
 nick   = "tersmus"
