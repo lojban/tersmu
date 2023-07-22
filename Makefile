@@ -1,11 +1,17 @@
+MAIN_BIN=tersmu
+
 PAPPY=pappy/pappy/pappy
 PAPPYOPTS=--2010 -e --monad
-all: tersmu tersmuBot
-tersmu: *.hs Lojban.hs Morphology.hs Pappy/Parse.hs
-	ghc -fno-warn-tabs -o tersmu --make Main
-tersmuBot: *.hs Lojban.hs Morphology.hs Pappy/Parse.hs
-	#killall tersmuBot || true
-	ghc -fno-warn-tabs -o tersmuBot --make tersmuBot.hs
+
+.PHONY: warn install build
+warn:
+	@echo "Use \"make install\" to download and compile dependencies and install tersmu"
+install: *.hs Lojban.hs Morphology.hs Pappy/Parse.hs
+	cabal update && cabal install
+
+build: *.hs Lojban.hs Morphology.hs Pappy/Parse.hs
+	cabal build
+
 ${PAPPY}:
 	# get my patched version of Chris Done's version of Bryan Ford's pappy
 	darcs clone http://mbays.freeshell.org/pappy
@@ -17,5 +23,3 @@ Lojban.hs: Lojban.pappy ${PAPPY}
 	${PAPPY} ${PAPPYOPTS} Lojban.pappy
 Morphology.hs: Morphology.pappy ${PAPPY}
 	${PAPPY} ${PAPPYOPTS} Morphology.pappy
-test: tersmu
-	rlwrap ./tersmu
