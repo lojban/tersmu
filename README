@@ -17,6 +17,14 @@ Installation
 tersmu is in hackage, so it should just be a matter of
     cabal install tersmu
 
+Docker Installation
+------------
+If you use docker, you can build and run a docker image with tersmu installed by running
+    docker build -t tersmu .
+    docker run -it tersmu
+
+once inside the container, you can run tersmu with
+    tersmu
 
 Hacking
 -------
