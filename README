@@ -14,8 +14,17 @@ other documentation.
 
 Installation
 ------------
-tersmu is in hackage, so it should just be a matter of
-    cabal install tersmu
+tersmu is in hackage, so you can install it using cabal.
+
+If your system doesn't have cabal and darcs, install it and update it:
+    apt-get install cabal-install
+    cabal update
+
+Add the cabal bin directory to your path in your .bashrc or .zshrc:
+    export PATH=$PATH:~/.cabal/bin
+
+After you have cabal, you can install tersmu using the Makefile in this repo:
+    make install
 
 Docker Installation
 ------------
