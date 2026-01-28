@@ -8,8 +8,10 @@ Please note that this is an entirely unofficial project. Although the aim to
 follow baseline prescription where feasible, the semantics this program
 attributes to lojban text may in some cases be non-standard and/or wrong.
 
-See the examples/ directory for some examples, BUGS for limitations, docs/ for
-other documentation.
+See the examples/ directory for examples; docs/ contains BUGS.md (limitations), TODO.md, CHANGELOG.md, THANKS.md,
+design-notes.md, overview.md, README.old.md (historical), and notes/ (topic
+notes: bridi-operators, drt, free, goha, illocution, joi, options, output,
+questions, reductions, resources, sides, tags, tense-connections, tricky, voha).
 
 
 Installation
@@ -44,4 +46,8 @@ Lojban.hs and Morphology.hs are generated from the corresponding .pappy files,
 using a bugfixed version of Bryan Ford's Pappy. Please see the Makefile for
 details on that.
 
-docs/overview is intended as a guide to the general architecture of the code.
+docs/overview.md is intended as a guide to the general architecture of the code.
+
+Acknowledgments: thanks to John Clifford, selpa'i, Alex Burka, tsani, and
+especially Jorge Llambías, for helpful conversations and pointers (see
+docs/THANKS.md).

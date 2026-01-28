@@ -19,6 +19,7 @@ import Logic
 import Bindful
 import Morph
 
+import Control.Monad (when)
 import Control.Monad.State
 import Control.Monad.Identity
 import Control.Applicative

@@ -1,27 +1,36 @@
-# Use an official base image
-FROM ubuntu:latest
+## Build and runtime image for the Haskell tersmu parser
+##
+## We use the official haskell image so that GHC and cabal-install are
+## available and up-to-date, and then build the parser from the *local*
+## source tree rather than re-cloning from Git.
 
-# Install dependencies
-# Combining installation commands into a single RUN to reduce layers. 
-# Also, clean up apt cache to reduce image size.
+FROM haskell:9.8
+
+## Additional tools needed at build time:
+##  - darcs: to fetch the patched Pappy parser used by the Makefile
+##  - make: already present in the base image, but kept here for clarity
 RUN apt-get update && apt-get install -y \
-    build-essential \
-    cabal-install \
-    git \
     darcs \
  && rm -rf /var/lib/apt/lists/*
 
-# Clone the repository
-RUN git clone https://gitlab.com/zugz/tersmu.git /app/tersmu
+WORKDIR /app
 
-# Change to the cloned repository's directory
-WORKDIR /app/tersmu
+## Build from the current checkout (not from a remote clone)
+COPY . .
 
-# Update cabal and install the application
-# Combining cabal update and make install into a single RUN command for efficiency
-RUN cabal update && make install
+## Ensure the cabal bin directory is on PATH for both build and runtime.
+ENV PATH=/root/.cabal/bin:$PATH
 
-# Set environment variables
-# Setting PATH here as it applies to the image at runtime
-ENV PATH=$PATH:/root/.cabal/bin
+## Build and install tersmu and tersmu-server. Tests can be run separately
+## (see test_all_examples.sh and test_api_examples.sh).
+RUN cabal update \
+ && make install
+
+EXPOSE 8080
+
+## By default, run the HTTP REST API. To run the CLI instead:
+##   docker run --rm -it --entrypoint tersmu tersmu examples/1.jbo
+## To run the API and validate examples:
+##   docker run -d -p 8080:8080 --name tersmu-api tersmu && ./test_api_examples.sh
+CMD ["tersmu-server"]
 

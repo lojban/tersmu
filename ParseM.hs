@@ -25,6 +25,7 @@ import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 
+import Control.Monad (when, foldM)
 import Control.Monad.State
 import Control.Monad.Cont
 import Control.Monad.Identity
