@@ -1,6 +1,6 @@
 # tersmu 0.1rc1 (historical)
 
-> This is the historical README from an earlier release. See the project root [README](../README) for current documentation.
+> This is the historical README from an earlier release. See the project root [README.md](../README.md) for current documentation.
 
 ## Requirements
 
