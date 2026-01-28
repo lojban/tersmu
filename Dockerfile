@@ -21,7 +21,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-## Build from the current checkout (not from a remote clone)
+## --- Cabal dependency caching ---
+## Copy only the cabal file first so Docker can cache dependency fetch/build.
+## Changing source files won't invalidate this layer unless dependencies change.
+COPY tersmu.cabal ./tersmu.cabal
+
+RUN cabal update \
+ && cabal build --only-dependencies exe:tersmu exe:tersmu-server
+
+## Now copy the rest of the working tree (this layer changes frequently).
 COPY . .
 
 ## Generate .pappy from canonical Pest grammar (.pest + .pappy.rhs) before Pappy/Haskell build
@@ -35,7 +43,6 @@ RUN make pappy/pappy/pappy \
 
 ## Install just the executables into a clean directory so we can copy them
 ## into a tiny runtime image. This avoids shipping /root/.cabal (huge store).
-RUN cabal update
 RUN mkdir -p /opt/tersmu/bin \
  && cabal install \
       exe:tersmu \
