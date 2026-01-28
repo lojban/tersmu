@@ -20,14 +20,15 @@ import Data.Aeson (Value(..), decode, encode, object, (.=))
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import qualified Data.Text.Encoding.Error as TEE
 import Data.Text (strip)
 import Data.Text.Lazy (pack, unpack)
 import Data.Text.Lazy.Encoding (decodeUtf8, encodeUtf8)
 import Network.HTTP.Types (status200, status405)
 import Network.Wai (Application, Request, Response, requestMethod, requestBody, pathInfo, responseLBS)
 import Network.Wai.Handler.Warp (run)
-import System.Process (readProcessWithExitCode)
-import System.IO (hPutStr, hClose)
+import System.Process (CreateProcess(..), StdStream(..), proc, createProcess, waitForProcess)
+import System.IO (hPutStr, hClose, hSetBinaryMode)
 import System.IO.Temp (withSystemTempFile)
 
 port :: Int
@@ -58,14 +59,32 @@ handleParse request respond = do
   let input = unpack $ decodeUtf8 $ BL.fromStrict body
   -- Drop trailing empty lines so POST body matching .jbo files (with trailing newline) matches expected .loj
   let lines' = reverse . dropWhile null . reverse $ lines input
-  (_exitCode, out, _err) <- withSystemTempFile "tersmu_in.jbo" $ \path h -> do
+  outBytes <- withSystemTempFile "tersmu_in.jbo" $ \path h -> do
     mapM_ (\line -> hPutStr h (line ++ "\n")) lines'
     hClose h
-    readProcessWithExitCode "tersmu" ["--json", "-L", path] ""
-  let jsonLines = filter (not . null) (lines out)
-  let parseJsonLine line =
-        maybe (object ["error" .= ("decode failed" :: String), "raw" .= line]) trimJsonValue
-          (decode (BL.fromStrict (TE.encodeUtf8 (T.pack line))) :: Maybe Value)
+    -- IMPORTANT: read stdout as bytes to avoid locale-based truncation/corruption
+    -- (e.g. when output contains non-ASCII like '∧').
+    (_hin, Just hout, _herr, ph) <-
+      createProcess
+        (proc "tersmu" ["--json", "-L", path])
+          { std_out = CreatePipe
+          , std_err = CreatePipe
+          }
+    hSetBinaryMode hout True
+    bs <- BL.hGetContents hout
+    _ <- waitForProcess ph
+    pure bs
+
+  -- tersmu --json is documented as NDJSON (one JSON object per line). We split on '\n'
+  -- at the byte level to avoid locale decoding issues.
+  let jsonLines = filter (not . BL.null) (BL.split 10 outBytes)
+  let decodeUtf8Lenient =
+        TE.decodeUtf8With TEE.lenientDecode . BL.toStrict
+  let parseJsonLine bs =
+        maybe
+          (object ["error" .= ("decode failed" :: String), "raw" .= decodeUtf8Lenient bs])
+          trimJsonValue
+          (decode bs :: Maybe Value)
   let decoded = map parseJsonLine jsonLines
   let responseBody = case decoded of
         [one] -> one

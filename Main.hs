@@ -95,10 +95,21 @@ jsonEscape = concatMap $ \c -> case c of
     '\t' -> "\\t"
     _ -> [c]
 
-jsonOneLine :: String -> Either String (String, String) -> String
-jsonOneLine input result = case result of
-    Left err -> "{\"input\":\"" ++ jsonEscape (trimStr input) ++ "\",\"logical\":null,\"canonical\":null,\"error\":\"" ++ jsonEscape (trimStr err) ++ "\"}"
-    Right (loj, jbo) -> "{\"input\":\"" ++ jsonEscape (trimStr input) ++ "\",\"logical\":\"" ++ jsonEscape (trimStr loj) ++ "\",\"canonical\":\"" ++ jsonEscape (trimStr jbo) ++ "\",\"error\":null}"
+jsonOneLine :: [Opt] -> String -> Either String (String, String) -> String
+jsonOneLine opts input result =
+    -- NOTE: without --utf8, we must avoid emitting non-ASCII to stdout
+    -- (common in minimal Docker images), otherwise write failures can truncate JSON.
+    let enc = if Utf8 `elem` opts then id else asciifyJboShown
+    in case result of
+        Left err ->
+            "{\"input\":\"" ++ jsonEscape (trimStr input) ++
+            "\",\"logical\":null,\"canonical\":null,\"error\":\"" ++
+            jsonEscape (trimStr (enc err)) ++ "\"}"
+        Right (loj, jbo) ->
+            "{\"input\":\"" ++ jsonEscape (trimStr input) ++
+            "\",\"logical\":\"" ++ jsonEscape (trimStr (enc loj)) ++
+            "\",\"canonical\":\"" ++ jsonEscape (trimStr (enc jbo)) ++
+            "\",\"error\":null}"
 
 data OutputType = Jbo | Loj | Both
     deriving (Eq, Ord, Show)
@@ -142,7 +153,7 @@ main = do
 	    if isEOFError e then exitWith ExitSuccess
 		else putStr (show e) >> exitFailure)
 	Just s -> if Json `elem` opts
-	    then mapM_ (hPutStrLn h . (\line -> jsonOneLine line (parseLineToResult line))) (mangleInput inType s) >> hClose h
+	    then mapM_ (hPutStrLn h . (\line -> jsonOneLine opts line (parseLineToResult line))) (mangleInput inType s) >> hClose h
 	    else mapM (doParse opts h stderr) (mangleInput inType s) >> hClose h
     where
 	repl opts h = do
@@ -152,7 +163,7 @@ main = do
 	    s <- getLine
 	    hPutStrLn stderr ""
 	    if Json `elem` opts
-		then hPutStrLn h $ jsonOneLine s (parseLineToResult s)
+		then hPutStrLn h $ jsonOneLine opts s (parseLineToResult s)
 		else doParse opts h stderr s
 	    repl opts h
 	mangleInput WholeText = (\x -> [x]) . map (\c -> if c `elem` "\n\r" then ' ' else c)
