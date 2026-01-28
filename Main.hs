@@ -13,7 +13,7 @@ module Main where
 import ParseText (parseText)
 import JboParse (evalText, evalStatement)
 import JboSyntax
-import ParseM (ParseStateT, evalParseStateT)
+import ParseM (ParseStateT, evalParseStateT, evalParseStateM)
 import JboShow
 import Logic
 import Bindful
@@ -62,11 +62,49 @@ highlightError h pos s errstr = let context = 40 in
 	"^" ++
 	"\n\n"
 
+-- Trim spaces and newlines from both ends
+trimStr :: String -> String
+trimStr = reverse . dropWhile (`elem` " \t\n\r") . reverse . dropWhile (`elem` " \t\n\r")
+
+errorMessage :: String -> Int -> String -> String
+errorMessage errstr pos s = let context = 40 in
+    errstr++":" ++
+	"\n\t{" ++ take (context*2) (drop (pos-context) s) ++ "}" ++
+	"\n\t " ++ replicate (min pos context) ' ' ++
+	"^" ++
+	"\n\n"
+
+-- Parse one line to either error message or (logical_form, canonical_form)
+parseLineToResult :: String -> Either String (String, String)
+parseLineToResult s = case morph s of
+    Left errpos -> Left $ errorMessage "Morphology error" errpos s
+    Right textStr -> case parseText textStr of
+	Left pos -> Left $ errorMessage "Parse error" pos textStr
+	Right text ->
+	    let jboText = evalParseStateM (JboParse.evalText text)
+		logical = evalBindful (logjboshow False jboText)
+		canonical = evalBindful (logjboshow True jboText)
+	    in Right (logical, canonical)
+
+jsonEscape :: String -> String
+jsonEscape = concatMap $ \c -> case c of
+    '\\' -> "\\\\"
+    '"' -> "\\\""
+    '\n' -> "\\n"
+    '\r' -> "\\r"
+    '\t' -> "\\t"
+    _ -> [c]
+
+jsonOneLine :: String -> Either String (String, String) -> String
+jsonOneLine input result = case result of
+    Left err -> "{\"input\":\"" ++ jsonEscape (trimStr input) ++ "\",\"logical\":null,\"canonical\":null,\"error\":\"" ++ jsonEscape (trimStr err) ++ "\"}"
+    Right (loj, jbo) -> "{\"input\":\"" ++ jsonEscape (trimStr input) ++ "\",\"logical\":\"" ++ jsonEscape (trimStr loj) ++ "\",\"canonical\":\"" ++ jsonEscape (trimStr jbo) ++ "\",\"error\":null}"
+
 data OutputType = Jbo | Loj | Both
     deriving (Eq, Ord, Show)
 data InputType = WholeText | Paras | Lines
     deriving (Eq, Ord, Show)
-data Opt = Output OutputType | Input InputType | Utf8 | Help | Version
+data Opt = Output OutputType | Input InputType | Utf8 | Help | Version | Json
     deriving (Eq, Ord, Show)
 options =
     [ Option ['l'] ["loj"] (NoArg (Output Loj)) "output logical form only"
@@ -76,6 +114,7 @@ options =
     , Option ['u'] ["utf8"] (NoArg Utf8) "output utf8 encoded text rather than ascii"
     , Option ['v'] ["version"] (NoArg Version) "show version"
     , Option ['h'] ["help"] (NoArg Help) "show help"
+    , Option [] ["json"] (NoArg Json) "output one JSON object per line (NDJSON) with input, logical, canonical, error"
     ]
 parseArgs :: [String] -> IO ([Opt],[String])
 parseArgs argv =
@@ -102,7 +141,9 @@ main = do
 	Nothing -> repl opts h `catchIOError` (\e ->
 	    if isEOFError e then exitWith ExitSuccess
 		else putStr (show e) >> exitFailure)
-	Just s -> mapM (doParse opts h stderr) (mangleInput inType s) >> hClose h
+	Just s -> if Json `elem` opts
+	    then mapM_ (hPutStrLn h . (\line -> jsonOneLine line (parseLineToResult line))) (mangleInput inType s) >> hClose h
+	    else mapM (doParse opts h stderr) (mangleInput inType s) >> hClose h
     where
 	repl opts h = do
 	    -- interactive mode
@@ -110,7 +151,9 @@ main = do
 	    hFlush stderr
 	    s <- getLine
 	    hPutStrLn stderr ""
-	    doParse opts h stderr s
+	    if Json `elem` opts
+		then hPutStrLn h $ jsonOneLine s (parseLineToResult s)
+		else doParse opts h stderr s
 	    repl opts h
 	mangleInput WholeText = (\x -> [x]) . map (\c -> if c `elem` "\n\r" then ' ' else c)
 	mangleInput Lines = lines

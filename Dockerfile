@@ -1,17 +1,21 @@
 ## Build and runtime image for the Haskell tersmu parser
 ##
-## We use the official haskell image so that GHC and cabal-install are
-## available and up-to-date, and then build the parser from the *local*
-## source tree rather than re-cloning from Git.
+## The original single-stage image was huge because it shipped:
+##  - the full GHC+cabal toolchain (from haskell:9.8)
+##  - cabal store/build artifacts
+##  - the whole source tree
+##
+## This multi-stage Dockerfile keeps all build tooling in the builder stage,
+## then copies only the installed binaries + data-files into a slim runtime.
 
-FROM haskell:9.8
+FROM haskell:9.8 AS builder
 
 ## Additional tools needed at build time:
-##  - darcs: to fetch the patched Pappy parser used by the Makefile
 ##  - python3: to generate .pappy from canonical .pest + .pappy.rhs
-##  - make: already present in the base image, but kept here for clarity
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     darcs \
+    gcc \
+    make \
     python3 \
  && rm -rf /var/lib/apt/lists/*
 
@@ -24,19 +28,40 @@ COPY . .
 RUN python3 scripts/gen_pappy.py Lojban.pest Lojban.pappy.rhs -o Lojban.pappy \
  && python3 scripts/gen_pappy.py Morphology.pest Morphology.pappy.rhs -o Morphology.pappy
 
-## Ensure the cabal bin directory is on PATH for both build and runtime.
-ENV PATH=/root/.cabal/bin:$PATH
+## Fetch/build the patched Pappy tool, then generate the Haskell modules
+## required by cabal (Lojban.hs, Morphology.hs, Pappy/Parse.hs).
+RUN make pappy/pappy/pappy \
+ && make Pappy/Parse.hs Lojban.hs Morphology.hs
 
-## Build and install tersmu and tersmu-server. Tests can be run separately
-## (see test_all_examples.sh and test_api_examples.sh).
-RUN cabal update \
- && make install
+## Install just the executables into a clean directory so we can copy them
+## into a tiny runtime image. This avoids shipping /root/.cabal (huge store).
+RUN cabal update
+RUN mkdir -p /opt/tersmu/bin \
+ && cabal install \
+      exe:tersmu \
+      exe:tersmu-server \
+      --install-method=copy \
+      --installdir=/opt/tersmu/bin \
+      --overwrite-policy=always
+
+## Optional: strip symbols to reduce binary size (safe to ignore if strip missing)
+RUN strip /opt/tersmu/bin/tersmu /opt/tersmu/bin/tersmu-server || true
+
+FROM debian:bookworm-slim AS runtime
+
+## Runtime shared libraries commonly needed by GHC-produced binaries.
+## (Exact set depends on linking; these are small compared to GHC itself.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    libgmp10 \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /opt/tersmu/bin/tersmu /usr/local/bin/tersmu
+COPY --from=builder /opt/tersmu/bin/tersmu-server /usr/local/bin/tersmu-server
 
 EXPOSE 8080
 
 ## By default, run the HTTP REST API. To run the CLI instead:
 ##   docker run --rm -it --entrypoint tersmu tersmu examples/1.jbo
-## To run the API and validate examples:
-##   docker run -d -p 8080:8080 --name tersmu-api tersmu && ./test_api_examples.sh
 CMD ["tersmu-server"]
 

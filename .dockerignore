@@ -1,0 +1,21 @@
+# Version control and editor/IDE
+.git
+.gitignore
+.cursorignore
+.cursorindexingignore
+.specstory
+
+# Not used in Haskell Docker build
+rust/
+archive/
+
+# Documentation (not needed for build)
+docs/
+
+# Test artifacts and scripts (optional in image)
+examples/*.api.diff
+
+# Local Cabal/Haskell caches (avoid copying from host)
+dist-newstyle
+dist
+.cabal

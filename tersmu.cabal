@@ -43,6 +43,7 @@ executable tersmu
 
 executable tersmu-server
       build-depends: base >=4.3, base < 5
+        , aeson >= 1.0
         , bytestring >= 0.10
         , http-types >= 0.12
         , process >= 1.1

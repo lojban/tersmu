@@ -60,6 +60,16 @@ The server exposes a small REST API on port **8080**.
 
 Send the Lojban text as the request body (plain text, UTF-8). One line per sentence; blank lines are allowed.
 
+**Response:** The API returns **JSON** (`Content-Type: application/json`). All string values are trimmed of leading/trailing spaces and newlines.
+
+**Single line:** One JSON object with keys:
+- `input` — the trimmed input line
+- `logical` — logical form (bracket notation), or `null` on error
+- `canonical` — canonicalized Lojban form, or `null` on error
+- `error` — `null` on success, or the error message (morphology/parse) on failure
+
+**Multiple lines:** One JSON object with key `results` — an array of objects, each with the same keys as above.
+
 **Example (curl):**
 
 ```bash
@@ -74,18 +84,26 @@ curl -s -X POST -H "Content-Type: text/plain; charset=utf-8" \
   http://localhost:8080/parse
 ```
 
-**Example response:**
+**Example response (success):**
 
+```json
+{
+  "input": "mi klama le zarci",
+  "logical": "non-veridical: zarci(c0)\nklama(mi,c0)",
+  "canonical": "ju'a nai cy no zarci\n.i mi klama cy no",
+  "error": null
+}
 ```
-> mi klama le zarci
 
-non-veridical: zarci(c0)
-klama(mi,c0)
+**Example response (parse error):**
 
-ju'a nai cy no zarci
-.i mi klama cy no
-
------
+```json
+{
+  "input": "mi klama",
+  "logical": null,
+  "canonical": null,
+  "error": "Parse error:\n\t{...}\n\t ^"
+}
 ```
 
 ### Health check
@@ -170,14 +188,14 @@ To install **tersmu-server** (HTTP API) as well, clone the repo and use the inst
 
 For a modified version or to build the server:
 
-1. Install dependencies: GHC, Cabal, `make`, and `darcs` (see [Makefile](Makefile) for Pappy).
+1. Install dependencies: GHC, Cabal, `make` (see [Makefile](Makefile) for Pappy).
 2. Build and install:
 
    ```bash
    make install
    ```
 
-   This runs `cabal update && cabal install`, which builds both `tersmu` and `tersmu-server`. The Makefile may first fetch a patched Pappy parser via darcs to generate `Lojban.hs` and `Morphology.hs`.
+   This runs `cabal update && cabal install`, which builds both `tersmu` and `tersmu-server`. The Makefile may first generate `Lojban.hs` and `Morphology.hs`.
 
 ---
 

@@ -2,3 +2,4 @@ result
 rust/
 archive/
 .specstory/
+examples/*.diff

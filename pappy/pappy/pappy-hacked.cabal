@@ -1,0 +1,21 @@
+name:                pappy-hacked
+version:             0.1.1
+synopsis:            modified version of package 'pappy' written for 'tersmu'
+-- description:
+license:             BSD3
+license-file:        LICENSE
+author:              Martin Bays
+maintainer:          mbays@sdf.org
+-- copyright:
+category:            Text
+build-type:          Simple
+extra-source-files:  CHANGELOG.md
+cabal-version:       >=1.10
+
+executable pappy-hacked
+  main-is:             Main.hs
+  -- other-modules:
+  other-extensions:    CPP
+  build-depends:       base >=4.3 && <5
+  -- hs-source-dirs:
+  default-language:    Haskell2010

@@ -13,9 +13,9 @@ build: *.hs Lojban.hs Morphology.hs Pappy/Parse.hs
 	cabal build
 
 ${PAPPY}:
-	# get my patched version of Chris Done's version of Bryan Ford's pappy
-	darcs clone http://mbays.freeshell.org/pappy
-	cd pappy/pappy && make
+	# Build the vendored patched version of Bryan Ford's pappy.
+	# (We vendor it to avoid network fetches during builds.)
+	$(MAKE) -C pappy/pappy pappy
 Pappy/Parse.hs:
 	mkdir Pappy || true
 	${PAPPY} --2010 --write-files
