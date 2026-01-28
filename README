@@ -1,53 +1,207 @@
-tersmu-0.2.2
-============
+# tersmu
 
-tersmu is a semantic parser for the engineered human language Lojban
-(www.lojban.org). It translates lojban text to a predicate logic.
+**tersmu** is a semantic parser for [Lojban](https://www.lojban.org). It translates Lojban text into predicate logic.
 
-Please note that this is an entirely unofficial project. Although the aim to
-follow baseline prescription where feasible, the semantics this program
-attributes to lojban text may in some cases be non-standard and/or wrong.
+> **Disclaimer:** This is an unofficial project. While it aims to follow baseline prescription where feasible, the semantics it assigns to Lojban may in some cases be non-standard or incorrect.
 
-See the examples/ directory for examples; docs/ contains BUGS.md (limitations), TODO.md, CHANGELOG.md, THANKS.md,
-design-notes.md, overview.md, README.old.md (historical), and notes/ (topic
-notes: bridi-operators, drt, free, goha, illocution, joi, options, output,
-questions, reductions, resources, sides, tags, tense-connections, tricky, voha).
+---
 
+## Quick start (Docker)
 
-Installation
-------------
-tersmu is in hackage, so you can install it using cabal.
+The easiest way to run tersmu is with Docker.
 
-Install cabal if necessary, e.g. on debian-based systems:
-    apt-get install cabal-install
+### Run the HTTP API (default)
 
-Then install tersmu:
-    cabal update && cabal install tersmu
+```bash
+# Build the image
+docker build -t tersmu .
 
-This will install the binary to ~/.cabal/bin/tersmu by default; you may wish 
-to add the cabal bin directory to your path in your .bashrc or .zshrc:
-    export PATH=$PATH:~/.cabal/bin
+# Run the API (foreground)
+docker run --rm -p 8080:8080 tersmu
 
-To install a modified version, edit the source in this directory then run:
-    make install
+# Or run in background
+docker run -d -p 8080:8080 --name tersmu-api tersmu
+```
 
-Docker Installation
--------------------
-If you use docker, you can build and run a docker image with tersmu installed by running
-    docker build -t tersmu .
-    docker run -it tersmu
+The API listens on **http://0.0.0.0:8080**. See [HTTP REST API](#http-rest-api) below.
 
-once inside the container, you can run tersmu with
-    tersmu
+### Run the CLI parser
 
-Hacking
--------
-Lojban.hs and Morphology.hs are generated from the corresponding .pappy files,
-using a bugfixed version of Bryan Ford's Pappy. Please see the Makefile for
-details on that.
+To use the command-line parser instead of the API:
 
-docs/overview.md is intended as a guide to the general architecture of the code.
+```bash
+# Parse a file
+docker run --rm -it --entrypoint tersmu tersmu /app/examples/1.jbo
 
-Acknowledgments: thanks to John Clifford, selpa'i, Alex Burka, tsani, and
-especially Jorge Llambías, for helpful conversations and pointers (see
-docs/THANKS.md).
+# Parse from stdin (paste Lojban, then Ctrl-D)
+docker run --rm -it --entrypoint tersmu tersmu
+```
+
+To parse a file from your host, mount it:
+
+```bash
+docker run --rm -it -v "$(pwd)/myfile.jbo:/input.jbo:ro" --entrypoint tersmu tersmu -L /input.jbo
+```
+
+---
+
+## HTTP REST API
+
+The server exposes a small REST API on port **8080**.
+
+| Method | Path     | Description                    |
+|--------|----------|--------------------------------|
+| `GET`  | `/`      | API description                |
+| `GET`  | `/health`| Health check                   |
+| `POST` | `/`      | Parse Lojban text (request body) |
+| `POST` | `/parse` | Parse Lojban text (request body) |
+
+### Parse Lojban
+
+Send the Lojban text as the request body (plain text, UTF-8). One line per sentence; blank lines are allowed.
+
+**Example (curl):**
+
+```bash
+# Single line
+curl -s -X POST -H "Content-Type: text/plain; charset=utf-8" \
+  -d "mi klama le zarci" \
+  http://localhost:8080/parse
+
+# From file
+curl -s -X POST -H "Content-Type: text/plain; charset=utf-8" \
+  --data-binary @examples/1.jbo \
+  http://localhost:8080/parse
+```
+
+**Example response:**
+
+```
+> mi klama le zarci
+
+non-veridical: zarci(c0)
+klama(mi,c0)
+
+ju'a nai cy no zarci
+.i mi klama cy no
+
+-----
+```
+
+### Health check
+
+```bash
+curl -s http://localhost:8080/health
+# ok
+```
+
+### Testing the API with the example suite
+
+With the container running (`docker run -d -p 8080:8080 --name tersmu-api tersmu`):
+
+```bash
+./test_api_examples.sh
+```
+
+Optional: use a different API base URL:
+
+```bash
+TERSMU_API_URL=http://your-host:8080 ./test_api_examples.sh
+```
+
+---
+
+## Command-line usage (tersmu)
+
+When run locally (see [Installation](#installation)) or via `docker run ... --entrypoint tersmu tersmu`:
+
+```bash
+tersmu [OPTIONS] [FILE]
+```
+
+- **No FILE:** read from stdin (interactive; one paragraph per input).
+- **FILE:** read from file. Use `-L` / `--lines` to treat each line as a separate Lojban text.
+
+**Options:**
+
+| Option        | Long         | Description |
+|---------------|--------------|-------------|
+| `-l`          | `--loj`      | Output logical form only |
+| `-j`          | `--jbo`      | Output forethoughtful Lojban form only |
+| `-L`          | `--lines`    | One line = one Lojban text |
+| `-p`          | `--paragraphs` | One blank-line-separated block = one text |
+| `-u`          | `--utf8`     | Output UTF-8 (default: ASCII) |
+| `-h`          | `--help`     | Show help |
+| `-v`          | `--version`  | Show version |
+
+**Examples:**
+
+```bash
+# Parse a file (one line per sentence)
+tersmu -L examples/1.jbo
+
+# Parse stdin
+echo "mi klama le zarci" | tersmu -L
+```
+
+---
+
+## Installation (without Docker)
+
+### From Hackage (Cabal)
+
+```bash
+# Install Cabal if needed (e.g. Debian/Ubuntu)
+sudo apt-get install cabal-install
+
+# Install tersmu
+cabal update && cabal install tersmu
+```
+
+The `tersmu` binary is installed to `~/.cabal/bin/`. Add it to your `PATH` if needed:
+
+```bash
+export PATH="$PATH:$HOME/.cabal/bin"
+```
+
+To install **tersmu-server** (HTTP API) as well, clone the repo and use the instructions in [From source](#from-source).
+
+### From source
+
+For a modified version or to build the server:
+
+1. Install dependencies: GHC, Cabal, `make`, and `darcs` (see [Makefile](Makefile) for Pappy).
+2. Build and install:
+
+   ```bash
+   make install
+   ```
+
+   This runs `cabal update && cabal install`, which builds both `tersmu` and `tersmu-server`. The Makefile may first fetch a patched Pappy parser via darcs to generate `Lojban.hs` and `Morphology.hs`.
+
+---
+
+## Documentation
+
+| Path | Description |
+|------|-------------|
+| [docs/overview.md](docs/overview.md) | Architecture and code overview |
+| [docs/BUGS.md](docs/BUGS.md) | Known limitations |
+| [docs/TODO.md](docs/TODO.md) | Planned work |
+| [docs/CHANGELOG.md](docs/CHANGELOG.md) | Version history |
+| [docs/design-notes.md](docs/design-notes.md) | Design notes |
+| [docs/notes/](docs/notes/) | Topic notes (bridi-operators, drt, illocution, questions, etc.) |
+
+---
+
+## Hacking
+
+- **Parser sources:** `Lojban.hs` and `Morphology.hs` are generated from `Lojban.pappy` and `Morphology.pappy` using a patched [Pappy](http://mbays.freeshell.org/pappy). See the [Makefile](Makefile) for targets and dependencies.
+- **Architecture:** See [docs/overview.md](docs/overview.md).
+
+---
+
+## License and thanks
+
+- **License:** GPL-3. See [COPYING](COPYING).
+- **Thanks:** John Clifford, selpa'i, Alex Burka, tsani, and especially Jorge Llambías (see [docs/THANKS.md](docs/THANKS.md)).
