@@ -1,0 +1,191 @@
+--- examples/8.loj	2024-06-28 17:28:56.137554151 +0300
++++ /tmp/tmp.i2OyAPidW0	2026-01-28 19:04:01.366160503 +0200
+@@ -7,7 +7,7 @@
+ -----
+ > ti poi ke'a prenu ku'o cu barda
+ 
+-(prenu(c0) /\ (c0 =< ti))
++(prenu(c0) /\ (c0 <= ti))
+ barda(c0)
+ 
+ ge cy no prenu gi cy no me ti me'u
+@@ -16,7 +16,7 @@
+ -----
+ > ti poi ke'a nazbi ku'o cu barda
+ 
+-(nazbi(c0) /\ (c0 =< ti))
++(nazbi(c0) /\ (c0 <= ti))
+ barda(c0)
+ 
+ ge cy no nazbi gi cy no me ti me'u
+@@ -25,7 +25,7 @@
+ -----
+ > ti poi ke'a nazbi kapkevna ku'o cu barda
+ 
+-(<nazbi(_)><kapkevna>(c0) /\ (c0 =< ti))
++(<nazbi(_)><kapkevna>(c0) /\ (c0 <= ti))
+ barda(c0)
+ 
+ ge cy no ke nazbi kapkevna ke'e gi cy no me ti me'u
+@@ -34,7 +34,7 @@
+ -----
+ > tu poi le mlatu pu lacpu ke'a ku'o cu ratcu
+ 
+-((pu)(). lacpu(c0,c1) /\ (c1 =< tu))
++((pu)(). lacpu(c0,c1) /\ (c1 <= tu))
+ non-veridical: mlatu(c0)
+ ratcu(c1)
+ 
+@@ -45,7 +45,7 @@
+ -----
+ > ta poi mi djica le nu mi ponse ke'a [kei] ku'o cu bloti
+ 
+-(djica(mi,f0(c1)) /\ (c1 =< ta))
++(djica(mi,f0(c1)) /\ (c1 <= ta))
+ non-veridical: FA x1. nu[ponse(mi,x1)](f0(x1))
+ bloti(c1)
+ 
+@@ -56,7 +56,7 @@
+ -----
+ > ti poi nazbi cu barda
+ 
+-(nazbi(c0) /\ (c0 =< ti))
++(nazbi(c0) /\ (c0 <= ti))
+ barda(c0)
+ 
+ ge cy no nazbi gi cy no me ti me'u
+@@ -65,7 +65,7 @@
+ -----
+ > tu poi le mlatu pu lacpu cu ratcu
+ 
+-((pu)(). lacpu(c0,c1) /\ (c1 =< tu))
++((pu)(). lacpu(c0,c1) /\ (c1 <= tu))
+ non-veridical: mlatu(c0)
+ ratcu(c1)
+ 
+@@ -76,7 +76,7 @@
+ -----
+ > ti poi prenu cu barda
+ 
+-(prenu(c0) /\ (c0 =< ti))
++(prenu(c0) /\ (c0 <= ti))
+ barda(c0)
+ 
+ ge cy no prenu gi cy no me ti me'u
+@@ -253,7 +253,7 @@
+ -----
+ > la nu,iork po'u le tcadu
+ 
+-((c1 == c0) /\ (c1 =< "nuiork"))
++((c1 == c0) /\ (c1 <= "nuiork"))
+ non-veridical: tcadu(c0)
+ [Fragment: c1]
+ 
+@@ -404,7 +404,7 @@
+ -----
+ > ti voi nanmu cu ninmu
+ 
+-(non-veridical: nanmu(c0) /\ (c0 =< ti))
++(non-veridical: nanmu(c0) /\ (c0 <= ti))
+ ninmu(c0)
+ 
+ ge ju'a nai cy no nanmu gi cy no me ti me'u
+@@ -422,7 +422,7 @@
+ -----
+ > le poi blabi ku'o gerku cu klama
+ 
+-(blabi(c1) /\ (c1 =< c0))
++(blabi(c1) /\ (c1 <= c0))
+ non-veridical: gerku(c0)
+ klama(c1)
+ 
+@@ -433,7 +433,7 @@
+ -----
+ > le gerku ku poi blabi cu klama
+ 
+-(blabi(c1) /\ (c1 =< c0))
++(blabi(c1) /\ (c1 <= c0))
+ non-veridical: gerku(c0)
+ klama(c1)
+ 
+@@ -446,7 +446,7 @@
+ 
+ non-veridical: zarci(c1)
+ non-veridical: (prenu(c0) /\ 5 mei(c0))
+-EQ(2) x1:((_ =< c0)). klama(x1,c1)
++EQ(2)x1:((_ <= c0)). klama(x1,c1)
+ 
+ ju'a nai cy pa zarci
+ .i ju'a nai ge cy no prenu gi cy no mu mei
+@@ -457,7 +457,7 @@
+ 
+ non-veridical: zarci(c1)
+ non-veridical: (prenu(c0) /\ 5 mei(c0))
+-EQ(2) x1:(((_ =< c0) /\ ninmu(_))). klama(x1,c1)
++EQ(2)x1:(((_ <= c0) /\ ninmu(_))). klama(x1,c1)
+ 
+ ju'a nai cy pa zarci
+ .i ju'a nai ge cy no prenu gi cy no mu mei
+@@ -468,7 +468,7 @@
+ 
+ non-veridical: zarci(c1)
+ non-veridical: (prenu(c0) /\ (5 mei(c0) /\ ninmu(c0)))
+-EQ(2) x1:((_ =< c0)). klama(x1,c1)
++EQ(2)x1:((_ <= c0)). klama(x1,c1)
+ 
+ ju'a nai cy pa zarci
+ .i ju'a nai ge cy no prenu gi ge cy no mu mei gi cy no ninmu
+@@ -479,7 +479,7 @@
+ 
+ non-veridical: zarci(c1)
+ non-veridical: (prenu(c0) /\ 5 mei(c0))
+-EQ(2) x1:(((_ =< c0) /\ ninmu(_))). klama(x1,c1)
++EQ(2)x1:(((_ <= c0) /\ ninmu(_))). klama(x1,c1)
+ 
+ ju'a nai cy pa zarci
+ .i ju'a nai ge cy no prenu gi cy no mu mei
+@@ -521,7 +521,7 @@
+ -----
+ > mi viska la nanmu ku poi terpa le ke'a xirma.
+ 
+-(terpa( ,f0(c1)) /\ (c1 =< [Name: nanmu(_) ]))
++(terpa( ,f0(c1)) /\ (c1 <= [Name: nanmu(_) ]))
+ non-veridical: FA x1. (xirma(f0(x1)) /\ srana(f0(x1),x1))
+ viska(mi,c1)
+ 
+@@ -532,7 +532,7 @@
+ -----
+ > mi ponse re karce [ku] poi xekri
+ 
+-EQ(2) x1:((karce(_) /\ xekri(_))). ponse(mi,x1)
++EQ(2)x1:((karce(_) /\ xekri(_))). ponse(mi,x1)
+ 
+ re da poi ge ke'a karce gi ke'a xekri ku'o zo'u mi ponse da
+ 
+@@ -548,7 +548,7 @@
+ -----
+ > le pe mi karce cu xunre
+ 
+-(srana(c1,mi) /\ (c1 =< c0))
++(srana(c1,mi) /\ (c1 <= c0))
+ non-veridical: karce(c0)
+ xunre(c1)
+ 
+@@ -631,7 +631,7 @@
+ > la'e poi tolcitno vau lu le xunre cmaxirma li'u cu zvati le vu kumfa
+ 
+ non-veridical: (vu)(). kumfa(c1)
+-(tolcitno(c0) /\ (c0 =< {la'e}(<< non-veridical: <xunre(_)><cmaxirma>(c0)
++(tolcitno(c0) /\ (c0 <= {la'e}(<< non-veridical: <xunre(_)><cmaxirma>(c0)
+ [Fragment: c0] >>)))
+ zvati(c0,c1)
+ 
+@@ -644,7 +644,7 @@
+ > la'e lu le xunre cmaxirma li'u lu'u poi to'ercitno cu zvati le vu kumfa
+ 
+ non-veridical: (vu)(). kumfa(c1)
+-(to'ercitno(c0) /\ (c0 =< {la'e}(<< non-veridical: <xunre(_)><cmaxirma>(c0)
++(to'ercitno(c0) /\ (c0 <= {la'e}(<< non-veridical: <xunre(_)><cmaxirma>(c0)
+ [Fragment: c0] >>)))
+ zvati(c0,c1)
+ 

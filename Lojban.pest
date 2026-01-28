@@ -1,0 +1,811 @@
+// Generated from Lojban.pappy - structure only
+// Pest grammar - canonical source for Rust port
+
+wholeStatement = { statement ~ (NIhO+ | I | !Char) }
+
+textHead = { (I ~ joikJek? ~ BO? | NIhO)* }
+
+terminatedText = { text ~ Spacing? ~ "%%%END%%%" }
+
+free = { "sei" ~ !BU ~ (ts:terms CU? | "ti'o" ~ !BU ~ (ts:terms CU? | SOI ~ !BU ~ sumti ~ sumti? ~ SEhU? | vocative ~ !BU ~ maybeRelativeClauses ~ selbri ~ maybeRelativeClauses ~ DOhU? ~ -> ~ { Vocative cs $ Just (QAtom [] Nothing (rels1++rels2)
+	    (Description "le" Nothing Nothing (Left sb) [] [])) } | vocative ~ !BU ~ name ~ maybeRelativeClauses ~ DOhU? ~ -> ~ { Vocative cs $ Just (QAtom [] Nothing rels (n "la")) } | vocative ~ !BU ~ !free ~ sumti? ~ DOhU? | numberOrLerfuString ~ MAI | TO ~ !BU ~ text ~ TOI? | xiClause | FUhE? ~ indicator | BAhE | Y ~ !BU }
+
+vocative = { coi* ~ DOI | coi+ }
+
+coi = { COI ~ NAI? }
+
+indicator = { "xu" ~ !BU ~ ("kau" ~ !BU ~ xiLit?)? | (UI | CAI) ~ NAI? ~ !BU | (DAhO | FUhO) ~ !BU }
+
+xiClause = { XI ~ !BU ~ numberOrLerfuString ~ BOI? | XI ~ !BU ~ VEI ~ mex ~ VEhO? ~ -> ~ q ~ -- ~ |lastStatementOrSubsentence ~ parses ~ up ~ to ~ and ~ including ~ the ~ start ~ of ~ the ~ -- ~ last ~ statement ~ or ~ subsentence, ~ being ~ where ~ we ~ should ~ put ~ any ~ frees. ~ -- ~ Currently ~ unused. ~ --lastStatementOrSubsentence ~ :: ~ {()} ~ -- ~ = ~ nextStatementOrSubsentence* ~ -> ~ {()} ~ --nextStatementOrSubsentence ~ :: ~ {()} ~ -- ~ = ~ (quoteETC | !startStOrSubs ~ Valsi)* ~ startStOrSubs ~ -> ~ {()} ~ ---- ~ probably ~ this ~ doesn't ~ deal ~ properly ~ with ~ all ~ magic ~ word ~ interactions ~ --quoteETC ~ :: ~ {()} ~ -- ~ = ~ nonJboQuote | errorQuote | ZO ~ Valsi | Valsi ~ BU | Valsi ~ ZEI ~ -> ~ {()} ~ --startStOrSubs ~ :: ~ String ~ -- ~ = ~ NU ~ NAI? | NOI | TO | I ~ !(joikJek | BO) | NIhO ~ ----- ~ main }
+
+text = { free* ~ NAI* ~ textPart2 ~ (!text1 ~ joikJek)? ~ text1? ~ FAhO? ~ -> ~ {Text (fs1++fs2) (not $ null ns) $
+	    maybe [] (\jjfrag }
+
+textPart2 = { CMENE+ | indicator* }
+
+text1 = { I ~ joikJek? ~ (mtag:tag? BO | NIhO+ ~ paragraphs? | paragraphs }
+
+paragraphs = { paragraph ~ (NIhO+ ~ paragraphs)? }
+
+paragraph = { statementOrFragment ~ (I !jek !joik !joikJek msf:statementOrFragment? }
+
+statementOrFragment = { statement | free* ~ fragment }
+
+statement = { free* ~ statement1 | free* ~ prenex ~ {Statement fs' ps' s}:statement ~ -> ~ {Statement (fs++fs') (ps++ps') s} }
+
+statement1 = { statement2 ~ (_jekstatements)* ~ -> ~ { foldl (\s1 -> \(con,s2) }
+
+_jekstatements = { I ~ joikJek ~ statement2 }
+
+statement2 = { statement3 ~ boSt:( I mjj:(joikJek)? mtag:(tag)? BO s:statement2
+	    -> {(jjJboCon mtag $ fromMaybe (JJJek $ LogJboConnective True 'e' True) mjj,s)} )? ~ -> ~ { case boSt of
+	    Nothing -> s1
+	    Just (con,s2) }
+
+statement3 = { free* ~ sentence | tag? ~ TUhE ~ text1 ~ TUhU? }
+
+fragment = { prenex | terms ~ VAU? | ek | gihek | quantifier | NA ~ !JA | relativeClauses | links | linkargs }
+
+prenex = { terms ~ ZOhU }
+
+sentence = { bridiTail | {(ts,bt)}:termsAndTail }
+
+termsAndTail = { CU? ~ bridiTail | terms1 ~ {(ts,bt)}:termsAndTail }
+
+subsentence = { free* ~ sentence | free* ~ prenex ~ {Subsentence fs' ps' s}:subsentence ~ -> ~ { Subsentence (fs++fs') (ps++ps') s } }
+
+bridiTail = { bridiTail1 ~ gihek:(lcon:gihek mtag:(tag)? KE bt2:bridiTail KEhE? tts:tailTerms ->
+	{(jboConnLogOrQ mtag lcon, bt2, tts)} )? ~ -> ~ {
+	    case gihek of
+		Nothing -> bt1
+		Just (con, bt2, tts) }
+
+bridiTail1 = { bridiTail2 ~ _gihekbt* ~ -> ~ { foldl (\bt1 }
+
+_gihekbt = { gihek ~ !(tag? ~ BO) ~ !(tag? KE }
+
+bridiTail2 = { bridiTail3 ~ gihek:(lcon:gihek mtag:(tag)? BO bt2:bridiTail2 tts:tailTerms
+	    -> {(jboConnLogOrQ mtag lcon,bt2,tts)})? ~ -> ~ { case gihek of
+		Nothing -> bt1
+		Just (con, bt2, tts) }
+
+bridiTail3 = { selbri ~ tailTerms | gekSentence }
+
+gekSentence = { gek ~ subsentence ~ gik ~ subsentence ~ tailTerms ~ -> ~ { ConnectedGS (pcon b) s1 s2 tts } | tag? ~ KE ~ gekSentence ~ KEhE? | "na" ~ gekSentence | "ja'a" ~ gekSentence }
+
+tailTerms = { terms1* ~ VAU? }
+
+terms = { terms1+ }
+
+terms1 = { terms2 ~ PEhE ~ joikJek ~ terms2 | terms2 }
+
+terms2 = { term ~ (CEhE ~ terms2)+ | term }
+
+term = { sumti | !gek ~ tag ~ sumti | !gek ~ tag ~ KU? | tagFA ~ sumti | tagFA ~ KU? | "fai" ~ sumti | FA ~ KU? | termset | "na" ~ KU | "ja'a" ~ KU }
+
+termset = { NUhI ~ gek ~ terms ~ NUhU ~ gik ~ terms ~ NUhU? ~ -> ~ { ConnectedTerms True (pcon b) (Termset ts1) (Termset ts2) } | NUhI ~ terms ~ NUhU? | gek ~ {(ts1,b,ts2)}:termsGikTerms ~ -> ~ { ConnectedTerms True (pcon b) (Termset ts1) (Termset ts2) } }
+
+termsGikTerms = { term ~ {(ts1,b,ts2)}:( b:gik }
+
+sumti = { sumti1 ~ (VUhO ~ relativeClauses)? ~ -> ~ { case rels of
+	    Nothing -> s
+	    Just rels }
+
+sumti1 = { sumti2 ~ eks:( jj:joikEk mtag:(tag)? KE s:sumti KEhE?
+	    -> {(jjJboCon mtag jj,s)} )? ~ -> ~ { case eks of
+	    Nothing -> s1
+	    Just (con,s2) }
+
+sumti2 = { sumti3 ~ (_eksumti)* ~ -> ~ { foldl (\s1 -> \(con,s2) }
+
+_eksumti = { joikEk ~ sumti3 }
+
+sumti3 = { sumti4 ~ (joikEk ~ (tag)? ~ BO ~ sumti3)? ~ -> ~ { case eks of
+		Nothing -> s1
+		Just (con,s2) }
+
+sumti4 = { sumti5 | gek ~ sumti ~ gik ~ sumti4 }
+
+sumti5 = { quantifier? ~ sumti6 ~ ("kau" ~ xiLit?)? ~ free* ~ maybeRelativeClauses | quantifier ~ selbri ~ KU? ~ maybeRelativeClauses }
+
+sumti6 = { ZO ~ Valsi | nonJboQuote | errorQuote | lerfuString ~ !MOI ~ BOI? | LU ~ text ~ LIhU? | qualifier ~ maybeRelativeClauses ~ sumti ~ LUhU? ~ -> ~ {QualifiedSumti qual rels s} | KOhA | KOhA | KOhA | variable ~ xiLit? | "ke'a" ~ xiLit? | "ce'u" ~ xiLit? ~ xiLit? | "ri" ~ xiLit? | "ra" | "ru" | assignable ~ xiLit? | mainBridiSumbasti ~ xiLit? | "zo'e" | KOhA | "ma" | LA ~ name | (LA | LE) ~ {(is,q,ssb,rels,irels)}:sumtiTail ~ KU? ~ -> ~ {Description g is q ssb rels irels} | liClause }
+
+qualifier = { LAhE | NAhE ~ BO }
+
+name = { maybeRelativeClauses ~ CMENE+ ~ -> ~ {\g }
+
+variable = { "da" | "de" | "di" }
+
+assignable = { "ko'a" | "ko'e" | "ko'i" | "ko'o" | "ko'u" | "fo'a" | "fo'e" | "fo'i" | "fo'o" | "fo'u" }
+
+mainBridiSumbasti = { "vo'a" | "vo'e" | "vo'i" | "vo'o" | "vo'u" }
+
+nonJboText = { -- ~ not ~ sure ~ how ~ to ~ do ~ this ~ properly... ~ some ~ preparsing ~ magic, ~ I ~ -- ~ suppose ~ = ~ "zoi" ~ (Word)* ~ "zoi" | "gy" ~ (Word)* ~ "gy" }
+
+nonJboQuote = { "zoi" ~ nonJboText }
+
+nonJboNamed = { "la'o" ~ nonJboText }
+
+errorQuote = { LOhU ~ ((!LEhU v:Valsi) ~ LEhU }
+
+liClause = { "li" ~ mex ~ LOhO? | "me'o" ~ mex ~ LOhO? }
+
+sumtiTail = { sumti6 ~ maybeRelativeClauses ~ {(q,ssb,irels)}:sumtiTail1 ~ -> ~ {(Just (QAtom [] Nothing srels s),q,ssb,[],irels)} | maybeRelativeClauses ~ {(q,ssb,irels)}:sumtiTail1 ~ -> ~ {(Nothing,q,ssb,rels,irels)} }
+
+sumtiTail1 = { selbri ~ maybeRelativeClauses ~ -> ~ {(Nothing,Left sb,rels)} | quantifier? ~ selbri ~ maybeRelativeClauses ~ -> ~ {(mq,Left sb,rels)} | quantifier ~ sumti }
+
+maybeRelativeClauses = { relativeClauses? }
+
+relativeClauses = { relativeClause ~ (ZIhE ~ relativeClause)* }
+
+relativeClause = { "poi" ~ subsentence ~ KUhO? | "noi" ~ subsentence ~ KUhO? | "voi" ~ subsentence ~ KUhO? | "goi" ~ term ~ GEhU? | "ne" ~ term ~ GEhU? | "no'u" ~ term ~ GEhU? | "pe" ~ term ~ GEhU? | "po'u" ~ term ~ GEhU? | "po" ~ term ~ GEhU? | "po'e" ~ term ~ GEhU? }
+
+selbri = { tag ~ selbri1 | selbri1 }
+
+selbri1 = { "na" ~ selbri | "ja'a" ~ selbri | selbri2 }
+
+selbri2 = { selbri3 ~ CO ~ sb':selbri2 | selbri3 }
+
+selbri3 = { selbri3 ~ sb':selbri4 | selbri4 }
+
+selbri4 = { selbri5 ~ (_jeksbs)* ~ -> ~ { foldl (\sb1 -> \(con,sb2) }
+
+_jeksbs = { joikJek ~ selbri5 | joik ~ tag? ~ KE ~ selbri3 ~ KEhE? }
+
+selbri5 = { selbri6 ~ joikJek ~ (tag)? ~ BO ~ selbri5 ~ -> ~ { ConnectedSB False (jjJboCon mtag jj) (sb3tosb sb1) sb2 } | selbri6 }
+
+selbri6 = { tanruUnit ~ BO ~ selbri6 | tanruUnit | NAhE? ~ guhek ~ selbri ~ gik ~ selbri6 ~ -> ~ { maybe id ScalarNegatedSB mn $
+	    ConnectedSB True (jboConnLogOrQ Nothing $ pcon b) sb1 sb2 } }
+
+tanruUnit = { tanruUnit ~ CEI ~ tu':tanruUnit1 | tanruUnit1 }
+
+tanruUnit1 = { tanruUnit2 ~ ("kau":UI x:xiLit? }
+
+tanruUnit2 = { -- ~ probably ~ this ~ ZEI ~ handling ~ interacts ~ badly ~ with ~ other ~ magic ~ words? ~ = ~ Valsi ~ (ZEI ~ Valsi)+ | BRIVLA | "mo" | GOhA ~ xiLit? ~ RAhO? | KE ~ selbri3 ~ KEhE? | ME ~ (sumti / ls:lerfuString | numberOrLerfuString ~ MOI | NUhA ~ mexOperator | convSE ~ tanruUnit2 | JAI ~ tag? ~ tanruUnit2 | NAhE ~ tanruUnit2 | abstractor ~ subsentence ~ KEI? | XOhI ~ tag }
+
+convSE = { SE ~ xiLit | "se" | "te" | "ve" | "xe" }
+
+abstractor = { NU ~ NAI? ~ (joikJek ~ abstractor)? ~ -> ~ {let a1 = (if isJust nai then NegatedAbstractor else id) $ NU n
+	    in case mca of
+		Nothing -> a1
+		Just (JJJoik joik,a2) -> JoiConnectedAbstractor joik a1 a2
+		Just (JJJek lcon@(LogJboConnective _ 'i' _),a2) ->
+		    JoiConnectedAbstractor "??" a1 a2
+		Just (JJJek lcon,a2) }
+
+linkargs = { BE ~ term ~ links? ~ BEhO? }
+
+links = { BEI ~ term ~ links? }
+
+quantifier = { number ~ !MOI ~ BOI? | VEI ~ mex ~ VEhO? }
+
+mex = { mex1 ~ optail* ~ -> ~ {foldl (flip ($)) m opts} | rpClause }
+
+optail = { operator ~ mex1 ~ -> ~ { \m1 }
+
+rpClause = { FUhA ~ rpExpression }
+
+mex1 = { mex2 ~ (BIhE opt:optail }
+
+mex2 = { operand | mexForethought }
+
+mexForethought = { PEhO? ~ operator ~ foreOperands ~ KUhE? }
+
+foreOperands = { mex2+ }
+
+rpExpression = { operand ~ rpExpressionTail | operand }
+
+rpExpressionTail = { rpExpression ~ operator ~ rpExpressionTail ~ -> ~ { t . \m1 | rpExpression ~ operator ~ -> ~ { \m1 }
+
+operator = { operator1 ~ _jekops* ~ -> ~ { foldl (\op1 -> \(con,op2) }
+
+_jekops = { joikJek ~ operator1 | joik ~ tag? ~ KE ~ operator ~ KEhE? }
+
+operator1 = { operator2 ~ joikJek ~ tag? ~ BO ~ operator1 ~ -> ~ { ConnectedOperator False (jjJboCon mtag jj) op1 op2 } | operator2 | guhek ~ operator1 ~ gik ~ operator2 ~ -> ~ { ConnectedOperator True (jboConnLogOrQ Nothing $ pcon b) op1 op2 } }
+
+operator2 = { mexOperator | KE ~ operator ~ KEhE? }
+
+mexOperator = { convSE ~ mexOperator | NAhE ~ mexOperator | MAhO ~ mex ~ TEhU? | NAhU ~ selbri ~ TEhU? | VUhU }
+
+operand = { operand1 ~ joikEk ~ tag? ~ KE ~ operand ~ KEhE? ~ -> ~ { ConnectedMex False (jjJboCon mtag jj) o1 o2 } | operand1 }
+
+operand1 = { operand2 ~ _jekos* ~ -> ~ {foldl (flip ($)) o jekss} }
+
+_jekos = { joikEk ~ operand2 ~ -> ~ { \o1 }
+
+operand2 = { operand3 ~ joikEk ~ tag? ~ BO ~ operand2 ~ -> ~ { ConnectedMex False (jjJboCon mtag jj) o1 o2 } | operand3 }
+
+operand3 = { quantifier | lerfuString ~ !MOI ~ BOI? | NIhE ~ selbri ~ TEhU? | MOhE ~ sumti ~ TEhU? | JOhI ~ mex2+ ~ TEhU? | gek ~ operand ~ gik ~ operand3 | qualifier ~ operand ~ LUhU? }
+
+numberOrLerfuString = { number | lerfuString }
+
+number = { litnum ~ !numeral | PA ~ numeral* ~ -> ~ { MexNumeralString $ (PA p):t } }
+
+numeral = { PA | lerfuWord }
+
+litnum = { digit+ }
+
+digit = { "no" | "pa" | "re" | "ci" | "vo" | "mu" | "xa" | "ze" | "bi" | "so" | Char }
+
+xiLit = { XI ~ litnum ~ !numeral }
+
+lerfuString = { lerfuWord ~ cs:(lerfuWord
+	    / d:digit -> {LerfuChar $ head $ show d}
+	    / p:PA }
+
+lerfuWord = { BY ~ -> ~ {case s of
+	"y'y" -> LerfuChar 'h' 
+	s:"y" -> LerfuChar s
+	_ | VowelValsi ~ BU | Valsi ~ BU | LAU ~ lerfuWord | TEI ~ lerfuString ~ FOI }
+
+ek = { NA? ~ (SE)? ~ ekA ~ NAI? }
+
+gihek = { NA? ~ (SE)? ~ gihekGIhA ~ NAI? }
+
+jek = { NA? ~ (SE)? ~ jekJA ~ NAI? }
+
+joik = { SE? ~ JOI ~ NAI? | interval | GAhO ~ interval ~ GAhO }
+
+interval = { SE? ~ BIhI ~ NAI? }
+
+joikEk = { ek | joik }
+
+joikJek = { jek | joik }
+
+gek = { (SE)? ~ gekGA ~ NAI? ~ -> ~ { jboConnLogOrQ Nothing . LogJboConnective (isNothing ln) 
+		    (if (isJust se) && conchar=='u' then 'U' else conchar) } | joik ~ GI ~ -> ~ { \_ | tag ~ gik ~ -> ~ { \_ }
+
+guhek = { (SE)? ~ guhekGUhA ~ NAI? }
+
+gik = { GI ~ NAI? }
+
+ekA = { "a" | "e" | "o" | "u" | "ji" }
+
+jekJA = { "ja" | "je" | "jo" | "ju" | "je'i" }
+
+gihekGIhA = { "gi'a" | "gi'e" | "gi'o" | "gi'u" | "gi'i" }
+
+gekGA = { "ga" | "ge" | "go" | "gu" | "ge'i" }
+
+guhekGUhA = { "gu'a" | "gu'e" | "gu'o" | "gu'u" | "gu'i" }
+
+tagFA = { FA ~ xiLit | "fa" | "fe" | "fi" | "fo" | "fu" }
+
+tag = { tag1 ~ (_jektag)* ~ -> ~ { foldl (\t1 -> \(con,t2) }
+
+_jektag = { joikJek ~ tag1 }
+
+tag1 = { decoratedTagUnit+ }
+
+decoratedTagUnit = { (NAhE)? ~ (convSE)? ~ tagUnit ~ (NAI)? ~ -> ~ { DecoratedTagUnit nahe se (isJust nai) tu } }
+
+tagUnit = { (PU | ZI | ZEhA | VA | VEhA | VIhA) | CAhA | BAI | (MOhI)? ~ FAhA | (FEhE)? ~ number ~ ROI | (FEhE)? ~ (TAhE | ZAhO) | FIhO ~ selbri ~ FEhU? | CUhE | KI }
+
+LojbanLetter = { Consonant | Vowel | OtherLetter }
+
+nonConsonant = { Vowel | OtherLetter ~ -- ~ InitialPair ~ :: ~ String ~ = ~ "bl" | "br" | "cf" | "ck" | "cl" | "cm" | "cn" | "cp" | "cr" | "ct" | "dj" | "dr" | "dz" | "fl" | "fr" | "gl" | "gr" | "jb" | "jd" | "jg" | "jm" | "jv" | "kl" | "kr" | "ml" | "mr" | "pl" | "pr" | "sf" | "sk" | "sl" | "sm" | "sn" | "sp" | "sr" | "st" | "tc" | "tr" | "ts" | "vl" | "vr" | "xl" | "xr" | "zb" | "zd" | "zg" | "zm" | "zv" }
+
+Vowel = { Char }
+
+VowelValsi = { Vowel ~ Spacing }
+
+Consonant = { Char }
+
+OtherLetter = { Char }
+
+VowelNotY = { Char }
+
+YChar = { 'y' }
+
+TickChar = { '\'' }
+
+Space = { "" }
+
+Spacing = { Space+ }
+
+Valsi = { LojbanLetter+ ~ Spacing }
+
+Word = { (!Space ~ !PAUSE ~ Char)+ ~ Spacing }
+
+CMENE = { (LojbanLetter ~ !Spacing)* ~ Consonant ~ Spacing }
+
+CMAVO = { Consonant ~ (Vowel | TickChar)* ~ Spacing | (Vowel | TickChar)+ ~ Spacing }
+
+BRIVLA = { !CMENE ~ !CMAVO ~ Valsi }
+
+PAUSE = { "." }
+
+postClause = { Spacing ~ !BU }
+
+A = { Amain ~ postClause }
+
+Amain = { "a" | "e" | "ji" | "o" | "u" ~ -- ~ modal ~ operators }
+
+BAI = { BAImain ~ postClause }
+
+BAImain = { "du'o" | "si'u" | "zau" | "ki'i" | "du'i" | "cu'u" | "tu'i" | "ti'u" | "di'o" | "ji'u" | "ri'a" | "ni'i" | "mu'i" | "ki'u" | "va'u" | "koi" | "ca'i" | "ta'i" | "pu'e" | "ja'i" | "kai" | "bai" | "fi'e" | "de'i" | "ci'o" | "mau" | "mu'u" | "ri'i" | "ra'i" | "ka'a" | "pa'u" | "pa'a" | "le'a" | "ku'u" | "tai" | "bau" | "ma'i" | "ci'e" | "fau" | "po'i" | "cau" | "ma'e" | "ci'u" | "ra'a" | "pu'a" | "li'e" | "la'u" | "ba'i" | "ka'i" | "sau" | "fa'e" | "be'i" | "ti'i" | "ja'e" | "ga'a" | "va'o" | "ji'o" | "me'a" | "do'e" | "ji'e" | "pi'o" | "gau" | "zu'e" | "me'e" | "rai" ~ -- ~ next ~ word ~ intensifier }
+
+BAhE = { BAhEmain ~ postClause }
+
+BAhEmain = { "ba'e" | "za'e" ~ -- ~ sumti ~ link ~ to ~ attach ~ sumti ~ to ~ a ~ selbri }
+
+BE = { BEmain ~ postClause }
+
+BEmain = { "be" ~ -- ~ multiple ~ sumti ~ separator ~ between ~ BE, ~ BEI }
+
+BEI = { BEImain ~ postClause }
+
+BEImain = { "bei" ~ -- ~ terminates ~ BEBEI ~ specified ~ descriptors }
+
+BEhO = { BEhOmain ~ postClause }
+
+BEhOmain = { "be'o" ~ -- ~ prefix ~ for ~ high-priority ~ MEX ~ operator }
+
+BIhE = { BIhEmain ~ postClause }
+
+BIhEmain = { "bi'e" ~ -- ~ interval ~ component ~ of ~ JOI }
+
+BIhI = { BIhImain ~ postClause }
+
+BIhImain = { "mi'i" | "bi'o" | "bi'i" ~ -- ~ joins ~ two ~ units ~ with ~ shortest ~ scope }
+
+BO = { BOmain ~ postClause }
+
+BOmain = { "bo" ~ -- ~ number ~ or ~ lerfu-string ~ terminator }
+
+BOI = { BOImain ~ postClause }
+
+BOImain = { "boi" ~ -- ~ turns ~ any ~ word ~ into ~ a ~ BY ~ lerfu ~ word }
+
+BU = { BUmain ~ postClause }
+
+BUmain = { "bu" ~ -- ~ individual ~ lerfu ~ words }
+
+BY = { BYmain ~ postClause }
+
+BYmain = { "jo'o" | "ru'o" | "ge'o" | "je'o" | "lo'a" | "na'a" | "se'e" | "to'a" | "ga'e" | "y'y" | "by" | "cy" | "dy" | "fy" | "gy" | "jy" | "ky" | "ly" | "my" | "ny" | "py" | "ry" | "sy" | "ty" | "vy" | "xy" | "zy" ~ -- ~ specifies ~ actualitypotentiality ~ of ~ tense }
+
+CAhA = { CAhAmain ~ postClause }
+
+CAhAmain = { "ca'a" | "pu'i" | "nu'o" | "ka'e" ~ -- ~ afterthought ~ intensity ~ marker }
+
+CAI = { CAImain ~ postClause }
+
+CAImain = { "pei" | "cai" | "cu'i" | "sai" | "ru'e" ~ -- ~ pro-bridi ~ assignment ~ operator }
+
+CEI = { CEImain ~ postClause }
+
+CEImain = { "cei" ~ -- ~ afterthought ~ term ~ list ~ connective }
+
+CEhE = { CEhEmain ~ postClause }
+
+CEhEmain = { "ce'e" ~ -- ~ tanru ~ inversion }
+
+CO = { COmain ~ postClause }
+
+COmain = { "co" ~ -- ~ vocative ~ marker ~ permitted ~ inside ~ names; ~ must ~ always ~ be ~ followed ~ by ~ pause ~ or ~ DOI }
+
+COI = { COImain ~ postClause }
+
+COImain = { "ju'i" | "coi" | "fi'i" | "ta'a" | "mu'o" | "fe'o" | "co'o" | "pe'u" | "ke'o" | "nu'e" | "re'i" | "be'e" | "je'e" | "mi'e" | "ki'e" | "vi'o" ~ -- ~ separator ~ between ~ head ~ sumti ~ and ~ selbri }
+
+CU = { CUmain ~ postClause }
+
+CUmain = { "cu" ~ -- ~ tensemodal ~ question }
+
+CUhE = { CUhEmain ~ postClause }
+
+CUhEmain = { "cu'e" | "nau" ~ -- ~ cancel ~ anaphoracataphora ~ assignments }
+
+DAhO = { DAhOmain ~ postClause }
+
+DAhOmain = { "da'o" ~ -- ~ vocative ~ marker }
+
+DOI = { DOImain ~ postClause }
+
+DOImain = { "doi" ~ -- ~ terminator ~ for ~ DOI-marked ~ vocatives }
+
+DOhU = { DOhUmain ~ postClause }
+
+DOhUmain = { "do'u" ~ -- ~ modifier ~ head ~ generic ~ case ~ tag }
+
+FA = { FAmain ~ postClause }
+
+FAmain = { "fai" | "fi'a" | "fa" | "fe" | "fi" | "fo" | "fu" ~ -- ~ superdirections ~ in ~ space }
+
+FAhA = { FAhAmain ~ postClause }
+
+FAhAmain = { "du'a" | "be'a" | "ne'u" | "vu'a" | "ga'u" | "ti'a" | "ni'a" | "ca'u" | "zu'a" | "ri'u" | "ru'u" | "re'o" | "te'e" | "bu'u" | "ne'a" | "pa'o" | "ne'i" | "to'o" | "zo'i" | "ze'o" | "zo'a" | "fa'a" ~ -- ~ normally ~ elided ~ 'done ~ pause' ~ to ~ indicate ~ end ~ of ~ utterance ~ string }
+
+FAhO = { FAhOmain ~ postClause }
+
+FAhOmain = { "fa'o" ~ -- ~ space ~ interval ~ mod ~ flag }
+
+FEhE = { FEhEmain ~ postClause }
+
+FEhEmain = { "fe'e" ~ -- ~ ends ~ bridi ~ to ~ modal ~ conversion }
+
+FEhU = { FEhUmain ~ postClause }
+
+FEhUmain = { "fe'u" ~ -- ~ marks ~ bridi ~ to ~ modal ~ conversion }
+
+FIhO = { FIhOmain ~ postClause }
+
+FIhOmain = { "fi'o" ~ -- ~ end ~ compound ~ lerfu }
+
+FOI = { FOImain ~ postClause }
+
+FOImain = { "foi" ~ -- ~ reverse ~ Polish ~ flag }
+
+FUhA = { FUhAmain ~ postClause }
+
+FUhAmain = { "fu'a" ~ -- ~ open ~ long ~ scope ~ for ~ indicator }
+
+FUhE = { FUhEmain ~ postClause }
+
+FUhEmain = { "fu'e" ~ -- ~ close ~ long ~ scope ~ for ~ indicator }
+
+FUhO = { FUhOmain ~ postClause }
+
+FUhOmain = { "fu'o" ~ -- ~ geks; ~ forethought ~ logical ~ connectives }
+
+GA = { GAmain ~ postClause }
+
+GAmain = { "ge'i" | "ge" | "go" | "ga" | "gu" ~ -- ~ openclosed ~ interval ~ markers ~ for ~ BIhI }
+
+GAhO = { GAhOmain ~ postClause }
+
+GAhOmain = { "ke'i" | "ga'o" ~ -- ~ marker ~ ending ~ GOI ~ relative ~ clauses }
+
+GEhU = { GEhUmain ~ postClause }
+
+GEhUmain = { "ge'u" ~ -- ~ forethought ~ medial ~ marker }
+
+GI = { GImain ~ postClause }
+
+GImain = { "gi" ~ -- ~ logical ~ connectives ~ for ~ bridi-tails }
+
+GIhA = { GIhAmain ~ postClause }
+
+GIhAmain = { "gi'e" | "gi'i" | "gi'o" | "gi'a" | "gi'u" ~ -- ~ attaches ~ a ~ sumti ~ modifier ~ to ~ a ~ sumti }
+
+GOI = { GOImain ~ postClause }
+
+GOImain = { "no'u" | "ne" | "goi" | "po'u" | "pe" | "po'e" | "po" ~ -- ~ pro-bridi }
+
+GOhA = { GOhAmain ~ postClause }
+
+GOhAmain = { "mo" | "nei" | "go'u" | "go'o" | "go'i" | "no'a" | "go'e" | "go'a" | "du" | "bu'a" | "bu'e" | "bu'i" | "co'e" ~ -- ~ GEK ~ for ~ tanru ~ units, ~ corresponds ~ to ~ JEKs }
+
+GUhA = { GUhAmain ~ postClause }
+
+GUhAmain = { "gu'e" | "gu'i" | "gu'o" | "gu'a" | "gu'u" ~ -- ~ sentence ~ link }
+
+I = { Imain ~ postClause }
+
+Imain = { "i" ~ -- ~ jeks; ~ logical ~ connectives ~ within ~ tanru }
+
+JA = { JAmain ~ postClause }
+
+JAmain = { "je'i" | "je" | "jo" | "ja" | "ju" ~ -- ~ modal ~ conversion ~ flag }
+
+JAI = { JAImain ~ postClause }
+
+JAImain = { "jai" ~ -- ~ flags ~ an ~ array ~ operand }
+
+JOhI = { JOhImain ~ postClause }
+
+JOhImain = { "jo'i" ~ -- ~ non-logical ~ connectives }
+
+JOI = { JOImain ~ postClause }
+
+JOImain = { "fa'u" | "pi'u" | "joi" | "ce'o" | "ce" | "jo'u" | "ku'a" | "jo'e" | "ju'e" ~ -- ~ left ~ long ~ scope ~ marker }
+
+KE = { KEmain ~ postClause }
+
+KEmain = { "ke" ~ -- ~ right ~ terminator ~ for ~ KE ~ groups }
+
+KEhE = { KEhEmain ~ postClause }
+
+KEhEmain = { "ke'e" ~ -- ~ right ~ terminator, ~ NU ~ abstractions }
+
+KEI = { KEImain ~ postClause }
+
+KEImain = { "kei" ~ -- ~ multiple ~ utterance ~ scope ~ for ~ tenses }
+
+KI = { KImain ~ postClause }
+
+KImain = { "ki" ~ -- ~ sumti ~ anaphora }
+
+KOhA = { KOhAmain ~ postClause }
+
+KOhAmain = { "da'u" | "da'e" | "di'u" | "di'e" | "de'u" | "de'e" | "dei" | "do'i" | "mi'o" | "ma'a" | "mi'a" | "do'o" | "ko'a" | "fo'u" | "ko'e" | "ko'i" | "ko'o" | "ko'u" | "fo'a" | "fo'e" | "fo'i" | "fo'o" | "vo'a" | "vo'e" | "vo'i" | "vo'o" | "vo'u" | "zi'o" | "ke'a" | "zu'i" | "zo'e" | "ce'u" | "ko" | "da" | "de" | "di" | "mi" | "ma" | "ru" | "ri" | "ra" | "ta" | "tu" | "ti" | "do" ~ -- ~ right ~ terminator ~ for ~ descriptions, ~ etc. }
+
+KU = { KUmain ~ postClause }
+
+KUmain = { "ku" ~ -- ~ MEX ~ forethought ~ delimiter }
+
+KUhE = { KUhEmain ~ postClause }
+
+KUhEmain = { "ku'e" ~ -- ~ right ~ terminator, ~ NOI ~ relative ~ clauses }
+
+KUhO = { KUhOmain ~ postClause }
+
+KUhOmain = { "ku'o" ~ -- ~ name ~ descriptors }
+
+LA = { LAmain ~ postClause }
+
+LAmain = { "lai" | "la'i" | "la" ~ -- ~ lerfu ~ prefixes }
+
+LAU = { LAUmain ~ postClause }
+
+LAUmain = { "ce'a" | "lau" | "zai" | "tau" ~ -- ~ sumti ~ qualifiers }
+
+LAhE = { LAhEmain ~ postClause }
+
+LAhEmain = { "tu'a" | "lu'a" | "lu'o" | "la'e" | "vu'i" | "lu'i" | "lu'e" ~ -- ~ sumti ~ descriptors }
+
+LE = { LEmain ~ postClause }
+
+LEmain = { "le'i" | "lo'i" | "le'e" | "lo'e" | "lei" | "loi" | "le" | "lo" ~ -- ~ possibly ~ ungrammatical ~ text ~ right ~ quote }
+
+LEhU = { LEhUmain ~ postClause }
+
+LEhUmain = { "le'u" ~ -- ~ convert ~ number ~ to ~ sumti }
+
+LI = { LImain ~ postClause }
+
+LImain = { "me'o" | "li" ~ -- ~ grammatical ~ text ~ right ~ quote }
+
+LIhU = { LIhUmain ~ postClause }
+
+LIhUmain = { "li'u" ~ -- ~ elidable ~ terminator ~ for ~ LI }
+
+LOhO = { LOhOmain ~ postClause }
+
+LOhOmain = { "lo'o" ~ -- ~ possibly ~ ungrammatical ~ text ~ left ~ quote }
+
+LOhU = { LOhUmain ~ postClause }
+
+LOhUmain = { "lo'u" ~ -- ~ grammatical ~ text ~ left ~ quote }
+
+LU = { LUmain ~ postClause }
+
+LUmain = { "lu" ~ -- ~ LAhE ~ close ~ delimiter }
+
+LUhU = { LUhUmain ~ postClause }
+
+LUhUmain = { "lu'u" ~ -- ~ change ~ MEX ~ expressions ~ to ~ MEX ~ operators }
+
+MAhO = { MAhOmain ~ postClause }
+
+MAhOmain = { "ma'o" ~ -- ~ change ~ numbers ~ to ~ utterance ~ ordinals }
+
+MAI = { MAImain ~ postClause }
+
+MAImain = { "mo'o" | "mai" ~ -- ~ converts ~ a ~ sumti ~ into ~ a ~ tanru_unit }
+
+ME = { MEmain ~ postClause }
+
+MEmain = { "me" ~ -- ~ terminator ~ for ~ ME }
+
+MEhU = { MEhUmain ~ postClause }
+
+MEhUmain = { "me'u" ~ -- ~ change ~ sumti ~ to ~ operand, ~ inverse ~ of ~ LI }
+
+MOhE = { MOhEmain ~ postClause }
+
+MOhEmain = { "mo'e" ~ -- ~ motion ~ tense ~ marker }
+
+MOhI = { MOhImain ~ postClause }
+
+MOhImain = { "mo'i" ~ -- ~ change ~ number ~ to ~ selbri }
+
+MOI = { MOImain ~ postClause }
+
+MOImain = { "mei" | "moi" | "si'e" | "cu'o" | "va'e" ~ -- ~ bridi ~ negation }
+
+NA = { NAmain ~ postClause }
+
+NAmain = { "ja'a" | "na" ~ -- ~ attached ~ to ~ words ~ to ~ negate ~ them }
+
+NAI = { NAImain ~ postClause }
+
+NAImain = { "nai" ~ -- ~ scalar ~ negation }
+
+NAhE = { NAhEmain ~ postClause }
+
+NAhEmain = { "to'e" | "je'a" | "na'e" | "no'e" ~ -- ~ change ~ a ~ selbri ~ into ~ an ~ operator }
+
+NAhU = { NAhUmain ~ postClause }
+
+NAhUmain = { "na'u" ~ -- ~ change ~ selbri ~ to ~ operand; ~ inverse ~ of ~ MOI }
+
+NIhE = { NIhEmain ~ postClause }
+
+NIhEmain = { "ni'e" ~ -- ~ new ~ paragraph; ~ change ~ of ~ subject }
+
+NIhO = { NIhOmain ~ postClause }
+
+NIhOmain = { "ni'o" | "no'i" ~ -- ~ attaches ~ a ~ subordinate ~ clause ~ to ~ a ~ sumti }
+
+NOI = { NOImain ~ postClause }
+
+NOImain = { "voi" | "noi" | "poi" ~ -- ~ abstraction }
+
+NU = { NUmain ~ postClause }
+
+NUmain = { "ni" | "du'u" | "si'o" | "nu" | "li'i" | "ka" | "jei" | "su'u" | "zu'o" | "mu'e" | "pu'u" | "za'i" | "poi'i" ~ -- ~ change ~ operator ~ to ~ selbri; ~ inverse ~ of ~ MOhE }
+
+NUhA = { NUhAmain ~ postClause }
+
+NUhAmain = { "nu'a" ~ -- ~ marks ~ the ~ start ~ of ~ a ~ termset }
+
+NUhI = { NUhImain ~ postClause }
+
+NUhImain = { "nu'i" ~ -- ~ marks ~ the ~ middle ~ and ~ end ~ of ~ a ~ termset }
+
+NUhU = { NUhUmain ~ postClause }
+
+NUhUmain = { "nu'u" ~ -- ~ numbers ~ and ~ numeric ~ punctuation }
+
+PA = { PAmain ~ postClause }
+
+PAmain = { "pi'e" | "fi'u" | "za'u" | "me'i" | "ni'u" | "ki'o" | "ce'i" | "ma'u" | "ra'e" | "da'a" | "so'a" | "ji'i" | "su'o" | "su'e" | "rau" | "so'u" | "so'i" | "so'e" | "so'o" | "mo'a" | "du'e" | "te'o" | "ka'o" | "ci'i" | "tu'o" | "pai" | "dau" | "fei" | "gai" | "jau" | "rei" | "vai" | "no'o" | "ro" | "xo" | "no" | "pa" | "ci" | "vo" | "mu" | "xa" | "ze" | "bi" | "so" | "pi" | "re" ~ -- ~ afterthought ~ termset ~ connective ~ prefix }
+
+PEhE = { PEhEmain ~ postClause }
+
+PEhEmain = { "pe'e" ~ -- ~ forethought ~ (Polish) ~ flag }
+
+PEhO = { PEhOmain ~ postClause }
+
+PEhOmain = { "pe'o" ~ -- ~ directions ~ in ~ time }
+
+PU = { PUmain ~ postClause }
+
+PUmain = { "ba" | "pu" | "ca" ~ -- ~ flag ~ for ~ modified ~ interpretation ~ of ~ GOhI }
+
+RAhO = { RAhOmain ~ postClause }
+
+RAhOmain = { "ra'o" ~ -- ~ converts ~ number ~ to ~ extensional ~ tense }
+
+ROI = { ROImain ~ postClause }
+
+ROImain = { "re'u" | "roi" ~ -- ~ metalinguistic ~ eraser ~ to ~ the ~ beginning ~ of ~ the ~ current ~ utterance }
+
+SA = { SAmain ~ postClause }
+
+SAmain = { "sa" ~ -- ~ conversions }
+
+SE = { SEmain ~ postClause }
+
+SEmain = { "se" | "te" | "ve" | "xe" ~ -- ~ metalinguistic ~ bridi ~ insert ~ marker }
+
+SEI = { SEImain ~ postClause }
+
+SEImain = { "sei" | "ti'o" ~ -- ~ metalinguistic ~ bridi ~ end ~ marker }
+
+SEhU = { SEhUmain ~ postClause }
+
+SEhUmain = { "se'u" ~ -- ~ metalinguistic ~ single ~ word ~ eraser }
+
+SI = { SImain ~ postClause }
+
+SImain = { "si" ~ -- ~ reciprocal ~ sumti ~ marker }
+
+SOI = { SOImain ~ postClause }
+
+SOImain = { "soi" ~ -- ~ metalinguistic ~ eraser ~ of ~ the ~ entire ~ text }
+
+SU = { SUmain ~ postClause }
+
+SUmain = { "su" ~ -- ~ tense ~ interval ~ properties }
+
+TAhE = { TAhEmain ~ postClause }
+
+TAhEmain = { "ru'i" | "ta'e" | "di'i" | "na'o" ~ -- ~ closing ~ gap ~ for ~ MEX ~ constructs }
+
+TEhU = { TEhUmain ~ postClause }
+
+TEhUmain = { "te'u" ~ -- ~ start ~ compound ~ lerfu }
+
+TEI = { TEImain ~ postClause }
+
+TEImain = { "tei" ~ -- ~ left ~ discursive ~ parenthesis }
+
+TO = { TOmain ~ postClause }
+
+TOmain = { "to'i" | "to" ~ -- ~ right ~ discursive ~ parenthesis }
+
+TOI = { TOImain ~ postClause }
+
+TOImain = { "toi" ~ -- ~ multiple ~ utterance ~ scope ~ mark }
+
+TUhE = { TUhEmain ~ postClause }
+
+TUhEmain = { "tu'e" ~ -- ~ multiple ~ utterance ~ end ~ scope ~ mark }
+
+TUhU = { TUhUmain ~ postClause }
+
+TUhUmain = { "tu'u" ~ -- ~ attitudinals, ~ observationals, ~ discursives }
+
+UI = { UImain ~ postClause }
+
+UImain = { "i'a" | "ie" | "a'e" | "u'i" | "i'o" | "i'e" | "a'a" | "ia" | "o'i" | "o'e" | "e'e" | "oi" | "uo" | "e'i" | "u'o" | "au" | "ua" | "a'i" | "i'u" | "ii" | "u'a" | "ui" | "a'o" | "ai" | "a'u" | "iu" | "ei" | "o'o" | "e'a" | "uu" | "o'a" | "o'u" | "u'u" | "e'o" | "io" | "e'u" | "ue" | "i'i" | "u'e" | "ba'a" | "ja'o" | "ca'e" | "su'a" | "ti'e" | "ka'u" | "se'o" | "za'a" | "pe'i" | "ru'a" | "ju'a" | "ta'o" | "ra'u" | "li'a" | "ba'u" | "mu'a" | "do'a" | "to'u" | "va'i" | "pa'e" | "zu'u" | "sa'e" | "la'a" | "ke'u" | "sa'u" | "da'i" | "je'u" | "sa'a" | "kau" | "ta'u" | "na'i" | "jo'a" | "bi'u" | "li'o" | "pau" | "mi'u" | "ku'i" | "ji'a" | "si'a" | "po'o" | "pe'a" | "ro'i" | "ro'e" | "ro'o" | "ro'u" | "ro'a" | "re'e" | "le'o" | "ju'o" | "fu'i" | "dai" | "ga'i" | "zo'o" | "be'u" | "ri'e" | "se'i" | "se'a" | "vu'e" | "ki'a" | "xu" | "ge'e" | "bu'o" ~ -- ~ distance ~ in ~ space-time }
+
+VA = { VAmain ~ postClause }
+
+VAmain = { "vi" | "va" | "vu" ~ -- ~ end ~ simple ~ bridi ~ or ~ bridi-tail }
+
+VAU = { VAUmain ~ postClause }
+
+VAUmain = { "vau" ~ -- ~ left ~ MEX ~ bracket }
+
+VEI = { VEImain ~ postClause }
+
+VEImain = { "vei" ~ -- ~ right ~ MEX ~ bracket }
+
+VEhO = { VEhOmain ~ postClause }
+
+VEhOmain = { "ve'o" ~ -- ~ MEX ~ operator }
+
+VUhU = { VUhUmain ~ postClause }
+
+VUhUmain = { "ge'a" | "fu'u" | "pi'i" | "fe'i" | "vu'u" | "su'i" | "ju'u" | "gei" | "pa'i" | "fa'i" | "te'a" | "cu'a" | "va'a" | "ne'o" | "de'o" | "fe'a" | "sa'o" | "re'a" | "ri'o" | "sa'i" | "pi'a" | "si'i" ~ -- ~ space-time ~ interval ~ size }
+
+VEhA = { VEhAmain ~ postClause }
+
+VEhAmain = { "ve'u" | "ve'a" | "ve'i" | "ve'e" ~ -- ~ space-time ~ dimensionality ~ marker }
+
+VIhA = { VIhAmain ~ postClause }
+
+VIhAmain = { "vi'i" | "vi'a" | "vi'u" | "vi'e" ~ -- ~ glue ~ between ~ logically ~ connected ~ sumti ~ and ~ relative ~ clauses }
+
+VUhO = { VUhOmain ~ postClause }
+
+VUhOmain = { "vu'o" ~ -- ~ subscripting ~ operator }
+
+XI = { XImain ~ postClause }
+
+XImain = { "xi" ~ -- ~ EXPERIMENTAL ~ cmavo ~ to ~ extract ~ a ~ binary ~ relation ~ from ~ a ~ tag }
+
+XOhI = { XOhImain ~ postClause }
+
+XOhImain = { "xo'i" ~ -- ~ hesitation }
+
+Y = { Ymain ~ postClause }
+
+Ymain = { "y" ~ -- ~ event ~ properties ~ - ~ inchoative, ~ etc. }
+
+ZAhO = { ZAhOmain ~ postClause }
+
+ZAhOmain = { "co'i" | "pu'o" | "co'u" | "mo'u" | "ca'o" | "co'a" | "de'a" | "ba'o" | "di'a" | "za'o" ~ -- ~ time ~ interval ~ size ~ tense }
+
+ZEhA = { ZEhAmain ~ postClause }
+
+ZEhAmain = { "ze'u" | "ze'a" | "ze'i" | "ze'e" ~ -- ~ lujvo ~ glue }
+
+ZEI = { ZEImain ~ Spacing }
+
+ZEImain = { "zei" ~ -- ~ time ~ distance ~ tense }
+
+ZI = { ZImain ~ postClause }
+
+ZImain = { "zu" | "za" | "zi" ~ -- ~ conjoins ~ relative ~ clauses }
+
+ZIhE = { ZIhEmain ~ postClause }
+
+ZIhEmain = { "zi'e" ~ -- ~ single ~ word ~ metalinguistic ~ quote ~ marker }
+
+ZO = { ZOmain ~ Spacing }
+
+ZOmain = { "zo" ~ -- ~ delimited ~ quote ~ marker }
+
+ZOI = { ZOImain ~ postClause }
+
+ZOImain = { "zoi" | "la'o" ~ -- ~ prenex ~ terminator ~ (not ~ elidable) }
+
+ZOhU = { ZOhUmain ~ postClause }
+
+ZOhUmain = { "zo'u" }
+

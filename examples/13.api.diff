@@ -1,0 +1,74 @@
+--- examples/13.loj	2024-06-28 17:28:56.134554150 +0300
++++ /tmp/tmp.BsDFZJurkq	2026-01-28 19:04:02.873159299 +0200
+@@ -377,7 +377,7 @@
+ > le cukta be'u cu zvati ma
+ 
+ non-veridical: cukta(c0)
+-? x1. zvati(c0,x1)
++?x1. zvati(c0,x1)
+ 
+ ju'a nai cy no cukta
+ .i ma goi ko'a zo'u cy no zvati ko'a
+@@ -471,7 +471,7 @@
+ -----
+ > ca'e le re do cu simxu speni
+ 
+-non-veridical: ((c0 =< do) /\ 2 mei(c0))
++non-veridical: ((c0 <= do) /\ 2 mei(c0))
+ <simxu(_)><speni>(c0)
+ 
+ ju'a nai ge cy no me do me'u gi cy no re mei
+@@ -559,7 +559,7 @@
+ 
+ non-veridical: du'u[pazvau(c0)](c1)
+ non-veridical: (<citno(_)><mensi>(c0) /\ srana(c0,mi))
+-(viska(do,c0) --> djuno(do,c1))
++(viska(do,c0) -> djuno(do,c1))
+ 
+ ju'a nai cy pa du'u cy no pazvau kei
+ .i ju'a nai ge cy no ke citno mensi ke'e gi cy no srana mi
+@@ -570,7 +570,7 @@
+ 
+ non-veridical: du'u[pazvau(c0)](c1)
+ non-veridical: (<citno(_)><mensi>(c0) /\ srana(c0,mi))
+-(viska(do,c0) --> djuno(do,c1))
++(viska(do,c0) -> djuno(do,c1))
+ 
+ ju'a nai cy pa du'u cy no pazvau kei
+ .i ju'a nai ge cy no ke citno mensi ke'e gi cy no srana mi
+@@ -613,7 +613,7 @@
+ -----
+ > mi djuno le du'u dakau klama le zarci
+ 
+-non-veridical: du'u[? x1. klama(x1,c0)](c1)
++non-veridical: du'u[?x1. klama(x1,c0)](c1)
+ non-veridical: zarci(c0)
+ djuno(mi,c1)
+ 
+@@ -663,7 +663,7 @@
+ > .i sei la mark. cusku se'u coi baza speni a'o le re do lifri le ka gleki
+ 
+ non-veridical: ka[gleki(\1)](c1)
+-non-veridical: ((c0 =< do) /\ 2 mei(c0))
++non-veridical: ((c0 <= do) /\ 2 mei(c0))
+ cusku( ,"mark")
+ lifri(c0,c1)
+ 
+@@ -708,7 +708,7 @@
+ > .i sei la rik. cusku se'u fi'i ro zvati ko pinxe pa ckafi fi'o pleji mi
+ 
+ cusku( ,"rik")
+-EQ(1) x1:(ckafi(_)). (fi'o pleji(_))(mi). pinxe(ko,x1)
++EQ(1)x1:(ckafi(_)). (fi'o pleji(_))(mi). pinxe(ko,x1)
+ 
+ cusku la rik.
+ .i pa da poi ke'a ckafi ku'o fi'o pleji fe'u mi zo'u ko pinxe da
+@@ -724,7 +724,7 @@
+ > .i sei le selfu cu cusku se'u re'i [end-comment]
+ 
+ Morphology error:
+-	{.i sei le selfu cu cusku se'u re'i [end-comment] }
++	{.i sei le selfu cu cusku se'u re'i [end-comment]}
+ 	                                         ^
+ 
+ -----

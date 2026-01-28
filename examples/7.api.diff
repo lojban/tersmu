@@ -1,0 +1,50 @@
+--- examples/7.loj	2024-06-28 17:28:56.137554151 +0300
++++ /tmp/tmp.xiYl9gtZTB	2026-01-28 19:04:01.119160700 +0200
+@@ -592,21 +592,21 @@
+ -----
+ > do klama ma
+ 
+-? x1. klama(do,x1)
++?x1. klama(do,x1)
+ 
+ ma goi ko'a zo'u do klama ko'a
+ 
+ -----
+ > do mo
+ 
+-? R1. R1(do)
++?R1. R1(do)
+ 
+-mo cei broda zo'u do broda
++tu'o mo cei broda zo'u do broda
+ 
+ -----
+ > ma cmene do
+ 
+-? x1. cmene(x1,do)
++?x1. cmene(x1,do)
+ 
+ ma goi ko'a zo'u ko'a cmene do
+ 
+@@ -616,18 +616,18 @@
+ -----
+ > lo mo prenu cu darxi do .i barda
+ 
+-? R1. <R1(_)><prenu>(c0)
++?R1. <R1(_)><prenu>(c0)
+ darxi(c0,do)
+ barda()
+ 
+-mo cei broda zo'u cy no ke broda prenu ke'e
++tu'o mo cei broda zo'u cy no ke broda prenu ke'e
+ .i cy no darxi do
+ .i barda
+ 
+ -----
+ > ma djuno ma
+ 
+-? x1. ? x2. djuno(x1,x2)
++?x1. ?x2. djuno(x1,x2)
+ 
+ ma goi ko'a ma goi ko'e zo'u ko'a djuno ko'e
+ 

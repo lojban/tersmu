@@ -1,0 +1,465 @@
+// Generated from Morphology.pappy - structure only
+// Pest grammar - canonical source for Rust port
+
+words = { pause? ~ (word ~ pause?)* }
+
+word = { lojban_word | non_lojban_word }
+
+lojban_word = { cmene | cmavo | brivla }
+
+brivla = { gismu | fuhivla | lujvo ~ --------------------------------------------------------------------- }
+
+cmene = { jbocme | zifcme }
+
+zifcme = { !h ~ (nucleus | glide | h | consonant ~ !pause | digit)* ~ consonant ~ &pause }
+
+jbocme = { &zifcme ~ (any_syllable | digit)+ ~ &pause | digit ~ --doi_la_lai_lahi ~ :: ~ String ~ = ~ (d ~ o ~ i | l ~ a ~ (h? ~ i)?) ~ !h ~ !nucleus ~ --------------------------------------------------------------------- }
+
+cmavo = { !cmene ~ !CVCy_lujvo ~ cmavo_form ~ &post_word }
+
+CVCy_lujvo = { CVC_rafsi ~ y ~ h? ~ initial_rafsi* ~ brivla_core | stressed_CVC_rafsi ~ y ~ short_final_rafsi }
+
+cmavo_form = { !h ~ !cluster ~ onset ~ cmavo_form_sub* ~ (!stressed ~ nucleus | nucleus ~ !cluster) | y+ | digit }
+
+cmavo_form_sub = { (s1:nucleus s2:h }
+
+lujvo = { !gismu ~ !fuhivla ~ !cmavo ~ initial_rafsi* ~ brivla_core }
+
+brivla_core = { fuhivla | gismu | CVV_final_rafsi | stressed_initial_rafsi ~ short_final_rafsi }
+
+stressed_initial_rafsi = { stressed_extended_rafsi | stressed_y_rafsi | stressed_y_less_rafsi }
+
+initial_rafsi = { extended_rafsi | y_rafsi | !any_extended_rafsi ~ y_less_rafsi }
+
+any_extended_rafsi = { fuhivla | extended_rafsi | stressed_extended_rafsi ~ --------------------------------------------------------------------- }
+
+fuhivla = { fuhivla_head ~ stressed_syllable ~ consonantal_syllable* ~ final_syllable }
+
+stressed_extended_rafsi = { stressed_brivla_rafsi | stressed_fuhivla_rafsi }
+
+extended_rafsi = { brivla_rafsi | fuhivla_rafsi }
+
+stressed_brivla_rafsi = { &unstressed_syllable ~ brivla_head ~ stressed_syllable ~ h ~ y }
+
+brivla_rafsi = { &(syllable ~ consonantal_syllable* ~ syllable) ~ brivla_head ~ h ~ y ~ h? }
+
+stressed_fuhivla_rafsi = { fuhivla_head ~ stressed_syllable ~ &consonant ~ onset ~ y }
+
+fuhivla_rafsi = { &unstressed_syllable ~ fuhivla_head ~ &consonant ~ onset ~ y ~ h? }
+
+fuhivla_head = { !rafsi_string ~ brivla_head }
+
+brivla_head = { !cmavo ~ !slinkuhi ~ !h ~ &onset ~ unstressed_syllable* }
+
+slinkuhi = { consonant ~ rafsi_string }
+
+rafsi_string = { y_less_rafsi* ~ (gismu | CVV_final_rafsi | stressed_y_less_rafsi ~ short_final_rafsi | y_rafsi | stressed_y_rafsi | stressed_y_less_rafsi? ~ initial_pair ~ y) }
+
+gismu = { (initial_pair ~ stressed_vowel | consonant ~ stressed_vowel ~ consonant) ~ &final_syllable ~ consonant ~ vowel ~ &post_word }
+
+CVV_final_rafsi = { consonant ~ stressed_vowel ~ h ~ &final_syllable ~ vowel ~ &post_word }
+
+short_final_rafsi = { &final_syllable ~ (consonant ~ diphthong | initial_pair ~ vowel) ~ &post_word }
+
+stressed_y_rafsi = { (stressed_long_rafsi | stressed_CVC_rafsi) ~ y }
+
+stressed_y_less_rafsi = { stressed_CVC_rafsi ~ !y | stressed_CCV_rafsi | stressed_CVV_rafsi }
+
+stressed_long_rafsi = { initial_pair ~ stressed_vowel ~ consonant | consonant ~ stressed_vowel ~ consonant ~ consonant }
+
+stressed_CVC_rafsi = { consonant ~ stressed_vowel ~ consonant }
+
+stressed_CCV_rafsi = { initial_pair ~ stressed_vowel }
+
+stressed_CVV_rafsi = { consonant ~ (unstressed_vowel ~ h ~ stressed_vowel | stressed_diphthong) ~ r_hyphen? }
+
+y_rafsi = { (long_rafsi | CVC_rafsi) ~ y ~ h? }
+
+y_less_rafsi = { !y_rafsi ~ (CVC_rafsi ~ !y | CCV_rafsi | CVV_rafsi) ~ !any_extended_rafsi }
+
+long_rafsi = { initial_pair ~ unstressed_vowel ~ consonant | consonant ~ unstressed_vowel ~ consonant ~ consonant }
+
+CVC_rafsi = { consonant ~ unstressed_vowel ~ consonant }
+
+CCV_rafsi = { initial_pair ~ unstressed_vowel }
+
+CVV_rafsi = { consonant ~ (unstressed_vowel ~ h ~ unstressed_vowel | unstressed_diphthong) ~ r_hyphen? }
+
+r_hyphen = { r ~ &consonant | n ~ &r }
+
+final_syllable = { onset ~ !y ~ !stressed ~ nucleus ~ !cmene ~ &post_word }
+
+stressed_syllable = { &stressed ~ syllable | syllable ~ &stress }
+
+stressed_diphthong = { &stressed ~ diphthong | diphthong ~ &stress }
+
+stressed_vowel = { &stressed ~ vowel | vowel ~ &stress }
+
+unstressed_syllable = { !stressed ~ syllable ~ !stress | consonantal_syllable }
+
+unstressed_diphthong = { !stressed ~ diphthong ~ !stress }
+
+unstressed_vowel = { !stressed ~ vowel ~ !stress }
+
+stress = { consonant* ~ y? ~ syllable ~ pause }
+
+stressed = { onset ~ comma* ~ ("A" | "E" | "I" | "O" | "U") }
+
+any_syllable = { onset ~ nucleus ~ coda? | consonantal_syllable }
+
+syllable = { onset ~ !y ~ nucleus ~ coda? }
+
+consonantal_syllable = { consonant ~ syllabic ~ &(consonantal_syllable | onset) ~ (consonant ~ &spaces)? }
+
+coda = { !any_syllable ~ consonant ~ &any_syllable | syllabic? ~ consonant? ~ &pause }
+
+onset = { h | consonant? ~ glide | initial }
+
+nucleus = { vowel | diphthong | y ~ !nucleus }
+
+glide = { (i | u) ~ &nucleus ~ !glide }
+
+diphthong = { (a ~ i | a ~ u | e ~ i | o ~ i) ~ !nucleus ~ !glide }
+
+vowel = { (a | e | i | o | u) ~ !nucleus }
+
+a = { comma* ~ ("a" | "A") }
+
+e = { comma* ~ ("e" | "E") }
+
+i = { comma* ~ ("i" | "I") }
+
+o = { comma* ~ ("o" | "O") }
+
+u = { comma* ~ ("u" | "U") }
+
+y = { comma* ~ ("y" | "Y") }
+
+cluster = { consonant ~ consonant+ }
+
+initial_pair = { &initial ~ consonant ~ consonant ~ !consonant }
+
+initial = { (affricate | sibilant? ~ other? ~ liquid?) ~ !consonant ~ !glide }
+
+affricate = { t ~ c | t ~ s | d ~ j | d ~ z }
+
+liquid = { l | r }
+
+other = { p | t ~ !l | k | f | x | b | d ~ !l | g | v | m | n ~ !liquid }
+
+sibilant = { c | s ~ !x | (j | z) ~ !n ~ !liquid }
+
+consonant = { voiced | unvoiced | syllabic }
+
+syllabic = { l | m | n | r }
+
+voiced = { b | d | g | j | v | z }
+
+unvoiced = { c | f | k | p | s | t | x }
+
+l = { comma* ~ ("l" | "L") ~ !h ~ !l }
+
+m = { comma* ~ ("m" | "M") ~ !h ~ !m ~ !z }
+
+n = { comma* ~ ("n" | "N") ~ !h ~ !n ~ !affricate }
+
+r = { comma* ~ ("r" | "R") ~ !h ~ !r }
+
+b = { comma* ~ ("b" | "B") ~ !h ~ !b ~ !unvoiced }
+
+d = { comma* ~ ("d" | "D") ~ !h ~ !d ~ !unvoiced }
+
+g = { comma* ~ ("g" | "G") ~ !h ~ !g ~ !unvoiced }
+
+v = { comma* ~ ("v" | "V") ~ !h ~ !v ~ !unvoiced }
+
+j = { comma* ~ ("j" | "J") ~ !h ~ !j ~ !z ~ !unvoiced }
+
+z = { comma* ~ ("z" | "Z") ~ !h ~ !z ~ !j ~ !unvoiced }
+
+s = { comma* ~ ("s" | "S") ~ !h ~ !s ~ !c ~ !voiced }
+
+c = { comma* ~ ("c" | "C") ~ !h ~ !c ~ !s ~ !x ~ !voiced }
+
+x = { comma* ~ ("x" | "X") ~ !h ~ !x ~ !c ~ !k ~ !voiced }
+
+k = { comma* ~ ("k" | "K") ~ !h ~ !k ~ !x ~ !voiced }
+
+f = { comma* ~ ("f" | "F") ~ !h ~ !f ~ !voiced }
+
+p = { comma* ~ ("p" | "P") ~ !h ~ !p ~ !voiced }
+
+t = { comma* ~ ("t" | "T") ~ !h ~ !t ~ !voiced }
+
+h = { comma* ~ ("'" | "h") ~ &nucleus }
+
+digit = { comma* ~ ("0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9") ~ !h ~ !nucleus }
+
+post_word = { pause | !nucleus ~ lojban_word }
+
+pause = { comma* ~ space_char+ | EOF ~ -- ~ pappy ~ doesn't ~ do ~ EOF }
+
+EOF = { space_char }
+
+comma = { "," }
+
+dot = { "." }
+
+non_lojban_word = { !lojban_word ~ non_space+ }
+
+non_space = { !space_char ~ dot }
+
+space_char = { Char }
+
+spaces = { !Y ~ initial_spaces }
+
+initial_spaces = { (initial_spaces_sub | !ybu ~ Y)+ ~ EOF? | EOF }
+
+initial_spaces_sub = { comma* ~ space_char }
+
+ybu = { Y ~ space_char* ~ BU }
+
+A = { &cmavo ~ (a | e | j ~ i | o | u) ~ &post_word }
+
+BAI = { &cmavo ~ (d ~ u ~ h ~ o | s ~ i ~ h ~ u | z ~ a ~ u | k ~ i ~ h ~ i | d ~ u ~ h ~ i | c ~ u ~ h ~ u | t ~ u ~ h ~ i | t ~ i ~ h ~ u | d ~ i ~ h ~ o | j ~ i ~ h ~ u | r ~ i ~ h ~ a | n ~ i ~ h ~ i | m ~ u ~ h ~ i | k ~ i ~ h ~ u | v ~ a ~ h ~ u | k ~ o ~ i | c ~ a ~ h ~ i | t ~ a ~ h ~ i | p ~ u ~ h ~ e | j ~ a ~ h ~ i | k ~ a ~ i | b ~ a ~ i | f ~ i ~ h ~ e | d ~ e ~ h ~ i | c ~ i ~ h ~ o | m ~ a ~ u | m ~ u ~ h ~ u | r ~ i ~ h ~ i | r ~ a ~ h ~ i | k ~ a ~ h ~ a | p ~ a ~ h ~ u | p ~ a ~ h ~ a | l ~ e ~ h ~ a | k ~ u ~ h ~ u | t ~ a ~ i | b ~ a ~ u | m ~ a ~ h ~ i | c ~ i ~ h ~ e | f ~ a ~ u | p ~ o ~ h ~ i | c ~ a ~ u | m ~ a ~ h ~ e | c ~ i ~ h ~ u | r ~ a ~ h ~ a | p ~ u ~ h ~ a | l ~ i ~ h ~ e | l ~ a ~ h ~ u | b ~ a ~ h ~ i | k ~ a ~ h ~ i | s ~ a ~ u | f ~ a ~ h ~ e | b ~ e ~ h ~ i | t ~ i ~ h ~ i | j ~ a ~ h ~ e | g ~ a ~ h ~ a | v ~ a ~ h ~ o | j ~ i ~ h ~ o | m ~ e ~ h ~ a | d ~ o ~ h ~ e | j ~ i ~ h ~ e | p ~ i ~ h ~ o | g ~ a ~ u | z ~ u ~ h ~ e | m ~ e ~ h ~ e | r ~ a ~ i) ~ &post_word }
+
+BAhE = { &cmavo ~ (b ~ a ~ h ~ e | z ~ a ~ h ~ e) ~ &post_word }
+
+BE = { &cmavo ~ (b ~ e) ~ &post_word }
+
+BEI = { &cmavo ~ (b ~ e ~ i) ~ &post_word }
+
+BEhO = { &cmavo ~ (b ~ e ~ h ~ o) ~ &post_word }
+
+BIhE = { &cmavo ~ (b ~ i ~ h ~ e) ~ &post_word }
+
+BIhI = { &cmavo ~ (m ~ i ~ h ~ i | b ~ i ~ h ~ o | b ~ i ~ h ~ i) ~ &post_word }
+
+BO = { &cmavo ~ (b ~ o) ~ &post_word }
+
+BOI = { &cmavo ~ (b ~ o ~ i) ~ &post_word }
+
+BU = { &cmavo ~ (b ~ u) ~ &post_word }
+
+BY = { ybu | &cmavo ~ (j ~ o ~ h ~ o | r ~ u ~ h ~ o | g ~ e ~ h ~ o | j ~ e ~ h ~ o | l ~ o ~ h ~ a | n ~ a ~ h ~ a | s ~ e ~ h ~ e | t ~ o ~ h ~ a | g ~ a ~ h ~ e | y ~ h ~ y | b ~ y | c ~ y | d ~ y | f ~ y | g ~ y | j ~ y | k ~ y | l ~ y | m ~ y | n ~ y | p ~ y | r ~ y | s ~ y | t ~ y | v ~ y | x ~ y | z ~ y) ~ &post_word }
+
+CAhA = { &cmavo ~ (c ~ a ~ h ~ a | p ~ u ~ h ~ i | n ~ u ~ h ~ o | k ~ a ~ h ~ e) ~ &post_word }
+
+CAI = { &cmavo ~ (p ~ e ~ i | c ~ a ~ i | c ~ u ~ h ~ i | s ~ a ~ i | r ~ u ~ h ~ e) ~ &post_word }
+
+CEI = { &cmavo ~ (c ~ e ~ i) ~ &post_word }
+
+CEhE = { &cmavo ~ (c ~ e ~ h ~ e) ~ &post_word }
+
+CO = { &cmavo ~ (c ~ o) ~ &post_word }
+
+COI = { &cmavo ~ (j ~ u ~ h ~ i | c ~ o ~ i | f ~ i ~ h ~ i | t ~ a ~ h ~ a | m ~ u ~ h ~ o | f ~ e ~ h ~ o | c ~ o ~ h ~ o | p ~ e ~ h ~ u | k ~ e ~ h ~ o | n ~ u ~ h ~ e | r ~ e ~ h ~ i | b ~ e ~ h ~ e | j ~ e ~ h ~ e | m ~ i ~ h ~ e | k ~ i ~ h ~ e | v ~ i ~ h ~ o) ~ &post_word }
+
+CU = { &cmavo ~ (c ~ u) ~ &post_word }
+
+CUhE = { &cmavo ~ (c ~ u ~ h ~ e | n ~ a ~ u) ~ &post_word }
+
+DAhO = { &cmavo ~ (d ~ a ~ h ~ o) ~ &post_word }
+
+DOI = { &cmavo ~ (d ~ o ~ i) ~ &post_word }
+
+DOhU = { &cmavo ~ (d ~ o ~ h ~ u) ~ &post_word }
+
+FA = { &cmavo ~ (f ~ a ~ i | f ~ a | f ~ e | f ~ o | f ~ u | f ~ i ~ h ~ a | f ~ i) ~ &post_word }
+
+FAhA = { &cmavo ~ (d ~ u ~ h ~ a | b ~ e ~ h ~ a | n ~ e ~ h ~ u | v ~ u ~ h ~ a | g ~ a ~ h ~ u | t ~ i ~ h ~ a | n ~ i ~ h ~ a | c ~ a ~ h ~ u | z ~ u ~ h ~ a | r ~ i ~ h ~ u | r ~ u ~ h ~ u | r ~ e ~ h ~ o | t ~ e ~ h ~ e | b ~ u ~ h ~ u | n ~ e ~ h ~ a | p ~ a ~ h ~ o | n ~ e ~ h ~ i | t ~ o ~ h ~ o | z ~ o ~ h ~ i | z ~ e ~ h ~ o | z ~ o ~ h ~ a | f ~ a ~ h ~ a) ~ &post_word }
+
+FAhO = { &cmavo ~ (f ~ a ~ h ~ o) ~ &post_word }
+
+FEhE = { &cmavo ~ (f ~ e ~ h ~ e) ~ &post_word }
+
+FEhU = { &cmavo ~ (f ~ e ~ h ~ u) ~ &post_word }
+
+FIhO = { &cmavo ~ (f ~ i ~ h ~ o) ~ &post_word }
+
+FOI = { &cmavo ~ (f ~ o ~ i) ~ &post_word }
+
+FUhA = { &cmavo ~ (f ~ u ~ h ~ a) ~ &post_word }
+
+FUhE = { &cmavo ~ (f ~ u ~ h ~ e) ~ &post_word }
+
+FUhO = { &cmavo ~ (f ~ u ~ h ~ o) ~ &post_word }
+
+GA = { &cmavo ~ (g ~ e ~ h ~ i | g ~ e | g ~ o | g ~ a | g ~ u) ~ &post_word }
+
+GAhO = { &cmavo ~ (k ~ e ~ h ~ i | g ~ a ~ h ~ o) ~ &post_word }
+
+GEhU = { &cmavo ~ (g ~ e ~ h ~ u) ~ &post_word }
+
+GI = { &cmavo ~ (g ~ i) ~ &post_word }
+
+GIhA = { &cmavo ~ (g ~ i ~ h ~ e | g ~ i ~ h ~ i | g ~ i ~ h ~ o | g ~ i ~ h ~ a | g ~ i ~ h ~ u) ~ &post_word }
+
+GOI = { &cmavo ~ (n ~ o ~ h ~ u | n ~ e | g ~ o ~ i | p ~ o ~ h ~ u | p ~ e | p ~ o ~ h ~ e | p ~ o) ~ &post_word }
+
+GOhA = { &cmavo ~ (m ~ o | n ~ e ~ i | g ~ o ~ h ~ u | g ~ o ~ h ~ o | g ~ o ~ h ~ i | n ~ o ~ h ~ a | g ~ o ~ h ~ e | g ~ o ~ h ~ a | d ~ u | b ~ u ~ h ~ a | b ~ u ~ h ~ e | b ~ u ~ h ~ i | c ~ o ~ h ~ e) ~ &post_word }
+
+GUhA = { &cmavo ~ (g ~ u ~ h ~ e | g ~ u ~ h ~ i | g ~ u ~ h ~ o | g ~ u ~ h ~ a | g ~ u ~ h ~ u) ~ &post_word }
+
+I = { &cmavo ~ (i) ~ &post_word }
+
+JA = { &cmavo ~ (j ~ e ~ h ~ i | j ~ e | j ~ o | j ~ a | j ~ u) ~ &post_word }
+
+JAI = { &cmavo ~ (j ~ a ~ i) ~ &post_word }
+
+JOhI = { &cmavo ~ (j ~ o ~ h ~ i) ~ &post_word }
+
+JOI = { &cmavo ~ (f ~ a ~ h ~ u | p ~ i ~ h ~ u | j ~ o ~ i | c ~ e ~ h ~ o | c ~ e | j ~ o ~ h ~ u | k ~ u ~ h ~ a | j ~ o ~ h ~ e | j ~ u ~ h ~ e) ~ &post_word }
+
+KE = { &cmavo ~ (k ~ e) ~ &post_word }
+
+KEhE = { &cmavo ~ (k ~ e ~ h ~ e) ~ &post_word }
+
+KEI = { &cmavo ~ (k ~ e ~ i) ~ &post_word }
+
+KI = { &cmavo ~ (k ~ i) ~ &post_word }
+
+KOhA = { &cmavo ~ (d ~ a ~ h ~ u | d ~ a ~ h ~ e | d ~ i ~ h ~ u | d ~ i ~ h ~ e | d ~ e ~ h ~ u | d ~ e ~ h ~ e | d ~ e ~ i | d ~ o ~ h ~ i | m ~ i ~ h ~ o | m ~ a ~ h ~ a | m ~ i ~ h ~ a | d ~ o ~ h ~ o | k ~ o ~ h ~ a | f ~ o ~ h ~ u | k ~ o ~ h ~ e | k ~ o ~ h ~ i | k ~ o ~ h ~ o | k ~ o ~ h ~ u | f ~ o ~ h ~ a | f ~ o ~ h ~ e | f ~ o ~ h ~ i | f ~ o ~ h ~ o | v ~ o ~ h ~ a | v ~ o ~ h ~ e | v ~ o ~ h ~ i | v ~ o ~ h ~ o | v ~ o ~ h ~ u | r ~ u | r ~ i | r ~ a | t ~ a | t ~ u | t ~ i | z ~ i ~ h ~ o | k ~ e ~ h ~ a | m ~ a | z ~ u ~ h ~ i | z ~ o ~ h ~ e | c ~ e ~ h ~ u | d ~ a | d ~ e | d ~ i | k ~ o | m ~ i | d ~ o) ~ &post_word }
+
+KU = { &cmavo ~ (k ~ u) ~ &post_word }
+
+KUhE = { &cmavo ~ (k ~ u ~ h ~ e) ~ &post_word }
+
+KUhO = { &cmavo ~ (k ~ u ~ h ~ o) ~ &post_word }
+
+LA = { &cmavo ~ (l ~ a ~ i | l ~ a ~ h ~ i | l ~ a) ~ &post_word }
+
+LAU = { &cmavo ~ (c ~ e ~ h ~ a | l ~ a ~ u | z ~ a ~ i | t ~ a ~ u) ~ &post_word }
+
+LAhE = { &cmavo ~ (t ~ u ~ h ~ a | l ~ u ~ h ~ a | l ~ u ~ h ~ o | l ~ a ~ h ~ e | v ~ u ~ h ~ i | l ~ u ~ h ~ i | l ~ u ~ h ~ e) ~ &post_word }
+
+LE = { &cmavo ~ (l ~ e ~ i | l ~ o ~ i | l ~ e ~ h ~ i | l ~ o ~ h ~ i | l ~ e ~ h ~ e | l ~ o ~ h ~ e | l ~ o | l ~ e) ~ &post_word }
+
+LEhU = { &cmavo ~ (l ~ e ~ h ~ u) ~ &post_word }
+
+LI = { &cmavo ~ (m ~ e ~ h ~ o | l ~ i) ~ &post_word }
+
+LIhU = { &cmavo ~ (l ~ i ~ h ~ u) ~ &post_word }
+
+LOhO = { &cmavo ~ (l ~ o ~ h ~ o) ~ &post_word }
+
+LOhU = { &cmavo ~ (l ~ o ~ h ~ u) ~ &post_word }
+
+LU = { &cmavo ~ (l ~ u) ~ &post_word }
+
+LUhU = { &cmavo ~ (l ~ u ~ h ~ u) ~ &post_word }
+
+MAhO = { &cmavo ~ (m ~ a ~ h ~ o) ~ &post_word }
+
+MAI = { &cmavo ~ (m ~ o ~ h ~ o | m ~ a ~ i) ~ &post_word }
+
+ME = { &cmavo ~ (m ~ e) ~ &post_word }
+
+MEhU = { &cmavo ~ (m ~ e ~ h ~ u) ~ &post_word }
+
+MOhE = { &cmavo ~ (m ~ o ~ h ~ e) ~ &post_word }
+
+MOhI = { &cmavo ~ (m ~ o ~ h ~ i) ~ &post_word }
+
+MOI = { &cmavo ~ (m ~ e ~ i | m ~ o ~ i | s ~ i ~ h ~ e | c ~ u ~ h ~ o | v ~ a ~ h ~ e) ~ &post_word }
+
+NA = { &cmavo ~ (j ~ a ~ h ~ a | n ~ a) ~ &post_word }
+
+NAI = { &cmavo ~ (n ~ a ~ i) ~ &post_word }
+
+NAhE = { &cmavo ~ (t ~ o ~ h ~ e | j ~ e ~ h ~ a | n ~ a ~ h ~ e | n ~ o ~ h ~ e) ~ &post_word }
+
+NAhU = { &cmavo ~ (n ~ a ~ h ~ u) ~ &post_word }
+
+NIhE = { &cmavo ~ (n ~ i ~ h ~ e) ~ &post_word }
+
+NIhO = { &cmavo ~ (n ~ i ~ h ~ o | n ~ o ~ h ~ i) ~ &post_word }
+
+NOI = { &cmavo ~ (v ~ o ~ i | n ~ o ~ i | p ~ o ~ i) ~ &post_word }
+
+NU = { &cmavo ~ (n ~ i | d ~ u ~ h ~ u | s ~ i ~ h ~ o | n ~ u | l ~ i ~ h ~ i | k ~ a | j ~ e ~ i | s ~ u ~ h ~ u | z ~ u ~ h ~ o | m ~ u ~ h ~ e | p ~ u ~ h ~ u | z ~ a ~ h ~ i) ~ &post_word }
+
+NUhA = { &cmavo ~ (n ~ u ~ h ~ a) ~ &post_word }
+
+NUhI = { &cmavo ~ (n ~ u ~ h ~ i) ~ &post_word }
+
+NUhU = { &cmavo ~ (n ~ u ~ h ~ u) ~ &post_word }
+
+PA = { &cmavo ~ (d ~ a ~ u | f ~ e ~ i | g ~ a ~ i | j ~ a ~ u | r ~ e ~ i | v ~ a ~ i | p ~ i ~ h ~ e | p ~ i | f ~ i ~ h ~ u | z ~ a ~ h ~ u | m ~ e ~ h ~ i | n ~ i ~ h ~ u | k ~ i ~ h ~ o | c ~ e ~ h ~ i | m ~ a ~ h ~ u | r ~ a ~ h ~ e | d ~ a ~ h ~ a | s ~ o ~ h ~ a | j ~ i ~ h ~ i | s ~ u ~ h ~ o | s ~ u ~ h ~ e | r ~ o | r ~ a ~ u | s ~ o ~ h ~ u | s ~ o ~ h ~ i | s ~ o ~ h ~ e | s ~ o ~ h ~ o | m ~ o ~ h ~ a | d ~ u ~ h ~ e | t ~ e ~ h ~ o | k ~ a ~ h ~ o | c ~ i ~ h ~ i | t ~ u ~ h ~ o | x ~ o | p ~ a ~ i | n ~ o ~ h ~ o | n ~ o | p ~ a | r ~ e | c ~ i | v ~ o | m ~ u | x ~ a | z ~ e | b ~ i | s ~ o | digit) ~ &post_word }
+
+PEhE = { &cmavo ~ (p ~ e ~ h ~ e) ~ &post_word }
+
+PEhO = { &cmavo ~ (p ~ e ~ h ~ o) ~ &post_word }
+
+PU = { &cmavo ~ (b ~ a | p ~ u | c ~ a) ~ &post_word }
+
+RAhO = { &cmavo ~ (r ~ a ~ h ~ o) ~ &post_word }
+
+ROI = { &cmavo ~ (r ~ e ~ h ~ u | r ~ o ~ i) ~ &post_word }
+
+SA = { &cmavo ~ (s ~ a) ~ &post_word }
+
+SE = { &cmavo ~ (s ~ e | t ~ e | v ~ e | x ~ e) ~ &post_word }
+
+SEI = { &cmavo ~ (s ~ e ~ i | t ~ i ~ h ~ o) ~ &post_word }
+
+SEhU = { &cmavo ~ (s ~ e ~ h ~ u) ~ &post_word }
+
+SI = { &cmavo ~ (s ~ i) ~ &post_word }
+
+SOI = { &cmavo ~ (s ~ o ~ i) ~ &post_word }
+
+SU = { &cmavo ~ (s ~ u) ~ &post_word }
+
+TAhE = { &cmavo ~ (r ~ u ~ h ~ i | t ~ a ~ h ~ e | d ~ i ~ h ~ i | n ~ a ~ h ~ o) ~ &post_word }
+
+TEhU = { &cmavo ~ (t ~ e ~ h ~ u) ~ &post_word }
+
+TEI = { &cmavo ~ (t ~ e ~ i) ~ &post_word }
+
+TO = { &cmavo ~ (t ~ o ~ h ~ i | t ~ o) ~ &post_word }
+
+TOI = { &cmavo ~ (t ~ o ~ i) ~ &post_word }
+
+TUhE = { &cmavo ~ (t ~ u ~ h ~ e) ~ &post_word }
+
+TUhU = { &cmavo ~ (t ~ u ~ h ~ u) ~ &post_word }
+
+UI = { &cmavo ~ (i ~ h ~ a | i ~ e | a ~ h ~ e | u ~ h ~ i | i ~ h ~ o | i ~ h ~ e | a ~ h ~ a | i ~ a | o ~ h ~ i | o ~ h ~ e | e ~ h ~ e | o ~ i | u ~ o | e ~ h ~ i | u ~ h ~ o | a ~ u | u ~ a | a ~ h ~ i | i ~ h ~ u | i ~ i | u ~ h ~ a | u ~ i | a ~ h ~ o | a ~ i | a ~ h ~ u | i ~ u | e ~ i | o ~ h ~ o | e ~ h ~ a | u ~ u | o ~ h ~ a | o ~ h ~ u | u ~ h ~ u | e ~ h ~ o | i ~ o | e ~ h ~ u | u ~ e | i ~ h ~ i | u ~ h ~ e | b ~ a ~ h ~ a | j ~ a ~ h ~ o | c ~ a ~ h ~ e | s ~ u ~ h ~ a | t ~ i ~ h ~ e | k ~ a ~ h ~ u | s ~ e ~ h ~ o | z ~ a ~ h ~ a | p ~ e ~ h ~ i | r ~ u ~ h ~ a | j ~ u ~ h ~ a | t ~ a ~ h ~ o | r ~ a ~ h ~ u | l ~ i ~ h ~ a | b ~ a ~ h ~ u | m ~ u ~ h ~ a | d ~ o ~ h ~ a | t ~ o ~ h ~ u | v ~ a ~ h ~ i | p ~ a ~ h ~ e | z ~ u ~ h ~ u | s ~ a ~ h ~ e | l ~ a ~ h ~ a | k ~ e ~ h ~ u | s ~ a ~ h ~ u | d ~ a ~ h ~ i | j ~ e ~ h ~ u | s ~ a ~ h ~ a | k ~ a ~ u | t ~ a ~ h ~ u | n ~ a ~ h ~ i | j ~ o ~ h ~ a | b ~ i ~ h ~ u | l ~ i ~ h ~ o | p ~ a ~ u | m ~ i ~ h ~ u | k ~ u ~ h ~ i | j ~ i ~ h ~ a | s ~ i ~ h ~ a | p ~ o ~ h ~ o | p ~ e ~ h ~ a | r ~ o ~ h ~ i | r ~ o ~ h ~ e | r ~ o ~ h ~ o | r ~ o ~ h ~ u | r ~ o ~ h ~ a | r ~ e ~ h ~ e | l ~ e ~ h ~ o | j ~ u ~ h ~ o | f ~ u ~ h ~ i | d ~ a ~ i | g ~ a ~ h ~ i | z ~ o ~ h ~ o | b ~ e ~ h ~ u | r ~ i ~ h ~ e | s ~ e ~ h ~ i | s ~ e ~ h ~ a | v ~ u ~ h ~ e | k ~ i ~ h ~ a | x ~ u | g ~ e ~ h ~ e | b ~ u ~ h ~ o) ~ &post_word }
+
+VA = { &cmavo ~ (v ~ i | v ~ a | v ~ u) ~ &post_word }
+
+VAU = { &cmavo ~ (v ~ a ~ u) ~ &post_word }
+
+VEI = { &cmavo ~ (v ~ e ~ i) ~ &post_word }
+
+VEhO = { &cmavo ~ (v ~ e ~ h ~ o) ~ &post_word }
+
+VUhU = { &cmavo ~ (g ~ e ~ h ~ a | f ~ u ~ h ~ u | p ~ i ~ h ~ i | f ~ e ~ h ~ i | v ~ u ~ h ~ u | s ~ u ~ h ~ i | j ~ u ~ h ~ u | g ~ e ~ i | p ~ a ~ h ~ i | f ~ a ~ h ~ i | t ~ e ~ h ~ a | c ~ u ~ h ~ a | v ~ a ~ h ~ a | n ~ e ~ h ~ o | d ~ e ~ h ~ o | f ~ e ~ h ~ a | s ~ a ~ h ~ o | r ~ e ~ h ~ a | r ~ i ~ h ~ o | s ~ a ~ h ~ i | p ~ i ~ h ~ a | s ~ i ~ h ~ i) ~ &post_word }
+
+VEhA = { &cmavo ~ (v ~ e ~ h ~ u | v ~ e ~ h ~ a | v ~ e ~ h ~ i | v ~ e ~ h ~ e) ~ &post_word }
+
+VIhA = { &cmavo ~ (v ~ i ~ h ~ i | v ~ i ~ h ~ a | v ~ i ~ h ~ u | v ~ i ~ h ~ e) ~ &post_word }
+
+VUhO = { &cmavo ~ (v ~ u ~ h ~ o) ~ &post_word }
+
+XI = { &cmavo ~ (x ~ i) ~ &post_word }
+
+Y = { &cmavo ~ (y+) ~ &post_word }
+
+ZAhO = { &cmavo ~ (c ~ o ~ h ~ i | p ~ u ~ h ~ o | c ~ o ~ h ~ u | m ~ o ~ h ~ u | c ~ a ~ h ~ o | c ~ o ~ h ~ a | d ~ e ~ h ~ a | b ~ a ~ h ~ o | d ~ i ~ h ~ a | z ~ a ~ h ~ o) ~ &post_word }
+
+ZEhA = { &cmavo ~ (z ~ e ~ h ~ u | z ~ e ~ h ~ a | z ~ e ~ h ~ i | z ~ e ~ h ~ e) ~ &post_word }
+
+ZEI = { &cmavo ~ (z ~ e ~ i) ~ &post_word }
+
+ZI = { &cmavo ~ (z ~ u | z ~ a | z ~ i) ~ &post_word }
+
+ZIhE = { &cmavo ~ (z ~ i ~ h ~ e) ~ &post_word }
+
+ZO = { &cmavo ~ (z ~ o) ~ &post_word }
+
+ZOI = { &cmavo ~ (z ~ o ~ i | l ~ a ~ h ~ o) ~ &post_word }
+
+ZOhU = { &cmavo ~ (z ~ o ~ h ~ u) ~ &post_word }
+

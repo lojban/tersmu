@@ -8,15 +8,21 @@ FROM haskell:9.8
 
 ## Additional tools needed at build time:
 ##  - darcs: to fetch the patched Pappy parser used by the Makefile
+##  - python3: to generate .pappy from canonical .pest + .pappy.rhs
 ##  - make: already present in the base image, but kept here for clarity
 RUN apt-get update && apt-get install -y \
     darcs \
+    python3 \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 ## Build from the current checkout (not from a remote clone)
 COPY . .
+
+## Generate .pappy from canonical Pest grammar (.pest + .pappy.rhs) before Pappy/Haskell build
+RUN python3 scripts/gen_pappy.py Lojban.pest Lojban.pappy.rhs -o Lojban.pappy \
+ && python3 scripts/gen_pappy.py Morphology.pest Morphology.pappy.rhs -o Morphology.pappy
 
 ## Ensure the cabal bin directory is on PATH for both build and runtime.
 ENV PATH=/root/.cabal/bin:$PATH

@@ -1,0 +1,2490 @@
+HEADER:
+-- vim:ft=haskell
+--
+-- This file is part of tersmu
+-- Copyright (C) 2014 Martin Bays <mbays@sdf.org>
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of version 3 of the GNU General Public License as
+-- published by the Free Software Foundation.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see http://www.gnu.org/licenses/.
+
+-- Lojban parser based on camxes
+-- http://users.digitalkingdom.org/~rlpowell/hobbies/lojban/grammar/index.html 
+
+parser lojban:
+
+{
+import JboSyntax
+import Logic hiding (Term,Connective)
+
+import Data.Maybe
+import Control.Monad.State
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Char (isSpace, isDigit, digitToInt)
+
+data JekJoik = JJJek LogJboConnective | JJJoik Joik
+jjJboCon :: (Maybe Tag) -> JekJoik -> Connective
+jjJboCon mtag (JJJek lcon) = jboConnLogOrQ mtag lcon
+jjJboCon mtag (JJJoik joik) = JboConnJoik mtag joik
+
+jboConnLogOrQ mtag (LogJboConnective _ 'i' _) = JboConnJoik mtag "??"
+jboConnLogOrQ mtag lcon = JboConnLog mtag lcon
+}
+
+top text,free,terminatedText,textHead,wholeStatement,lastStatementOrSubsentence
+
+----- auxiliary productions used in preparsing:
+
+---RULES---
+
+RULE:wholeStatement
+TYPE:Statement
+RHS:
+= s:statement (NIhO+ -> {()} / I -> {()} / !Char -> {()}) -> s
+
+RULE:textHead
+TYPE:{()}
+RHS:
+= (i:I joikJek? BO? -> i / NIhO)* -> {()}
+
+RULE:terminatedText
+TYPE:Text
+RHS:
+= t:text Spacing? "%%%END%%%" -> t
+
+RULE:free
+TYPE:Free
+RHS:
+= "sei":SEI !BU mts:(ts:terms CU? -> ts)? sb:selbri SEhU?
+	-> {Discursive $ BridiTail3 sb $ fromMaybe [] mts}
+    / "ti'o":SEI !BU mts:(ts:terms CU? -> ts)? sb:selbri SEhU?
+	-> {MexPrecedence $ BridiTail3 sb $ fromMaybe [] mts}
+    / SOI !BU s:sumti ms:sumti? SEhU? -> { SOI s ms }
+    / cs:vocative !BU rels1:maybeRelativeClauses sb:selbri rels2:maybeRelativeClauses DOhU?
+	-> { Vocative cs $ Just (QAtom [] Nothing (rels1++rels2)
+	    (Description "le" Nothing Nothing (Left sb) [] [])) }
+    / cs:vocative !BU n:name rels:maybeRelativeClauses DOhU?
+	-> { Vocative cs $ Just (QAtom [] Nothing rels (n "la")) }
+    / cs:vocative !BU !free ms:sumti? DOhU? -> { Vocative cs ms }
+    / q:numberOrLerfuString MAI -> { MAI q }
+    / TO !BU t:text TOI? -> {Bracketed t}
+    / q:xiClause -> {XI q}
+    / FUhE? i:indicator -> i -- FUhE ignored for now
+    -- XXX following aren't frees, but pretending they are lets our preparsing
+    -- mechanism strip them out
+    / BAhE -> {NullFree}
+    / Y !BU -> {NullFree}
+
+RULE:vocative
+TYPE:{[COI]}
+RHS:
+= cs:coi* DOI -> cs / coi+
+
+RULE:coi
+TYPE:COI
+RHS:
+= c:COI mn:NAI? -> {COI c $ isJust mn}
+
+RULE:indicator
+TYPE:Free
+RHS:
+= "xu":UI !BU k:("kau":UI !BU x:xiLit? -> {fromMaybe 1 x})? -> {TruthQ k}
+    / c:(UI/CAI) nai:NAI? !BU -> { Indicator (isJust nai) c }
+    / c:(DAhO/FUhO) !BU -> { Indicator False c }
+
+RULE:xiClause
+TYPE:Mex
+RHS:
+= XI !BU q:numberOrLerfuString BOI? -> q
+    / XI !BU VEI q:mex VEhO? -> q
+
+-- |lastStatementOrSubsentence parses up to and including the start of the
+-- last statement or subsentence, being where we should put any frees.
+-- Currently unused.
+--lastStatementOrSubsentence :: {()}
+--    = nextStatementOrSubsentence* -> {()}
+--nextStatementOrSubsentence :: {()}
+--    = (quoteETC / !startStOrSubs Valsi -> {()})* startStOrSubs -> {()}
+---- XXX: probably this doesn't deal properly with all magic word interactions
+--quoteETC :: {()}
+--    = nonJboQuote -> {()} / errorQuote -> {()} / ZO Valsi -> {()} / Valsi BU -> {()}
+--	    / Valsi ZEI -> {()}
+--startStOrSubs :: String
+--    = n:NU NAI? -> n / NOI / TO / i:I !(joikJek -> {""} / BO) -> i / NIhO
+
+----- main grammar:
+
+RULE:text
+TYPE:Text
+RHS:
+= fs1:free* ns:NAI* fs2:textPart2 mjjfrag:(!text1 jjfrag:joikJek -> jjfrag)? mps:text1? FAhO?
+	-> {Text (fs1++fs2) (not $ null ns) $
+	    maybe [] (\jjfrag -> [[Left $ FragCon $ jjJboCon Nothing jjfrag]]) mjjfrag ++
+	    fromMaybe [] mps}
+
+RULE:textPart2
+TYPE:{[Free]}
+RHS:
+= cs:CMENE+ -> { [Vocative [] $ Just $ QAtom [] Nothing [] $ Name "la" [] $ unwords cs] }
+    / indicator*
+
+RULE:text1
+TYPE:{[Paragraph]}
+RHS:
+= I mjj:joikJek? mmtag:(mtag:tag? BO -> mtag)? mt:text1?
+	-- CLL says we can answer a question with an ijek - this appears to
+	-- how...
+	-> {if isNothing mt && isNothing mmtag && isJust mjj
+		then [[Left $ FragCon $ jjJboCon Nothing $ fromJust mjj]]
+		else fromMaybe [] mt}
+    / NIhO+ mps:paragraphs? -> {fromMaybe [] mps}
+    / paragraphs
+
+RULE:paragraphs
+TYPE:{[Paragraph]}
+RHS:
+= p:paragraph mps:(NIhO+ ps:paragraphs -> ps)? -> {p : fromMaybe [] mps}
+
+RULE:paragraph
+TYPE:Paragraph
+RHS:
+= sf:statementOrFragment msfs:(I !jek !joik !joikJek msf:statementOrFragment? -> msf)*
+	-> {(sf:) $ concat $ map maybeToList msfs}
+
+RULE:statementOrFragment
+TYPE:{Either Fragment Statement}
+RHS:
+= s:statement -> {Right s}
+    / free* f:fragment -> {Left f}
+
+RULE:statement
+TYPE:Statement
+RHS:
+= fs:free* s:statement1 -> {Statement fs [] s}
+    / fs:free* ps:prenex {Statement fs' ps' s}:statement ->
+	{Statement (fs++fs') (ps++ps') s}
+
+RULE:statement1
+TYPE:Statement1
+RHS:
+= s:statement2 jekss:(_jekstatements)*
+    -> { foldl (\s1 -> \(con,s2) -> ConnectedStatement con s1 s2) s jekss }
+-- _jekstatements: helper for statement1
+
+RULE:_jekstatements
+TYPE:{(Connective, Statement1)}
+RHS:
+= I jj:joikJek s:statement2 -> {(jjJboCon Nothing jj,s)}
+
+RULE:statement2
+TYPE:Statement1
+RHS:
+= s1:statement3 boSt:( I mjj:(joikJek)? mtag:(tag)? BO s:statement2
+	    -> {(jjJboCon mtag $ fromMaybe (JJJek $ LogJboConnective True 'e' True) mjj,s)} )?
+	-> { case boSt of
+	    Nothing -> s1
+	    Just (con,s2) -> ConnectedStatement con s1 s2 }
+
+RULE:statement3
+TYPE:Statement1
+RHS:
+= fs:free* s:sentence -> {StatementSentence fs s}
+    / mtag:tag? TUhE ps:text1 TUhU? -> {StatementParas mtag ps}
+
+RULE:fragment
+TYPE:Fragment
+RHS:
+= p:prenex -> {FragPrenex p}
+    / ts:terms VAU? -> {FragTerms ts}
+    / c:ek -> {FragCon $ jboConnLogOrQ Nothing c}
+    / c:gihek -> {FragCon $ jboConnLogOrQ Nothing c}
+    / m:quantifier -> {FragQuantifier m}
+    / n:NA !JA -> {FragNA n}
+    / rels:relativeClauses -> {FragRels rels}
+    / ts:links -> {FragLinks ts}
+    / ts:linkargs -> {FragLinks ts}
+
+RULE:prenex
+TYPE:{[Term]}
+RHS:
+ps:terms ZOhU -> ps
+
+-- XXX: slight modification of camxes here: we parse terms before a bridi tail
+-- lazily rather than greedily, so {pu broda gi'e brode} ends up as
+-- {(pu broda) gi'e brode} rather than {pu [ku] (broda gi'e brode)}. This
+-- seems to be a bug in camxes - it disagrees with the YACC parser.
+-- Thanks to menli for pointing out the bug.
+
+RULE:sentence
+TYPE:{Sentence}
+RHS:
+= bt:bridiTail -> { Sentence [] bt }
+    / {(ts,bt)}:termsAndTail -> {Sentence ts bt}
+
+RULE:termsAndTail
+TYPE:{([Term],BridiTail)}
+RHS:
+= CU? bt:bridiTail -> {([],bt)}
+    / t:terms1 {(ts,bt)}:termsAndTail -> {t:ts,bt}
+
+RULE:subsentence
+TYPE:Subsentence
+RHS:
+= fs:free* s:sentence -> {Subsentence fs [] s}
+    / fs:free* ps:prenex {Subsentence fs' ps' s}:subsentence ->
+	{ Subsentence (fs++fs') (ps++ps') s }
+
+RULE:bridiTail
+TYPE:BridiTail
+RHS:
+= bt1:bridiTail1 gihek:(lcon:gihek mtag:(tag)? KE bt2:bridiTail KEhE? tts:tailTerms ->
+	{(jboConnLogOrQ mtag lcon, bt2, tts)} )? -> {
+	    case gihek of
+		Nothing -> bt1
+		Just (con, bt2, tts) -> ConnectedBT con bt1 bt2 tts }
+
+RULE:bridiTail1
+TYPE:BridiTail
+RHS:
+= bt:bridiTail2 giheks:_gihekbt*
+    -> { foldl (\bt1 -> \(con,bt2,tts) ->
+		    ConnectedBT con bt1 bt2 tts
+		) bt giheks }
+-- _gihekbt: helper for bridiTail1
+
+RULE:_gihekbt
+TYPE:{(Connective, BridiTail, [Term])}
+RHS:
+= lcon:gihek !(tag? BO -> {()}) !(tag? KE -> {()}) bt:bridiTail2 tts:tailTerms
+	-> {(jboConnLogOrQ Nothing lcon, bt, tts)}
+
+RULE:bridiTail2
+TYPE:BridiTail
+RHS:
+= bt1:bridiTail3
+	gihek:(lcon:gihek mtag:(tag)? BO bt2:bridiTail2 tts:tailTerms
+	    -> {(jboConnLogOrQ mtag lcon,bt2,tts)})?
+	-> { case gihek of
+		Nothing -> bt1
+		Just (con, bt2, tts) -> ConnectedBT con bt1 bt2 tts }
+
+RULE:bridiTail3
+TYPE:BridiTail
+RHS:
+= sb:selbri ts:tailTerms -> { BridiTail3 sb ts }
+    / gs:gekSentence -> { GekSentence gs }
+
+RULE:gekSentence
+TYPE:GekSentence
+RHS:
+= pcon:gek s1:subsentence b:gik s2:subsentence tts:tailTerms
+	-> { ConnectedGS (pcon b) s1 s2 tts }
+    / mtag:tag? KE gs:gekSentence KEhE? -> { maybe gs (flip TaggedGS gs) mtag }
+    / "na":NA gs:gekSentence -> {NegatedGS gs}
+    / "ja'a":NA gs:gekSentence -> gs
+
+RULE:tailTerms
+TYPE:{[Term]}
+RHS:
+= ts:terms1* VAU? -> ts
+
+RULE:terms
+TYPE:{[Term]}
+RHS:
+= ts:terms1+ -> { ts }
+
+RULE:terms1
+TYPE:Term
+RHS:
+= ts1:terms2 PEhE jj:joikJek ts2:terms2 -> { ConnectedTerms False (jjJboCon Nothing jj) ts1 ts2 }
+    / terms2
+
+RULE:terms2
+TYPE:Term
+RHS:
+= t:term ts:(CEhE t:terms2 -> t)+ -> { Termset (t:ts) }
+    / term
+
+RULE:term
+TYPE:Term
+RHS:
+= s:sumti -> {Sumti Untagged s}
+    / !gek tag:tag s:sumti -> {Sumti (Tagged tag) s}
+    / !gek tag:tag KU? -> {BareTag tag}
+    / n:tagFA s:sumti -> {Sumti (FATagged n) s}
+    / n:tagFA KU?  -> {BareFA $ Just n}
+    / "fai":FA s:sumti -> {Sumti FAITagged s}
+    -- TODO: fi'a
+    / FA KU? -> {NullTerm}
+    / termset
+    / "na":NA KU -> {Negation}
+    / "ja'a":NA KU -> {NullTerm}
+
+RULE:termset
+TYPE:Term
+RHS:
+= NUhI pcon:gek ts1:terms NUhU b:gik ts2:terms NUhU?
+	-> { ConnectedTerms True (pcon b) (Termset ts1) (Termset ts2) }
+    / NUhI ts:terms NUhU? -> { Termset ts }
+    / pcon:gek {(ts1,b,ts2)}:termsGikTerms
+	-> { ConnectedTerms True (pcon b) (Termset ts1) (Termset ts2) }
+
+RULE:termsGikTerms
+TYPE:{([Term],Bool,[Term])}
+RHS:
+= t1:term {(ts1,b,ts2)}:( b:gik -> {([],b,[])} / termsGikTerms ) t2:term
+	-> {(t1:ts1,b,ts2++[t2])}
+
+RULE:sumti
+TYPE:Sumti
+RHS:
+= s:sumti1 rels:(VUhO rels:relativeClauses -> rels)?
+	-> { case rels of
+	    Nothing -> s
+	    Just rels -> appendRelsToSumti rels s }
+
+RULE:sumti1
+TYPE:Sumti
+RHS:
+= s1:sumti2 eks:( jj:joikEk mtag:(tag)? KE s:sumti KEhE?
+	    -> {(jjJboCon mtag jj,s)} )?
+	-> { case eks of
+	    Nothing -> s1
+	    Just (con,s2) -> ConnectedSumti False con s1 s2 [] }
+
+RULE:sumti2
+TYPE:Sumti
+RHS:
+= s:sumti3 ekss:(_eksumti)*
+	-> { foldl (\s1 -> \(con,s2) -> ConnectedSumti False con s1 s2 []) s ekss }
+-- _eksumti: helper for sumti2
+
+RULE:_eksumti
+TYPE:{(Connective, Sumti)}
+RHS:
+= jj:joikEk s:sumti3 -> {(jjJboCon Nothing jj,s)}
+
+RULE:sumti3
+TYPE:Sumti
+RHS:
+s1:sumti4
+	eks:( jj:joikEk mtag:(tag)? BO s:sumti3 -> {(jjJboCon mtag jj,s)} )?
+	    -> { case eks of
+		Nothing -> s1
+		Just (con,s2) -> ConnectedSumti False con s1 s2 [] }
+
+RULE:sumti4
+TYPE:Sumti
+RHS:
+sumti5
+	/ pcon:gek s1:sumti b:gik s2:sumti4
+	    -> { ConnectedSumti True (pcon b) s1 s2 [] }
+
+RULE:sumti5
+TYPE:Sumti
+RHS:
+= q:quantifier? s:sumti6 k:("kau":UI x:xiLit? -> {fromMaybe 1 x})? fs:free* rels:maybeRelativeClauses
+	    -> {QAtom fs q rels (maybe s (SumtiQ . Just) k)}
+	/ q:quantifier sb:selbri KU? rels:maybeRelativeClauses
+	    -> {QSelbri q rels sb}
+
+RULE:sumti6
+TYPE:SumtiAtom
+RHS:
+= ZO s:Valsi -> {Word s}
+    / s:nonJboQuote -> {NonJboQuote s}
+    / vs:errorQuote -> {ErrorQuote vs}
+    / l:lerfuString !MOI BOI? -> {LerfuString l}
+    / LU t:text LIhU? -> {Quote t}
+    / qual:qualifier rels:maybeRelativeClauses s:sumti LUhU?
+	-> {QualifiedSumti qual rels s}
+    / k:KOhA &{k `elem` ["do","ko","do'o","mi","ma'a","mi'a","mi'o"]} -> {NonAnaphoricProsumti k}
+    / k:KOhA &{k `elem` ["ti","ta","tu"]} -> {NonAnaphoricProsumti k}
+    / k:KOhA &{k `elem` ["da'e","de'e","di'e","da'u","de'u","di'u","dei","do'i"]} -> {NonAnaphoricProsumti k}
+    / n:variable mn:xiLit? -> {Variable $ fromMaybe n mn}
+    / "ke'a":KOhA mn:xiLit? -> {RelVar $ fromMaybe 1 mn}
+    / "ce'u":KOhA ml:xiLit? mn:xiLit? -> {LambdaVar ml mn}
+    / "ri":KOhA mn:xiLit? -> {Ri $ fromMaybe 1 mn}
+    / "ra":KOhA -> {Ra "ra"}
+    / "ru":KOhA -> {Ra "ru"}
+    / n:assignable mn:xiLit? -> {Assignable $ fromMaybe n mn}
+    / n:mainBridiSumbasti mn:xiLit? -> {MainBridiSumbasti $ fromMaybe n mn}
+    / "zo'e":KOhA -> {Zohe}
+    / k:KOhA &{k `elem` ["zi'o","zu'i"]} -> {NonAnaphoricProsumti k}
+    / "ma":KOhA -> {SumtiQ Nothing}
+    / g:LA n:name -> {n g}
+    / g:(LA/LE) {(is,q,ssb,rels,irels)}:sumtiTail KU? ->
+	{Description g is q ssb rels irels}
+    / liClause
+
+RULE:qualifier
+TYPE:SumtiQualifier
+RHS:
+= l:LAhE -> {LAhE l}
+    / n:NAhE BO -> {NAhE_BO n}
+
+RULE:name
+TYPE:{Gadri -> SumtiAtom}
+RHS:
+= rels:maybeRelativeClauses cs:CMENE+ -> {\g -> Name g rels $ unwords cs}
+
+RULE:variable
+TYPE:Int
+RHS:
+= "da":KOhA -> {1}
+    / "de":KOhA -> {2}
+    / "di":KOhA -> {3}
+
+RULE:assignable
+TYPE:Int
+RHS:
+= "ko'a":KOhA -> {1}
+    / "ko'e":KOhA -> {2}
+    / "ko'i":KOhA -> {3}
+    / "ko'o":KOhA -> {4}
+    / "ko'u":KOhA -> {5}
+    / "fo'a":KOhA -> {6}
+    / "fo'e":KOhA -> {7}
+    / "fo'i":KOhA -> {8}
+    / "fo'o":KOhA -> {9}
+    / "fo'u":KOhA -> {10}
+
+RULE:mainBridiSumbasti
+TYPE:Int
+RHS:
+= "vo'a":KOhA -> {1}
+    / "vo'e":KOhA -> {2}
+    / "vo'i":KOhA -> {3}
+    / "vo'o":KOhA -> {4}
+    / "vo'u":KOhA -> {5}
+
+RULE:nonJboText
+TYPE:String
+RHS:
+-- TODO: not sure how to do this properly... some preparsing magic, I
+    -- suppose
+    = "zoi":Valsi ws:(w:Word &{w/="zoi"} -> w)* "zoi":Valsi -> {unwords ws}
+    / "gy":Valsi ws:(w:Word &{w/="gy"} -> w)* "gy":Valsi -> {unwords ws}
+
+RULE:nonJboQuote
+TYPE:String
+RHS:
+"zoi":ZOI s:nonJboText -> s
+
+RULE:nonJboNamed
+TYPE:String
+RHS:
+"la'o":ZOI s:nonJboText -> s
+
+RULE:errorQuote
+TYPE:{[String]}
+RHS:
+= LOhU vs:((!LEhU v:Valsi -> v)*) LEhU -> vs
+
+RULE:liClause
+TYPE:SumtiAtom
+RHS:
+= "li":LI m:mex LOhO? -> { MexLi m }
+    / "me'o":LI m:mex LOhO? -> { MexMex m }
+
+RULE:sumtiTail
+TYPE:{(Maybe Sumti, Maybe Mex, Either Selbri Sumti, [RelClause], [RelClause])}
+RHS:
+= s:sumti6 srels:maybeRelativeClauses {(q,ssb,irels)}:sumtiTail1
+	-> {(Just (QAtom [] Nothing srels s),q,ssb,[],irels)}
+    / rels:maybeRelativeClauses {(q,ssb,irels)}:sumtiTail1
+	-> {(Nothing,q,ssb,rels,irels)}
+
+RULE:sumtiTail1
+TYPE:{(Maybe Mex, Either Selbri Sumti, [RelClause])}
+RHS:
+= sb:selbri rels:maybeRelativeClauses
+	-> {(Nothing,Left sb,rels)}
+    / mq:quantifier? sb:selbri rels:maybeRelativeClauses
+	-> {(mq,Left sb,rels)}
+    / q:quantifier s:sumti -> {(Just q,Right s,[])}
+
+RULE:maybeRelativeClauses
+TYPE:{[RelClause]}
+RHS:
+= mrels:relativeClauses? -> {fromMaybe [] mrels}
+
+RULE:relativeClauses
+TYPE:{[RelClause]}
+RHS:
+= r:relativeClause rs:(ZIhE r:relativeClause -> r)*
+	    -> {(r:rs)}
+
+RULE:relativeClause
+TYPE:RelClause
+RHS:
+= "poi":NOI subs:subsentence KUhO? -> {Restrictive subs}
+	/ "noi":NOI subs:subsentence KUhO? -> {Incidental subs}
+	/ "voi":NOI subs:subsentence KUhO? -> {Descriptive subs}
+	/ "goi":GOI t:term GEhU? -> {Assignment t}
+	/ "ne":GOI t:term GEhU? -> {IncidentalGOI "ne" t}
+	/ "no'u":GOI t:term GEhU? -> {IncidentalGOI "no'u" t}
+	/ "pe":GOI t:term GEhU? -> {RestrictiveGOI "pe" t}
+	/ "po'u":GOI t:term GEhU? -> {RestrictiveGOI "po'u" t}
+	/ "po":GOI t:term GEhU? -> {RestrictiveGOI "po" t}
+	/ "po'e":GOI t:term GEhU? -> {RestrictiveGOI "po'e" t}
+
+RULE:selbri
+TYPE:Selbri
+RHS:
+= tag:tag sb:selbri1 -> {TaggedSelbri tag sb}
+    / selbri1
+
+RULE:selbri1
+TYPE:Selbri
+RHS:
+= "na":NA sb:selbri -> {Negated sb}
+    / "ja'a":NA sb:selbri -> sb
+    / sb:selbri2 -> {Selbri2 sb}
+
+RULE:selbri2
+TYPE:Selbri2
+RHS:
+= sb:selbri3 CO sb':selbri2 -> {SBInverted sb sb'}
+    / sb:selbri3 -> {Selbri3 sb}
+
+RULE:selbri3
+TYPE:Selbri3
+RHS:
+= sb:selbri3 sb':selbri4 -> {SBTanru sb sb'}
+    / selbri4
+
+RULE:selbri4
+TYPE:Selbri3
+RHS:
+= sb:selbri5 jekss:(_jeksbs)*
+	-> { foldl (\sb1 -> \(con,sb2) -> ConnectedSB False con (sb3tosb sb1) sb2) sb jekss }
+-- _jeksbs: helper for selbri4
+
+RULE:_jeksbs
+TYPE:{(Connective, Selbri3)}
+RHS:
+= jj:joikJek sb:selbri5 -> {(jjJboCon Nothing jj,sb)}
+    / joik:joik mtag:tag? KE sb:selbri3 KEhE? -> {(JboConnJoik mtag joik,sb)}
+
+RULE:selbri5
+TYPE:Selbri3
+RHS:
+= sb1:selbri6 jj:joikJek mtag:(tag)? BO sb2:selbri5
+	-> { ConnectedSB False (jjJboCon mtag jj) (sb3tosb sb1) sb2 }
+    / s:selbri6 -> s
+
+RULE:selbri6
+TYPE:Selbri3
+RHS:
+= tu:tanruUnit BO sb:selbri6 -> {SBTanru tu sb}
+    / tu:tanruUnit -> tu
+    / mn:NAhE? pcon:guhek sb1:selbri b:gik sb2:selbri6
+	-> { maybe id ScalarNegatedSB mn $
+	    ConnectedSB True (jboConnLogOrQ Nothing $ pcon b) sb1 sb2 }
+
+RULE:tanruUnit
+TYPE:Selbri3
+RHS:
+= tu:tanruUnit CEI tu':tanruUnit1 -> {BridiBinding tu tu'}
+    / tanruUnit1
+
+RULE:tanruUnit1
+TYPE:Selbri3
+RHS:
+= tu:tanruUnit2 k:("kau":UI x:xiLit? -> {fromMaybe 1 x})? fs:free* las:linkargs?
+	-> {TanruUnit fs (maybe tu (TUBridiQ . Just) k) (fromMaybe [] las)}
+
+RULE:tanruUnit2
+TYPE:TanruUnit
+RHS:
+-- XXX: probably this ZEI handling interacts badly with other magic words?
+    = v:Valsi vs:(ZEI v:Valsi -> v)+ -> {TUZei $ v:vs}
+    / bv:BRIVLA -> {TUBrivla bv}
+    / "mo":GOhA -> {TUBridiQ Nothing}
+    / g:GOhA mn:xiLit? RAhO? -> {TUGOhA g $ fromMaybe 1 mn}
+    / KE sb:selbri3 KEhE? -> {TUSelbri3 sb}
+    / ME s:(sumti / ls:lerfuString -> {QAtom [] Nothing [] $ LerfuString ls}) MEhU? mmoi:MOI?
+	-> {maybe (TUMe s) (TUMoi s) mmoi}
+    / q:numberOrLerfuString moi:MOI -> {TUMoi (QAtom [] Nothing [] $ MexLi q) moi}
+    / NUhA op:mexOperator -> {TUOperator op}
+    / n:convSE tu:tanruUnit2 -> {TUPermuted n tu}
+    / JAI mt:tag? tu:tanruUnit2 -> {TUJai mt tu}
+    / n:NAhE tu:tanruUnit2 -> {TUSelbri3 $ ScalarNegatedSB n $ TanruUnit [] tu []}
+    / a:abstractor ss:subsentence KEI? -> {TUAbstraction a ss}
+    / XOhI t:tag -> {TUXOhI t}
+
+RULE:convSE
+TYPE:Int
+RHS:
+= SE n:xiLit -> n
+    / "se":SE -> {2}
+    / "te":SE -> {3}
+    / "ve":SE -> {4}
+    / "xe":SE -> {5}
+
+RULE:abstractor
+TYPE:Abstractor
+RHS:
+= n:NU nai:NAI? mca:(jj:joikJek a:abstractor -> {(jj,a)})?
+	-> {let a1 = (if isJust nai then NegatedAbstractor else id) $ NU n
+	    in case mca of
+		Nothing -> a1
+		Just (JJJoik joik,a2) -> JoiConnectedAbstractor joik a1 a2
+		Just (JJJek lcon@(LogJboConnective _ 'i' _),a2) ->
+		    JoiConnectedAbstractor "??" a1 a2
+		Just (JJJek lcon,a2) -> LogConnectedAbstractor lcon a1 a2}
+
+RULE:linkargs
+TYPE:{[Term]}
+RHS:
+= BE t:term ts:links? BEhO? -> {(t : (fromMaybe [] ts))}
+
+RULE:links
+TYPE:{[Term]}
+RHS:
+= BEI t:term ts:links? -> {(t : (fromMaybe [] ts))}
+
+RULE:quantifier
+TYPE:Mex
+RHS:
+= q:number !MOI BOI? -> q
+    / VEI m:mex VEhO? -> m
+
+RULE:mex
+TYPE:Mex
+RHS:
+= m:mex1 opts:optail*
+	-> {foldl (flip ($)) m opts}
+    / rpClause
+
+RULE:optail
+TYPE:{Mex -> Mex}
+RHS:
+= o:operator m:mex1 -> { \m1 -> Operation o [m1,m] }
+
+RULE:rpClause
+TYPE:Mex
+RHS:
+= FUhA e:rpExpression -> e
+
+RULE:mex1
+TYPE:Mex
+RHS:
+= m:mex2 mopt:(BIhE opt:optail -> opt)?
+	-> {maybe m ($m) mopt}
+
+RULE:mex2
+TYPE:Mex
+RHS:
+= operand
+    / mexForethought
+
+RULE:mexForethought
+TYPE:Mex
+RHS:
+= PEhO? op:operator os:foreOperands KUhE? -> {Operation op os}
+
+RULE:foreOperands
+TYPE:{[Mex]}
+RHS:
+= mex2+
+
+RULE:rpExpression
+TYPE:Mex
+RHS:
+= o:operand mt:rpExpressionTail -> { mt o }
+    / o:operand -> o
+
+RULE:rpExpressionTail
+TYPE:{Mex -> Mex}
+RHS:
+= m:rpExpression opr:operator t:rpExpressionTail
+	-> { t . \m1 -> Operation opr [m1,m] }
+    / m:rpExpression opr:operator
+	-> { \m1 -> Operation opr [m1,m] }
+
+RULE:operator
+TYPE:Operator
+RHS:
+= op:operator1 jekss:_jekops*
+	-> { foldl (\op1 -> \(con,op2) -> ConnectedOperator False con op1 op2) op jekss }
+-- _jekops: helper for operator
+
+RULE:_jekops
+TYPE:{(Connective, Operator)}
+RHS:
+= jj:joikJek op:operator1 -> {(jjJboCon Nothing jj,op)}
+    / joik:joik mtag:tag? KE op:operator KEhE? -> {(JboConnJoik mtag joik,op)}
+
+RULE:operator1
+TYPE:Operator
+RHS:
+= op1:operator2 jj:joikJek mtag:tag? BO op2:operator1
+	-> { ConnectedOperator False (jjJboCon mtag jj) op1 op2 }
+    / op:operator2 -> op
+    / pcon:guhek op1:operator1 b:gik op2:operator2
+	-> { ConnectedOperator True (jboConnLogOrQ Nothing $ pcon b) op1 op2 }
+
+RULE:operator2
+TYPE:Operator
+RHS:
+= mexOperator
+    / KE op:operator KEhE? -> op
+
+RULE:mexOperator
+TYPE:Operator
+RHS:
+= c:convSE op:mexOperator -> { OpPermuted c op }
+    / n:NAhE op:mexOperator -> { OpScalarNegated n op } 
+    / MAhO m:mex TEhU? -> {OpMex m}
+    / NAhU s:selbri TEhU? -> {OpSelbri s}
+    / v:VUhU -> {OpVUhU v}
+
+RULE:operand
+TYPE:Mex
+RHS:
+= o1:operand1 jj:joikEk mtag:tag? KE o2:operand KEhE?
+	-> { ConnectedMex False (jjJboCon mtag jj) o1 o2 }
+    / op:operand1 -> op
+
+RULE:operand1
+TYPE:Mex
+RHS:
+= o:operand2 jekss:_jekos*
+	-> {foldl (flip ($)) o jekss}
+
+RULE:_jekos
+TYPE:{Mex -> Mex}
+RHS:
+= jj:joikEk o2:operand2 -> { \o1 -> ConnectedMex False (jjJboCon Nothing jj) o1 o2 }
+
+RULE:operand2
+TYPE:Mex
+RHS:
+= o1:operand3 jj:joikEk mtag:tag? BO o2:operand2
+	-> { ConnectedMex False (jjJboCon mtag jj) o1 o2 }
+    / o:operand3 -> o
+
+RULE:operand3
+TYPE:Mex
+RHS:
+= quantifier
+    / ls:lerfuString !MOI BOI? -> {MexLerfuString ls}
+    / NIhE s:selbri TEhU? -> {MexSelbri s}
+    / MOhE s:sumti TEhU? -> {MexSumti s}
+    / JOhI ms:mex2+ TEhU? -> {MexArray ms}
+    / pcon:gek o1:operand b:gik o2:operand3 -> {ConnectedMex True (pcon b) o1 o2}
+    / qual:qualifier o:operand LUhU? -> {QualifiedMex qual o}
+
+RULE:numberOrLerfuString
+TYPE:Mex
+RHS:
+= number
+    / ls:lerfuString -> {MexLerfuString ls}
+
+RULE:number
+TYPE:Mex
+RHS:
+= n:litnum !numeral -> {MexInt n}
+    / p:PA t:numeral*
+	-> { MexNumeralString $ (PA p):t }
+
+RULE:numeral
+TYPE:Numeral
+RHS:
+= p:PA -> {PA p}
+    / l:lerfuWord -> {NumeralLerfu l}
+
+RULE:litnum
+TYPE:Int
+RHS:
+= ds:digit+ -> {
+	let calc [] = 0
+	    calc (d:ds) = (10*calc ds) + d
+        in calc (reverse ds)}
+
+RULE:digit
+TYPE:Int
+RHS:
+= "no":PA -> {0}
+    / "pa":PA -> {1}
+    / "re":PA -> {2}
+    / "ci":PA -> {3}
+    / "vo":PA -> {4}
+    / "mu":PA -> {5}
+    / "xa":PA -> {6}
+    / "ze":PA -> {7}
+    / "bi":PA -> {8}
+    / "so":PA -> {9}
+    / c:Char &{isDigit c} -> {digitToInt c}
+
+RULE:xiLit
+TYPE:Int
+RHS:
+= XI n:litnum !numeral -> n
+
+RULE:lerfuString
+TYPE:{[Lerfu]}
+RHS:
+= c:lerfuWord cs:(lerfuWord
+	    / d:digit -> {LerfuChar $ head $ show d}
+	    / p:PA -> {LerfuPA p})*
+	-> {c:cs}
+
+RULE:lerfuWord
+TYPE:Lerfu
+RHS:
+= s:BY -> {case s of
+	"y'y" -> LerfuChar 'h' 
+	s:"y" -> LerfuChar s
+	_ -> LerfuShift s}
+    / v:VowelValsi BU -> { LerfuChar v }
+    / v:Valsi BU -> { LerfuValsi v }
+    / lau:LAU l:lerfuWord -> { LerfuShifted lau l }
+    / TEI ls:lerfuString FOI -> { LerfuComposite ls }
+
+RULE:ek
+TYPE:LogJboConnective
+RHS:
+ln:NA?
+	se:(SE)? conchar:ekA rn:NAI?
+    -> { LogJboConnective (ln /= Just "na")
+		    (if (isJust se) && conchar=='u' then 'U' else conchar)
+		    (isNothing rn) }
+
+RULE:gihek
+TYPE:LogJboConnective
+RHS:
+ln:NA?
+	se:(SE)? conchar:gihekGIhA rn:NAI?
+    -> { LogJboConnective (ln /= Just "na")
+		    (if (isJust se) && conchar=='u' then 'U' else conchar)
+		    (isNothing rn) }
+
+RULE:jek
+TYPE:LogJboConnective
+RHS:
+ln:NA?
+	se:(SE)? conchar:jekJA rn:NAI?
+    -> { LogJboConnective (ln /= Just "na") 
+		    (if (isJust se) && conchar=='u' then 'U' else conchar)
+		    (isNothing rn) }
+
+-- joiks entirely unparsed for now
+
+RULE:joik
+TYPE:String
+RHS:
+= se:SE? joi:JOI nai:NAI? -> { (fromMaybe "" se) ++ joi ++ (fromMaybe "" nai) }
+    / interval
+    / g1:GAhO i:interval g2:GAhO -> { g1 ++ i ++ g2 }
+
+RULE:interval
+TYPE:String
+RHS:
+= se:SE? bihi:BIhI nai:NAI? -> { (fromMaybe "" se) ++ bihi ++ (fromMaybe "" nai) }
+
+RULE:joikEk
+TYPE:JekJoik
+RHS:
+= jj:ek -> { JJJek jj }
+    / jj:joik -> { JJJoik jj }
+
+RULE:joikJek
+TYPE:JekJoik
+RHS:
+= jj:jek -> { JJJek jj }
+    / jj:joik -> { JJJoik jj }
+
+RULE:gek
+TYPE:{Bool -> Connective}
+RHS:
+= se:(SE)? conchar:gekGA ln:NAI?
+	-> { jboConnLogOrQ Nothing . LogJboConnective (isNothing ln) 
+		    (if (isJust se) && conchar=='u' then 'U' else conchar) }
+    / joik:joik GI -> { \_ -> JboConnJoik Nothing joik } 
+    / tag:tag gik -> { \_ -> jboConnLogOrQ (Just tag) (LogJboConnective True 'e' True) }
+
+RULE:guhek
+TYPE:{Bool -> LogJboConnective}
+RHS:
+se:(SE)? conchar:guhekGUhA ln:NAI?
+    -> { LogJboConnective (isNothing ln) 
+		    (if (isJust se) && conchar=='u' then 'U' else conchar) }
+
+RULE:gik
+TYPE:Bool
+RHS:
+GI rn:NAI? -> { isNothing rn }
+
+RULE:ekA
+TYPE:Char
+RHS:
+"a":A -> {'a'}
+    / "e":A -> {'e'}
+    / "o":A -> {'o'}
+    / "u":A -> {'u'}
+    / "ji":A -> {'i'}
+
+RULE:jekJA
+TYPE:Char
+RHS:
+"ja":JA -> {'a'}
+    / "je":JA -> {'e'}
+    / "jo":JA -> {'o'}
+    / "ju":JA -> {'u'}
+    / "je'i":JA -> {'i'}
+
+RULE:gihekGIhA
+TYPE:Char
+RHS:
+"gi'a":GIhA -> {'a'}
+    / "gi'e":GIhA -> {'e'}
+    / "gi'o":GIhA -> {'o'}
+    / "gi'u":GIhA -> {'u'}
+    / "gi'i":GIhA -> {'i'}
+
+RULE:gekGA
+TYPE:Char
+RHS:
+"ga":GA -> {'a'}
+    / "ge":GA -> {'e'}
+    / "go":GA -> {'o'}
+    / "gu":GA -> {'u'}
+    / "ge'i":GA -> {'i'}
+
+RULE:guhekGUhA
+TYPE:Char
+RHS:
+"gu'a":GUhA -> {'a'}
+    / "gu'e":GUhA -> {'e'}
+    / "gu'o":GUhA -> {'o'}
+    / "gu'u":GUhA -> {'u'}
+    / "gu'i":GUhA -> {'i'}
+
+RULE:tagFA
+TYPE:Int
+RHS:
+= FA n:xiLit -> n
+    / "fa":FA -> {1}
+    / "fe":FA -> {2}
+    / "fi":FA -> {3}
+    / "fo":FA -> {4}
+    / "fu":FA -> {5}
+
+RULE:tag
+TYPE:Tag
+RHS:
+= tag:tag1 jekts:(_jektag)* ->
+	{ foldl (\t1 -> \(con,t2) -> ConnectedTag con t1 t2) tag jekts }
+-- _jektag: helper for tag
+
+RULE:_jektag
+TYPE:{(Connective, Tag)}
+RHS:
+= jj:joikJek tag:tag1 -> {(jjJboCon Nothing jj,tag)}
+
+-- XXX: we use the relaxed tag grammar of xorxes' zasni gerna
+
+RULE:tag1
+TYPE:Tag
+RHS:
+= dtus:decoratedTagUnit+ -> {DecoratedTagUnits dtus}
+
+RULE:decoratedTagUnit
+TYPE:DecoratedTagUnit
+RHS:
+= nahe:(NAhE)? se:(convSE)? tu:tagUnit nai:(NAI)? ->
+	{ DecoratedTagUnit nahe se (isJust nai) tu }
+
+RULE:tagUnit
+TYPE:TagUnit
+RHS:
+= s:(PU / ZI / ZEhA / VA / VEhA / VIhA) -> {TenseCmavo s}
+    / s:CAhA -> {CAhA s}
+    / s:BAI -> {BAI s}
+    / m:(MOhI)? f:FAhA -> { FAhA (isJust m) f }
+    / f:(FEhE)? q:number r:ROI -> { ROI r (isJust f) q }
+    / f:(FEhE)? s:(TAhE / ZAhO) -> { TAhE_ZAhO (isJust f) s }
+    / FIhO s:selbri FEhU? -> { FIhO s }
+    / c:CUhE -> { CUhE c }
+    / KI -> { KI }
+
+
+----- Morphology
+
+RULE:LojbanLetter
+TYPE:Char
+RHS:
+Consonant / Vowel / OtherLetter
+
+RULE:nonConsonant
+TYPE:Char
+RHS:
+Vowel / OtherLetter
+
+-- InitialPair :: String = "bl" /  "br" /  "cf" /  "ck" /  "cl" /  "cm" /  "cn" /  "cp" /  "cr" /  "ct" /  "dj" /  "dr" /  "dz" /  "fl" /  "fr" /  "gl" /  "gr" /  "jb" /  "jd" /  "jg" /  "jm" /  "jv" /  "kl" /  "kr" /  "ml" /  "mr" /  "pl" /  "pr" /  "sf" /  "sk" /  "sl" /  "sm" /  "sn" /  "sp" /  "sr" /  "st" /  "tc" /  "tr" /  "ts" /  "vl" /  "vr" /  "xl" /  "xr" /  "zb" /  "zd" /  "zg" /  "zm" /  "zv"
+
+RULE:Vowel
+TYPE:Char
+RHS:
+c:Char &{c `elem` "aeiouy"} -> c
+
+RULE:VowelValsi
+TYPE:Char
+RHS:
+c:Vowel Spacing -> c
+
+RULE:Consonant
+TYPE:Char
+RHS:
+c:Char &{c `elem` "bcdfgjklmnprstvxz"} -> c
+
+RULE:OtherLetter
+TYPE:Char
+RHS:
+c:Char &{c `elem` "',"} -> c
+
+RULE:VowelNotY
+TYPE:Char
+RHS:
+c:Char &{c `elem` "aeiou"} -> c
+
+RULE:YChar
+TYPE:Char
+RHS:
+'y'
+
+RULE:TickChar
+TYPE:Char
+RHS:
+'\''
+
+RULE:Space
+TYPE:{()}	= c:Char &{isSpace c} -> {()}
+RHS:
+
+
+RULE:Spacing
+TYPE:{()}
+RHS:
+Space+
+
+RULE:Valsi
+TYPE:String
+RHS:
+cs:LojbanLetter+ Spacing -> cs
+
+RULE:Word
+TYPE:String
+RHS:
+cs:(!Space !PAUSE c:Char -> c)+ Spacing -> cs
+
+-- Simple morphology classification - we've already used the full morphology
+-- algorithm to split input into valid words, so this suffices:
+
+RULE:CMENE
+TYPE:String
+RHS:
+ls:(l:LojbanLetter !Spacing -> l)* c:Consonant Spacing -> {ls++[c]}
+
+RULE:CMAVO
+TYPE:String
+RHS:
+= c:Consonant vs:(Vowel/TickChar)* Spacing -> {c:vs}
+    / vs:(Vowel/TickChar)+ Spacing -> vs
+
+RULE:BRIVLA
+TYPE:String
+RHS:
+!CMENE !CMAVO w:Valsi -> w
+
+RULE:PAUSE
+TYPE:String
+RHS:
+"."
+
+RULE:postClause
+TYPE:{()}
+RHS:
+= Spacing !BU -> {()}
+
+--         eks; basic afterthought logical connectives
+
+RULE:A
+TYPE:String
+RHS:
+s:Amain postClause -> s
+
+RULE:Amain
+TYPE:String
+RHS:
+"a" / "e" / "ji" / "o" / "u"
+
+--         modal operators
+
+RULE:BAI
+TYPE:String
+RHS:
+s:BAImain postClause -> s
+
+RULE:BAImain
+TYPE:String
+RHS:
+"du'o" / "si'u" / "zau" / "ki'i" / "du'i" / "cu'u" / "tu'i" / "ti'u" / "di'o" / "ji'u" / "ri'a" / "ni'i" / "mu'i" / "ki'u" / "va'u" / "koi" / "ca'i" / "ta'i" / "pu'e" / "ja'i" / "kai" / "bai" / "fi'e" / "de'i" / "ci'o" / "mau" / "mu'u" / "ri'i" / "ra'i" / "ka'a" / "pa'u" / "pa'a" / "le'a" / "ku'u" / "tai" / "bau" / "ma'i" / "ci'e" / "fau" / "po'i" / "cau" / "ma'e" / "ci'u" / "ra'a" / "pu'a" / "li'e" / "la'u" / "ba'i" / "ka'i" / "sau" / "fa'e" / "be'i" / "ti'i" / "ja'e" / "ga'a" / "va'o" / "ji'o" / "me'a" / "do'e" / "ji'e" / "pi'o" / "gau" / "zu'e" / "me'e" / "rai"
+--         next word intensifier
+
+RULE:BAhE
+TYPE:String
+RHS:
+s:BAhEmain postClause -> s
+
+RULE:BAhEmain
+TYPE:String
+RHS:
+"ba'e" / "za'e"
+--         sumti link to attach sumti to a selbri
+
+RULE:BE
+TYPE:String
+RHS:
+s:BEmain postClause -> s
+
+RULE:BEmain
+TYPE:String
+RHS:
+"be"
+--         multiple sumti separator between BE, BEI
+
+RULE:BEI
+TYPE:String
+RHS:
+s:BEImain postClause -> s
+
+RULE:BEImain
+TYPE:String
+RHS:
+"bei"
+--         terminates BEBEI specified descriptors
+
+RULE:BEhO
+TYPE:String
+RHS:
+s:BEhOmain postClause -> s
+
+RULE:BEhOmain
+TYPE:String
+RHS:
+"be'o"
+--         prefix for high-priority MEX operator
+
+RULE:BIhE
+TYPE:String
+RHS:
+s:BIhEmain postClause -> s
+
+RULE:BIhEmain
+TYPE:String
+RHS:
+"bi'e"
+--         interval component of JOI
+
+RULE:BIhI
+TYPE:String
+RHS:
+s:BIhImain postClause -> s
+
+RULE:BIhImain
+TYPE:String
+RHS:
+"mi'i" / "bi'o" / "bi'i"
+--         joins two units with shortest scope
+
+RULE:BO
+TYPE:String
+RHS:
+s:BOmain postClause -> s
+
+RULE:BOmain
+TYPE:String
+RHS:
+"bo"
+--         number or lerfu-string terminator
+
+RULE:BOI
+TYPE:String
+RHS:
+s:BOImain postClause -> s
+
+RULE:BOImain
+TYPE:String
+RHS:
+"boi"
+--         turns any word into a BY lerfu word
+
+RULE:BU
+TYPE:String
+RHS:
+s:BUmain postClause -> s
+
+RULE:BUmain
+TYPE:String
+RHS:
+"bu"
+--         individual lerfu words
+
+RULE:BY
+TYPE:String
+RHS:
+s:BYmain postClause -> s
+
+RULE:BYmain
+TYPE:String
+RHS:
+"jo'o" / "ru'o" / "ge'o" / "je'o" / "lo'a" / "na'a" / "se'e" / "to'a" / "ga'e" / "y'y" / "by" / "cy" / "dy" / "fy" / "gy" / "jy" / "ky" / "ly" / "my" / "ny" / "py" / "ry" / "sy" / "ty" / "vy" / "xy" / "zy"
+--         specifies actualitypotentiality of tense
+
+RULE:CAhA
+TYPE:String
+RHS:
+s:CAhAmain postClause -> s
+
+RULE:CAhAmain
+TYPE:String
+RHS:
+"ca'a" / "pu'i" / "nu'o" / "ka'e"
+--         afterthought intensity marker
+
+RULE:CAI
+TYPE:String
+RHS:
+s:CAImain postClause -> s
+
+RULE:CAImain
+TYPE:String
+RHS:
+"pei" / "cai" / "cu'i" / "sai" / "ru'e"
+--         pro-bridi assignment operator
+
+RULE:CEI
+TYPE:String
+RHS:
+s:CEImain postClause -> s
+
+RULE:CEImain
+TYPE:String
+RHS:
+"cei"
+--         afterthought term list connective
+
+RULE:CEhE
+TYPE:String
+RHS:
+s:CEhEmain postClause -> s
+
+RULE:CEhEmain
+TYPE:String
+RHS:
+"ce'e"
+--         tanru inversion
+
+RULE:CO
+TYPE:String
+RHS:
+s:COmain postClause -> s
+
+RULE:COmain
+TYPE:String
+RHS:
+"co"
+--         vocative marker permitted inside names; must always be followed by pause or DOI
+
+RULE:COI
+TYPE:String
+RHS:
+s:COImain postClause -> s
+
+RULE:COImain
+TYPE:String
+RHS:
+"ju'i" / "coi" / "fi'i" / "ta'a" / "mu'o" / "fe'o" / "co'o" / "pe'u" / "ke'o" / "nu'e" / "re'i" / "be'e" / "je'e" / "mi'e" / "ki'e" / "vi'o"
+--         separator between head sumti and selbri
+
+RULE:CU
+TYPE:String
+RHS:
+s:CUmain postClause -> s
+
+RULE:CUmain
+TYPE:String
+RHS:
+"cu"
+--         tensemodal question
+
+RULE:CUhE
+TYPE:String
+RHS:
+s:CUhEmain postClause -> s
+
+RULE:CUhEmain
+TYPE:String
+RHS:
+"cu'e" / "nau"
+--         cancel anaphoracataphora assignments
+
+RULE:DAhO
+TYPE:String
+RHS:
+s:DAhOmain postClause -> s
+
+RULE:DAhOmain
+TYPE:String
+RHS:
+"da'o"
+--         vocative marker
+
+RULE:DOI
+TYPE:String
+RHS:
+s:DOImain postClause -> s
+
+RULE:DOImain
+TYPE:String
+RHS:
+"doi"
+--         terminator for DOI-marked vocatives
+
+RULE:DOhU
+TYPE:String
+RHS:
+s:DOhUmain postClause -> s
+
+RULE:DOhUmain
+TYPE:String
+RHS:
+"do'u"
+--         modifier head generic case tag
+
+RULE:FA
+TYPE:String
+RHS:
+s:FAmain postClause -> s
+
+RULE:FAmain
+TYPE:String
+RHS:
+"fai" / "fi'a" / "fa" / "fe" / "fi" / "fo" / "fu"
+--         superdirections in space
+
+RULE:FAhA
+TYPE:String
+RHS:
+s:FAhAmain postClause -> s
+
+RULE:FAhAmain
+TYPE:String
+RHS:
+"du'a" / "be'a" / "ne'u" / "vu'a" / "ga'u" / "ti'a" / "ni'a" / "ca'u" / "zu'a" / "ri'u" / "ru'u" / "re'o" / "te'e" / "bu'u" / "ne'a" / "pa'o" / "ne'i" / "to'o" / "zo'i" / "ze'o" / "zo'a" / "fa'a"
+--         normally elided 'done pause' to indicate end of utterance string
+
+RULE:FAhO
+TYPE:String
+RHS:
+s:FAhOmain postClause -> s
+
+RULE:FAhOmain
+TYPE:String
+RHS:
+"fa'o"
+--         space interval mod flag
+
+RULE:FEhE
+TYPE:String
+RHS:
+s:FEhEmain postClause -> s
+
+RULE:FEhEmain
+TYPE:String
+RHS:
+"fe'e"
+--         ends bridi to modal conversion
+
+RULE:FEhU
+TYPE:String
+RHS:
+s:FEhUmain postClause -> s
+
+RULE:FEhUmain
+TYPE:String
+RHS:
+"fe'u"
+--         marks bridi to modal conversion
+
+RULE:FIhO
+TYPE:String
+RHS:
+s:FIhOmain postClause -> s
+
+RULE:FIhOmain
+TYPE:String
+RHS:
+"fi'o"
+--         end compound lerfu
+
+RULE:FOI
+TYPE:String
+RHS:
+s:FOImain postClause -> s
+
+RULE:FOImain
+TYPE:String
+RHS:
+"foi"
+--         reverse Polish flag
+
+RULE:FUhA
+TYPE:String
+RHS:
+s:FUhAmain postClause -> s
+
+RULE:FUhAmain
+TYPE:String
+RHS:
+"fu'a"
+--         open long scope for indicator
+
+RULE:FUhE
+TYPE:String
+RHS:
+s:FUhEmain postClause -> s
+
+RULE:FUhEmain
+TYPE:String
+RHS:
+"fu'e"
+--         close long scope for indicator
+
+RULE:FUhO
+TYPE:String
+RHS:
+s:FUhOmain postClause -> s
+
+RULE:FUhOmain
+TYPE:String
+RHS:
+"fu'o"
+
+--         geks; forethought logical connectives
+
+RULE:GA
+TYPE:String
+RHS:
+s:GAmain postClause -> s
+
+RULE:GAmain
+TYPE:String
+RHS:
+"ge'i" / "ge" / "go" / "ga" / "gu"
+--         openclosed interval markers for BIhI
+
+RULE:GAhO
+TYPE:String
+RHS:
+s:GAhOmain postClause -> s
+
+RULE:GAhOmain
+TYPE:String
+RHS:
+"ke'i" / "ga'o"
+--         marker ending GOI relative clauses
+
+RULE:GEhU
+TYPE:String
+RHS:
+s:GEhUmain postClause -> s
+
+RULE:GEhUmain
+TYPE:String
+RHS:
+"ge'u"
+--         forethought medial marker
+
+RULE:GI
+TYPE:String
+RHS:
+s:GImain postClause -> s
+
+RULE:GImain
+TYPE:String
+RHS:
+"gi"
+--         logical connectives for bridi-tails
+
+RULE:GIhA
+TYPE:String
+RHS:
+s:GIhAmain postClause -> s
+
+RULE:GIhAmain
+TYPE:String
+RHS:
+"gi'e" / "gi'i" / "gi'o" / "gi'a" / "gi'u"
+--         attaches a sumti modifier to a sumti
+
+RULE:GOI
+TYPE:String
+RHS:
+s:GOImain postClause -> s
+
+RULE:GOImain
+TYPE:String
+RHS:
+"no'u" / "ne" / "goi" / "po'u" / "pe" / "po'e" / "po"
+--         pro-bridi
+
+RULE:GOhA
+TYPE:String
+RHS:
+s:GOhAmain postClause -> s
+
+RULE:GOhAmain
+TYPE:String
+RHS:
+"mo" / "nei" / "go'u" / "go'o" / "go'i" / "no'a" / "go'e" / "go'a" / "du" / "bu'a" / "bu'e" / "bu'i" / "co'e"
+--         GEK for tanru units, corresponds to JEKs
+
+RULE:GUhA
+TYPE:String
+RHS:
+s:GUhAmain postClause -> s
+
+RULE:GUhAmain
+TYPE:String
+RHS:
+"gu'e" / "gu'i" / "gu'o" / "gu'a" / "gu'u"
+
+--         sentence link
+
+RULE:I
+TYPE:String
+RHS:
+s:Imain postClause -> s
+
+RULE:Imain
+TYPE:String
+RHS:
+"i"
+
+--         jeks; logical connectives within tanru
+
+RULE:JA
+TYPE:String
+RHS:
+s:JAmain postClause -> s
+
+RULE:JAmain
+TYPE:String
+RHS:
+"je'i" / "je" / "jo" / "ja" / "ju"
+--         modal conversion flag
+
+RULE:JAI
+TYPE:String
+RHS:
+s:JAImain postClause -> s
+
+RULE:JAImain
+TYPE:String
+RHS:
+"jai"
+--         flags an array operand
+
+RULE:JOhI
+TYPE:String
+RHS:
+s:JOhImain postClause -> s
+
+RULE:JOhImain
+TYPE:String
+RHS:
+"jo'i"
+--         non-logical connectives
+
+RULE:JOI
+TYPE:String
+RHS:
+s:JOImain postClause -> s
+
+RULE:JOImain
+TYPE:String
+RHS:
+"fa'u" / "pi'u" / "joi" / "ce'o" / "ce" / "jo'u" / "ku'a" / "jo'e" / "ju'e"
+
+--         left long scope marker
+
+RULE:KE
+TYPE:String
+RHS:
+s:KEmain postClause -> s
+
+RULE:KEmain
+TYPE:String
+RHS:
+"ke"
+--         right terminator for KE groups
+
+RULE:KEhE
+TYPE:String
+RHS:
+s:KEhEmain postClause -> s
+
+RULE:KEhEmain
+TYPE:String
+RHS:
+"ke'e"
+--         right terminator, NU abstractions
+
+RULE:KEI
+TYPE:String
+RHS:
+s:KEImain postClause -> s
+
+RULE:KEImain
+TYPE:String
+RHS:
+"kei"
+--         multiple utterance scope for tenses
+
+RULE:KI
+TYPE:String
+RHS:
+s:KImain postClause -> s
+
+RULE:KImain
+TYPE:String
+RHS:
+"ki"
+--         sumti anaphora
+
+RULE:KOhA
+TYPE:String
+RHS:
+s:KOhAmain postClause -> s
+
+RULE:KOhAmain
+TYPE:String
+RHS:
+"da'u" / "da'e" / "di'u" / "di'e" / "de'u" / "de'e" / "dei" / "do'i" / "mi'o" / "ma'a" / "mi'a" / "do'o" / "ko'a" / "fo'u" / "ko'e" / "ko'i" / "ko'o" / "ko'u" / "fo'a" / "fo'e" / "fo'i" / "fo'o" / "vo'a" / "vo'e" / "vo'i" / "vo'o" / "vo'u" / "zi'o" / "ke'a" / "zu'i" / "zo'e" / "ce'u" / "ko" / "da" / "de" / "di" / "mi" / "ma" / "ru" / "ri" / "ra" / "ta" / "tu" / "ti" / "do"
+--         right terminator for descriptions, etc.
+
+RULE:KU
+TYPE:String
+RHS:
+s:KUmain postClause -> s
+
+RULE:KUmain
+TYPE:String
+RHS:
+"ku"
+--         MEX forethought delimiter
+
+RULE:KUhE
+TYPE:String
+RHS:
+s:KUhEmain postClause -> s
+
+RULE:KUhEmain
+TYPE:String
+RHS:
+"ku'e"
+--         right terminator, NOI relative clauses
+
+RULE:KUhO
+TYPE:String
+RHS:
+s:KUhOmain postClause -> s
+
+RULE:KUhOmain
+TYPE:String
+RHS:
+"ku'o"
+
+--         name descriptors
+
+RULE:LA
+TYPE:String
+RHS:
+s:LAmain postClause -> s
+
+RULE:LAmain
+TYPE:String
+RHS:
+"lai" / "la'i" / "la"
+--         lerfu prefixes
+
+RULE:LAU
+TYPE:String
+RHS:
+s:LAUmain postClause -> s
+
+RULE:LAUmain
+TYPE:String
+RHS:
+"ce'a" / "lau" / "zai" / "tau"
+--         sumti qualifiers
+
+RULE:LAhE
+TYPE:String
+RHS:
+s:LAhEmain postClause -> s
+
+RULE:LAhEmain
+TYPE:String
+RHS:
+"tu'a" / "lu'a" / "lu'o" / "la'e" / "vu'i" / "lu'i" / "lu'e"
+--         sumti descriptors
+
+RULE:LE
+TYPE:String
+RHS:
+s:LEmain postClause -> s
+
+RULE:LEmain
+TYPE:String
+RHS:
+"le'i" / "lo'i" / "le'e" / "lo'e" / "lei" / "loi" / "le" / "lo"
+--         possibly ungrammatical text right quote
+
+RULE:LEhU
+TYPE:String
+RHS:
+s:LEhUmain postClause -> s
+
+RULE:LEhUmain
+TYPE:String
+RHS:
+"le'u"
+--         convert number to sumti
+
+RULE:LI
+TYPE:String
+RHS:
+s:LImain postClause -> s
+
+RULE:LImain
+TYPE:String
+RHS:
+"me'o"
+	/ "li" 
+--         grammatical text right quote
+
+RULE:LIhU
+TYPE:String
+RHS:
+s:LIhUmain postClause -> s
+
+RULE:LIhUmain
+TYPE:String
+RHS:
+"li'u"
+--         elidable terminator for LI
+
+RULE:LOhO
+TYPE:String
+RHS:
+s:LOhOmain postClause -> s
+
+RULE:LOhOmain
+TYPE:String
+RHS:
+"lo'o"
+--         possibly ungrammatical text left quote
+
+RULE:LOhU
+TYPE:String
+RHS:
+s:LOhUmain postClause -> s
+
+RULE:LOhUmain
+TYPE:String
+RHS:
+"lo'u"
+--         grammatical text left quote
+
+RULE:LU
+TYPE:String
+RHS:
+s:LUmain postClause -> s
+
+RULE:LUmain
+TYPE:String
+RHS:
+"lu"
+--         LAhE close delimiter
+
+RULE:LUhU
+TYPE:String
+RHS:
+s:LUhUmain postClause -> s
+
+RULE:LUhUmain
+TYPE:String
+RHS:
+"lu'u"
+
+--         change MEX expressions to MEX operators
+
+RULE:MAhO
+TYPE:String
+RHS:
+s:MAhOmain postClause -> s
+
+RULE:MAhOmain
+TYPE:String
+RHS:
+"ma'o"
+--         change numbers to utterance ordinals
+
+RULE:MAI
+TYPE:String
+RHS:
+s:MAImain postClause -> s
+
+RULE:MAImain
+TYPE:String
+RHS:
+"mo'o"
+	/ "mai" 
+--         converts a sumti into a tanru_unit
+
+RULE:ME
+TYPE:String
+RHS:
+s:MEmain postClause -> s
+
+RULE:MEmain
+TYPE:String
+RHS:
+"me"
+--         terminator for ME
+
+RULE:MEhU
+TYPE:String
+RHS:
+s:MEhUmain postClause -> s
+
+RULE:MEhUmain
+TYPE:String
+RHS:
+"me'u"
+--         change sumti to operand, inverse of LI
+
+RULE:MOhE
+TYPE:String
+RHS:
+s:MOhEmain postClause -> s
+
+RULE:MOhEmain
+TYPE:String
+RHS:
+"mo'e"
+--         motion tense marker
+
+RULE:MOhI
+TYPE:String
+RHS:
+s:MOhImain postClause -> s
+
+RULE:MOhImain
+TYPE:String
+RHS:
+"mo'i"
+--         change number to selbri
+
+RULE:MOI
+TYPE:String
+RHS:
+s:MOImain postClause -> s
+
+RULE:MOImain
+TYPE:String
+RHS:
+"mei" / "moi" / "si'e" / "cu'o" / "va'e"
+
+--         bridi negation
+
+RULE:NA
+TYPE:String
+RHS:
+s:NAmain postClause -> s
+
+RULE:NAmain
+TYPE:String
+RHS:
+"ja'a"
+	/ "na" 
+--         attached to words to negate them
+
+RULE:NAI
+TYPE:String
+RHS:
+s:NAImain postClause -> s
+
+RULE:NAImain
+TYPE:String
+RHS:
+"nai"
+--         scalar negation
+
+RULE:NAhE
+TYPE:String
+RHS:
+s:NAhEmain postClause -> s
+
+RULE:NAhEmain
+TYPE:String
+RHS:
+"to'e" / "je'a" / "na'e" / "no'e"
+--         change a selbri into an operator
+
+RULE:NAhU
+TYPE:String
+RHS:
+s:NAhUmain postClause -> s
+
+RULE:NAhUmain
+TYPE:String
+RHS:
+"na'u"
+--         change selbri to operand; inverse of MOI
+
+RULE:NIhE
+TYPE:String
+RHS:
+s:NIhEmain postClause -> s
+
+RULE:NIhEmain
+TYPE:String
+RHS:
+"ni'e"
+--         new paragraph; change of subject
+
+RULE:NIhO
+TYPE:String
+RHS:
+s:NIhOmain postClause -> s
+
+RULE:NIhOmain
+TYPE:String
+RHS:
+"ni'o" / "no'i"
+--         attaches a subordinate clause to a sumti
+
+RULE:NOI
+TYPE:String
+RHS:
+s:NOImain postClause -> s
+
+RULE:NOImain
+TYPE:String
+RHS:
+"voi" / "noi" / "poi"
+--         abstraction
+
+RULE:NU
+TYPE:String
+RHS:
+s:NUmain postClause -> s
+
+RULE:NUmain
+TYPE:String
+RHS:
+"ni" / "du'u" / "si'o" / "nu" / "li'i" / "ka" / "jei" / "su'u" / "zu'o" / "mu'e" / "pu'u" / "za'i" / "poi'i"
+--         change operator to selbri; inverse of MOhE
+
+RULE:NUhA
+TYPE:String
+RHS:
+s:NUhAmain postClause -> s
+
+RULE:NUhAmain
+TYPE:String
+RHS:
+"nu'a"
+--         marks the start of a termset
+
+RULE:NUhI
+TYPE:String
+RHS:
+s:NUhImain postClause -> s
+
+RULE:NUhImain
+TYPE:String
+RHS:
+"nu'i"
+--         marks the middle and end of a termset
+
+RULE:NUhU
+TYPE:String
+RHS:
+s:NUhUmain postClause -> s
+
+RULE:NUhUmain
+TYPE:String
+RHS:
+"nu'u"
+
+--         numbers and numeric punctuation
+
+RULE:PA
+TYPE:String
+RHS:
+s:PAmain postClause -> s
+
+RULE:PAmain
+TYPE:String
+RHS:
+"pi'e" / "fi'u" / "za'u" / "me'i" / "ni'u" / "ki'o" / "ce'i" / "ma'u" / "ra'e" / "da'a" / "so'a" / "ji'i" / "su'o" / "su'e" / "rau" / "so'u" / "so'i" / "so'e" / "so'o" / "mo'a" / "du'e" / "te'o" / "ka'o" / "ci'i" / "tu'o" / "pai" / "dau" / "fei" / "gai" / "jau" / "rei" / "vai" / "no'o" / "ro" / "xo" / "no" / "pa" / "ci" / "vo" / "mu" / "xa" / "ze" / "bi" / "so" / "pi" / "re"
+--         afterthought termset connective prefix
+
+RULE:PEhE
+TYPE:String
+RHS:
+s:PEhEmain postClause -> s
+
+RULE:PEhEmain
+TYPE:String
+RHS:
+"pe'e"
+--         forethought (Polish) flag
+
+RULE:PEhO
+TYPE:String
+RHS:
+s:PEhOmain postClause -> s
+
+RULE:PEhOmain
+TYPE:String
+RHS:
+"pe'o"
+--         directions in time
+
+RULE:PU
+TYPE:String
+RHS:
+s:PUmain postClause -> s
+
+RULE:PUmain
+TYPE:String
+RHS:
+"ba" / "pu" / "ca"
+
+--         flag for modified interpretation of GOhI
+
+RULE:RAhO
+TYPE:String
+RHS:
+s:RAhOmain postClause -> s
+
+RULE:RAhOmain
+TYPE:String
+RHS:
+"ra'o"
+--         converts number to extensional tense
+
+RULE:ROI
+TYPE:String
+RHS:
+s:ROImain postClause -> s
+
+RULE:ROImain
+TYPE:String
+RHS:
+"re'u" / "roi"
+
+--         metalinguistic eraser to the beginning of the current utterance
+
+RULE:SA
+TYPE:String
+RHS:
+s:SAmain postClause -> s
+
+RULE:SAmain
+TYPE:String
+RHS:
+"sa"
+--         conversions
+
+RULE:SE
+TYPE:String
+RHS:
+s:SEmain postClause -> s
+
+RULE:SEmain
+TYPE:String
+RHS:
+"se" / "te" / "ve" / "xe"
+--         metalinguistic bridi insert marker
+
+RULE:SEI
+TYPE:String
+RHS:
+s:SEImain postClause -> s
+
+RULE:SEImain
+TYPE:String
+RHS:
+"sei" / "ti'o"
+--         metalinguistic bridi end marker
+
+RULE:SEhU
+TYPE:String
+RHS:
+s:SEhUmain postClause -> s
+
+RULE:SEhUmain
+TYPE:String
+RHS:
+"se'u"
+--         metalinguistic single word eraser
+
+RULE:SI
+TYPE:String
+RHS:
+s:SImain postClause -> s
+
+RULE:SImain
+TYPE:String
+RHS:
+"si"
+--         reciprocal sumti marker
+
+RULE:SOI
+TYPE:String
+RHS:
+s:SOImain postClause -> s
+
+RULE:SOImain
+TYPE:String
+RHS:
+"soi"
+--         metalinguistic eraser of the entire text
+
+RULE:SU
+TYPE:String
+RHS:
+s:SUmain postClause -> s
+
+RULE:SUmain
+TYPE:String
+RHS:
+"su"
+
+--         tense interval properties
+
+RULE:TAhE
+TYPE:String
+RHS:
+s:TAhEmain postClause -> s
+
+RULE:TAhEmain
+TYPE:String
+RHS:
+"ru'i" / "ta'e" / "di'i" / "na'o"
+--         closing gap for MEX constructs
+
+RULE:TEhU
+TYPE:String
+RHS:
+s:TEhUmain postClause -> s
+
+RULE:TEhUmain
+TYPE:String
+RHS:
+"te'u"
+--         start compound lerfu
+
+RULE:TEI
+TYPE:String
+RHS:
+s:TEImain postClause -> s
+
+RULE:TEImain
+TYPE:String
+RHS:
+"tei"
+--         left discursive parenthesis
+
+RULE:TO
+TYPE:String
+RHS:
+s:TOmain postClause -> s
+
+RULE:TOmain
+TYPE:String
+RHS:
+"to'i" / "to"
+--         right discursive parenthesis
+
+RULE:TOI
+TYPE:String
+RHS:
+s:TOImain postClause -> s
+
+RULE:TOImain
+TYPE:String
+RHS:
+"toi"
+--         multiple utterance scope mark
+
+RULE:TUhE
+TYPE:String
+RHS:
+s:TUhEmain postClause -> s
+
+RULE:TUhEmain
+TYPE:String
+RHS:
+"tu'e"
+--         multiple utterance end scope mark
+
+RULE:TUhU
+TYPE:String
+RHS:
+s:TUhUmain postClause -> s
+
+RULE:TUhUmain
+TYPE:String
+RHS:
+"tu'u"
+
+--         attitudinals, observationals, discursives
+
+RULE:UI
+TYPE:String
+RHS:
+s:UImain postClause -> s
+
+RULE:UImain
+TYPE:String
+RHS:
+"i'a" / "ie" / "a'e" / "u'i" / "i'o" / "i'e" / "a'a" / "ia" / "o'i" / "o'e" / "e'e" / "oi" / "uo" / "e'i" / "u'o" / "au" / "ua" / "a'i" / "i'u" / "ii" / "u'a" / "ui" / "a'o" / "ai" / "a'u" / "iu" / "ei" / "o'o" / "e'a" / "uu" / "o'a" / "o'u" / "u'u" / "e'o" / "io" / "e'u" / "ue" / "i'i" / "u'e" / "ba'a" / "ja'o" / "ca'e" / "su'a" / "ti'e" / "ka'u" / "se'o" / "za'a" / "pe'i" / "ru'a" / "ju'a" / "ta'o" / "ra'u" / "li'a" / "ba'u" / "mu'a" / "do'a" / "to'u" / "va'i" / "pa'e" / "zu'u" / "sa'e" / "la'a" / "ke'u" / "sa'u" / "da'i" / "je'u" / "sa'a" / "kau" / "ta'u" / "na'i" / "jo'a" / "bi'u" / "li'o" / "pau" / "mi'u" / "ku'i" / "ji'a" / "si'a" / "po'o" / "pe'a" / "ro'i" / "ro'e" / "ro'o" / "ro'u" / "ro'a" / "re'e" / "le'o" / "ju'o" / "fu'i" / "dai" / "ga'i" / "zo'o" / "be'u" / "ri'e" / "se'i" / "se'a" / "vu'e" / "ki'a" / "xu" / "ge'e" / "bu'o"
+
+--         distance in space-time
+
+RULE:VA
+TYPE:String
+RHS:
+s:VAmain postClause -> s
+
+RULE:VAmain
+TYPE:String
+RHS:
+"vi" / "va" / "vu"
+--         end simple bridi or bridi-tail
+
+RULE:VAU
+TYPE:String
+RHS:
+s:VAUmain postClause -> s
+
+RULE:VAUmain
+TYPE:String
+RHS:
+"vau"
+--         left MEX bracket
+
+RULE:VEI
+TYPE:String
+RHS:
+s:VEImain postClause -> s
+
+RULE:VEImain
+TYPE:String
+RHS:
+"vei"
+--         right MEX bracket
+
+RULE:VEhO
+TYPE:String
+RHS:
+s:VEhOmain postClause -> s
+
+RULE:VEhOmain
+TYPE:String
+RHS:
+"ve'o"
+--         MEX operator
+
+RULE:VUhU
+TYPE:String
+RHS:
+s:VUhUmain postClause -> s
+
+RULE:VUhUmain
+TYPE:String
+RHS:
+"ge'a" / "fu'u" / "pi'i" / "fe'i" / "vu'u" / "su'i" / "ju'u" / "gei" / "pa'i" / "fa'i" / "te'a" / "cu'a" / "va'a" / "ne'o" / "de'o" / "fe'a" / "sa'o" / "re'a" / "ri'o" / "sa'i" / "pi'a" / "si'i"
+--         space-time interval size
+
+RULE:VEhA
+TYPE:String
+RHS:
+s:VEhAmain postClause -> s
+
+RULE:VEhAmain
+TYPE:String
+RHS:
+"ve'u" / "ve'a" / "ve'i" / "ve'e"
+--         space-time dimensionality marker
+
+RULE:VIhA
+TYPE:String
+RHS:
+s:VIhAmain postClause -> s
+
+RULE:VIhAmain
+TYPE:String
+RHS:
+"vi'i" / "vi'a" / "vi'u" / "vi'e"
+--         glue between logically connected sumti and relative clauses
+
+RULE:VUhO
+TYPE:String
+RHS:
+s:VUhOmain postClause -> s
+
+RULE:VUhOmain
+TYPE:String
+RHS:
+"vu'o"
+
+--         subscripting operator
+
+RULE:XI
+TYPE:String
+RHS:
+s:XImain postClause -> s
+
+RULE:XImain
+TYPE:String
+RHS:
+"xi"
+--	    EXPERIMENTAL cmavo to extract a binary relation from a tag
+
+RULE:XOhI
+TYPE:String
+RHS:
+s:XOhImain postClause -> s
+
+RULE:XOhImain
+TYPE:String
+RHS:
+"xo'i"
+
+--         hesitation
+
+RULE:Y
+TYPE:String
+RHS:
+s:Ymain postClause -> s
+
+RULE:Ymain
+TYPE:String
+RHS:
+"y"
+
+--         event properties - inchoative, etc.
+
+RULE:ZAhO
+TYPE:String
+RHS:
+s:ZAhOmain postClause -> s
+
+RULE:ZAhOmain
+TYPE:String
+RHS:
+"co'i" / "pu'o" / "co'u" / "mo'u" / "ca'o" / "co'a" / "de'a" / "ba'o" / "di'a" / "za'o"
+--         time interval size tense
+
+RULE:ZEhA
+TYPE:String
+RHS:
+s:ZEhAmain postClause -> s
+
+RULE:ZEhAmain
+TYPE:String
+RHS:
+"ze'u" / "ze'a" / "ze'i" / "ze'e"
+--         lujvo glue
+
+RULE:ZEI
+TYPE:String
+RHS:
+s:ZEImain Spacing -> s
+
+RULE:ZEImain
+TYPE:String
+RHS:
+"zei"
+--         time distance tense
+
+RULE:ZI
+TYPE:String
+RHS:
+s:ZImain postClause -> s
+
+RULE:ZImain
+TYPE:String
+RHS:
+"zu" / "za" / "zi"
+--         conjoins relative clauses
+
+RULE:ZIhE
+TYPE:String
+RHS:
+s:ZIhEmain postClause -> s
+
+RULE:ZIhEmain
+TYPE:String
+RHS:
+"zi'e"
+--         single word metalinguistic quote marker
+
+RULE:ZO
+TYPE:String
+RHS:
+s:ZOmain Spacing -> s
+
+RULE:ZOmain
+TYPE:String
+RHS:
+"zo"
+--         delimited quote marker
+
+RULE:ZOI
+TYPE:String
+RHS:
+s:ZOImain postClause -> s
+
+RULE:ZOImain
+TYPE:String
+RHS:
+"zoi" / "la'o"
+--         prenex terminator (not elidable)
+
+RULE:ZOhU
+TYPE:String
+RHS:
+s:ZOhUmain postClause -> s
+
+RULE:ZOhUmain
+TYPE:String
+RHS:
+"zo'u"
+

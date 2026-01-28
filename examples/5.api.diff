@@ -1,0 +1,106 @@
+--- examples/5.loj	2024-06-28 17:28:56.136554151 +0300
++++ /tmp/tmp.PGRxGCv5CP	2026-01-28 19:04:00.629161091 +0200
+@@ -426,7 +426,7 @@
+ > le mela nu,IORK. prenu le jecta
+ 
+ non-veridical: jecta(c1)
+-non-veridical: <(_ =< "nuiork")><prenu>(c0)
++non-veridical: <(_ <= "nuiork")><prenu>(c0)
+ [Fragment: c0,c1]
+ 
+ ju'a nai cy pa jecta
+@@ -706,7 +706,7 @@
+ > la BALtazar. cu me le ci nolraitru
+ 
+ non-veridical: (nolraitru(c0) /\ 3 mei(c0))
+-("baltazar" =< c0)
++("baltazar" <= c0)
+ 
+ ju'a nai ge cy no nolraitru gi cy no ci mei
+ .i la baltazar. me cy no me'u
+@@ -715,7 +715,7 @@
+ > la kaspar. cu me le ci nolraitru
+ 
+ non-veridical: (nolraitru(c0) /\ 3 mei(c0))
+-("kaspar" =< c0)
++("kaspar" <= c0)
+ 
+ ju'a nai ge cy no nolraitru gi cy no ci mei
+ .i la kaspar. me cy no me'u
+@@ -724,7 +724,7 @@
+ > la melxi,or. cu me le ci nolraitru
+ 
+ non-veridical: (nolraitru(c0) /\ 3 mei(c0))
+-("melxior" =< c0)
++("melxior" <= c0)
+ 
+ ju'a nai ge cy no nolraitru gi cy no ci mei
+ .i la melxior. me cy no me'u
+@@ -739,7 +739,7 @@
+ -----
+ > do me la djan.
+ 
+-(do =< "djan")
++(do <= "djan")
+ 
+ do me la djan. me'u
+ 
+@@ -747,7 +747,7 @@
+ > ta me lai kraislr. [me'u] karce
+ 
+ gunma(c0,"kraislr")
+-<(_ =< c0)><karce>(ta)
++<(_ <= c0)><karce>(ta)
+ 
+ cy no gunma la kraislr.
+ .i ta ke me cy no me'u karce ke'e
+@@ -756,7 +756,7 @@
+ > re me le ci nolraitru .e la djan. [me'u] cu blabi
+ 
+ non-veridical: (nolraitru(c0) /\ 3 mei(c0))
+-EQ(2) x1:(((_ =< c0) /\ (_ =< "djan"))). blabi(x1)
++EQ(2)x1:(((_ <= c0) /\ (_ <= "djan"))). blabi(x1)
+ 
+ ju'a nai ge cy no nolraitru gi cy no ci mei
+ .i re da poi ge ke'a me cy no me'u gi ke'a me la djan. me'u ku'o zo'u da blabi
+@@ -765,7 +765,7 @@
+ > re me le ci nolraitru me'u .e la djan. cu blabi
+ 
+ non-veridical: (nolraitru(c0) /\ 3 mei(c0))
+-(EQ(2) x1:((_ =< c0)). blabi(x1) /\ blabi("djan"))
++(EQ(2)x1:((_ <= c0)). blabi(x1) /\ blabi("djan"))
+ 
+ ju'a nai ge cy no nolraitru gi cy no ci mei
+ .i ge re da poi ke'a me cy no me'u ku'o zo'u da blabi gi la djan. blabi
+@@ -774,7 +774,7 @@
+ > ta me la'e le se cusku be do me'u cukta
+ 
+ non-veridical: cusku(do,c0)
+-<(_ =< {la'e}(c0))><cukta>(ta)
++<(_ <= {la'e}(c0))><cukta>(ta)
+ 
+ ju'a nai do cusku cy no
+ .i ta ke me la'e cy no lu'u me'u cukta ke'e
+@@ -782,7 +782,7 @@
+ -----
+ > le me le ci nolraitru [ku] me'u nunsalci
+ 
+-non-veridical: <(_ =< c0)><nunsalci>(c1)
++non-veridical: <(_ <= c0)><nunsalci>(c1)
+ non-veridical: (nolraitru(c0) /\ 3 mei(c0))
+ [Fragment: c1]
+ 
+@@ -954,11 +954,11 @@
+ 
+ non-veridical: zarci(c1)
+ non-veridical: <<birka(_)>{je}<masno(_)>(_)><klama>(c0)
+-{na'e}(<sutra(_)><cadzu>)(mi,c1,c0)
++{na'e}(<sutra(_)><cadzu>)(mi, ,c0,c1)
+ 
+ ju'a nai cy pa zarci
+ .i ju'a nai cy no ke ke birka ke'e je ke masno ke'e klama ke'e
+-.i mi na'e ke sutra cadzu ke'e cy pa cy no
++.i mi na'e ke sutra cadzu ke'e fi cy no cy pa
+ 
+ -----
+ > mi pu klama le zarci

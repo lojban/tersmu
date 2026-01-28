@@ -1,0 +1,128 @@
+--- examples/4.loj	2024-06-28 17:28:56.136554151 +0300
++++ /tmp/tmp.LLUUeKqxPJ	2026-01-28 19:04:00.161161465 +0200
+@@ -16,15 +16,11 @@
+ 
+ [Fragment: ]
+ 
+-
+-
+ -----
+ > pu nai je ca nai
+ 
+ [Fragment: ]
+ 
+-
+-
+ -----
+ > ki'e.u'e
+ 
+@@ -337,13 +333,13 @@
+ > me la'o ly. spaghetti .ly.
+ 
+ Morphology error:
+-	{me la'o ly. spaghetti .ly. }
+-	             ^
++	{  me la'o ly. spaghetti .ly.}
++	               ^
+ 
+ -----
+ > me la spagetis.
+ 
+-( =< "spagetis")
++( <= "spagetis")
+ 
+ me la spagetis. me'u
+ 
+@@ -367,8 +363,8 @@
+ > dja,r,spageti prefix short rafsi
+ 
+ Morphology error:
+-	{dja,r,spageti prefix short rafsi }
+-	                      ^
++	{  dja,r,spageti prefix short rafsi}
++	                        ^
+ 
+ -----
+ > acer Lojbanize
+@@ -383,8 +379,8 @@
+ > xaceru add initial consonant and final vowel
+ 
+ Morphology error:
+-	{xaceru add initial consonant and final vowel }
+-	        ^
++	{  xaceru add initial consonant and final vowel}
++	          ^
+ 
+ -----
+ > tric,r,xaceru prefix rafsi
+@@ -397,15 +393,15 @@
+ > ric,r,xaceru prefix short rafsi
+ 
+ Morphology error:
+-	{ric,r,xaceru prefix short rafsi }
+-	                     ^
++	{  ric,r,xaceru prefix short rafsi}
++	                       ^
+ 
+ -----
+ > bri Lojbanize
+ 
+ Morphology error:
+-	{bri Lojbanize }
+-	 ^
++	{  bri Lojbanize}
++	   ^
+ 
+ -----
+ > cirl,r,bri prefix rafsi
+@@ -443,8 +439,8 @@
+ > kuarka add final vowel
+ 
+ Morphology error:
+-	{kuarka add final vowel }
+-	        ^
++	{  kuarka add final vowel}
++	          ^
+ 
+ -----
+ > sask,r,kuarka prefix rafsi
+@@ -501,15 +497,15 @@
+ > bang,r,kore,a
+ 
+ Morphology error:
+-	{bang,r,kore,a }
+-	 ^
++	{  bang,r,kore,a}
++	   ^
+ 
+ -----
+ > kuln,r,kore,a
+ 
+ Morphology error:
+-	{kuln,r,kore,a }
+-	 ^
++	{  kuln,r,kore,a}
++	   ^
+ 
+ -----
+ > djim.
+@@ -545,15 +541,15 @@
+ > NEderlants.
+ 
+ Morphology error:
+-	{NEderlants. }
+-	 ^
++	{  NEderlants.}
++	   ^
+ 
+ -----
+ > NEder lants.
+ 
+ Morphology error:
+-	{NEder lants. }
+-	       ^
++	{  NEder lants.}
++	         ^
+ 
+ -----
+ > NEder

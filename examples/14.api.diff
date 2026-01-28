@@ -1,0 +1,193 @@
+--- examples/14.loj	2024-06-28 17:28:56.134554150 +0300
++++ /tmp/tmp.GGop4g5Ny5	2026-01-28 19:04:03.352158917 +0200
+@@ -42,21 +42,21 @@
+ -----
+ > la djan. nanmu .ijanai la djeimyz. ninmu
+ 
+-(ninmu("djeimyz") --> nanmu("djan"))
++(ninmu("djeimyz") -> nanmu("djan"))
+ 
+ ga nai la djeimyz. ninmu gi la djan. nanmu
+ 
+ -----
+ > la djan. ninmu .ijanai la djeimyz. ninmu
+ 
+-(ninmu("djeimyz") --> ninmu("djan"))
++(ninmu("djeimyz") -> ninmu("djan"))
+ 
+ ga nai la djeimyz. ninmu gi la djan. ninmu
+ 
+ -----
+ > la djan. nanmu .inaja la djeimyz. ninmu
+ 
+-(nanmu("djan") --> ninmu("djeimyz"))
++(nanmu("djan") -> ninmu("djeimyz"))
+ 
+ ga nai la djan. nanmu gi la djeimyz. ninmu
+ 
+@@ -105,7 +105,7 @@
+ -----
+ > ganai la djan. nanmu gi la djeimyz. ninmu
+ 
+-(nanmu("djan") --> ninmu("djeimyz"))
++(nanmu("djan") -> ninmu("djeimyz"))
+ 
+ ga nai la djan. nanmu gi la djeimyz. ninmu
+ 
+@@ -146,7 +146,7 @@
+ -----
+ > ganai la djan. nanmu ginai la djeimyz. ninmu
+ 
+-(ninmu("djeimyz") --> !nanmu("djan"))
++(ninmu("djeimyz") -> !nanmu("djan"))
+ 
+ ga nai la djeimyz. ninmu gi na ku la djan. nanmu
+ 
+@@ -199,7 +199,7 @@
+ > la djan. na.a la .alis. klama le zarci
+ 
+ non-veridical: zarci(c0)
+-(klama("djan",c0) --> klama("alis",c0))
++(klama("djan",c0) -> klama("alis",c0))
+ 
+ ju'a nai cy no zarci
+ .i ga nai la djan. klama cy no gi la alis. klama cy no
+@@ -270,21 +270,21 @@
+ -----
+ > mi cinba do .ije[bo] do cinba mi .ijanai mi prami do .ijebo do prami mi
+ 
+-((prami(mi,do) /\ prami(do,mi)) --> (cinba(mi,do) /\ cinba(do,mi)))
++((prami(mi,do) /\ prami(do,mi)) -> (cinba(mi,do) /\ cinba(do,mi)))
+ 
+ ga nai ge mi prami do gi do prami mi gi ge mi cinba do gi do cinba mi
+ 
+ -----
+ > tu'e mi cinba do .ije do cinba mi tu'u .ijanai tu'e mi prami do .ije do prami mi [tu'u]
+ 
+-((prami(mi,do) /\ prami(do,mi)) --> (cinba(mi,do) /\ cinba(do,mi)))
++((prami(mi,do) /\ prami(do,mi)) -> (cinba(mi,do) /\ cinba(do,mi)))
+ 
+ ga nai ge mi prami do gi do prami mi gi ge mi cinba do gi do cinba mi
+ 
+ -----
+ > mi cinba do .ije do cinba mi .ijanai tu'e mi prami do .ije do prami mi [tu'u]
+ 
+-((prami(mi,do) /\ prami(do,mi)) --> (cinba(mi,do) /\ cinba(do,mi)))
++((prami(mi,do) /\ prami(do,mi)) -> (cinba(mi,do) /\ cinba(do,mi)))
+ 
+ ga nai ge mi prami do gi do prami mi gi ge mi cinba do gi do cinba mi
+ 
+@@ -441,7 +441,7 @@
+ non-veridical: cukta(c2)
+ non-veridical: cukta(c1)
+ rupnu(c0)
+-(dejni(mi,c0,"djan") --> (dunda(mi,c1,"djan") \/ lebna(mi,c2,"djan")))
++(dejni(mi,c0,"djan") -> (dunda(mi,c1,"djan") \/ lebna(mi,c2,"djan")))
+ 
+ ju'a nai cy re cukta
+ .i ju'a nai cy pa cukta
+@@ -453,7 +453,7 @@
+ 
+ non-veridical: cukta(c1)
+ rupnu(c0)
+-(dejni(mi,c0,"djan") --> (dunda(mi,c1,"djan") \/ lebna(mi,c1,"djan")))
++(dejni(mi,c0,"djan") -> (dunda(mi,c1,"djan") \/ lebna(mi,c1,"djan")))
+ 
+ ju'a nai cy pa cukta
+ .i cy no rupnu
+@@ -464,7 +464,7 @@
+ 
+ non-veridical: cukta(c1)
+ rupnu(c0)
+-(dejni(mi,c0,"djan") --> (dunda(mi,c1,"djan") \/ lebna(mi,c1,"djan")))
++(dejni(mi,c0,"djan") -> (dunda(mi,c1,"djan") \/ lebna(mi,c1,"djan")))
+ 
+ ju'a nai cy pa cukta
+ .i cy no rupnu
+@@ -687,21 +687,21 @@
+ -----
+ > mi viska pa nanmu .ije mi viska pa ninmu
+ 
+-(EQ(1) x1:(nanmu(_)). viska(mi,x1) /\ EQ(1) x1:(ninmu(_)). viska(mi,x1))
++(EQ(1)x1:(nanmu(_)). viska(mi,x1) /\ EQ(1)x1:(ninmu(_)). viska(mi,x1))
+ 
+ ge pa da poi ke'a nanmu ku'o zo'u mi viska da gi pa da poi ke'a ninmu ku'o zo'u mi viska da
+ 
+ -----
+ > mi viska pa nanmu .e pa ninmu
+ 
+-(EQ(1) x1:(nanmu(_)). viska(mi,x1) /\ EQ(1) x1:(ninmu(_)). viska(mi,x1))
++(EQ(1)x1:(nanmu(_)). viska(mi,x1) /\ EQ(1)x1:(ninmu(_)). viska(mi,x1))
+ 
+ ge pa da poi ke'a nanmu ku'o zo'u mi viska da gi pa da poi ke'a ninmu ku'o zo'u mi viska da
+ 
+ -----
+ > mi viska pa nanmu je ninmu
+ 
+-EQ(1) x1:(<nanmu(_)>{je}<ninmu(_)>(_)). viska(mi,x1)
++EQ(1)x1:(<nanmu(_)>{je}<ninmu(_)>(_)). viska(mi,x1)
+ 
+ pa da poi ke'a ke nanmu ke'e je ke ninmu ke'e ku'o zo'u mi viska da
+ 
+@@ -819,7 +819,7 @@
+ ckafi(c2)
+ gunma(c1,c0)
+ tcati(c0)
+-((ckafi(ti) --> bevri(ko,c1,mi)) /\ (tcati(ti) --> bevri(ko,c3,mi)))
++((ckafi(ti) -> bevri(ko,c1,mi)) /\ (tcati(ti) -> bevri(ko,c3,mi)))
+ 
+ cy ci gunma cy re
+ .i cy re ckafi
+@@ -929,7 +929,7 @@
+ -----
+ > la djeimyz. fa'u la djordj. prami re mensi
+ 
+-EQ(2) x1:(mensi(_)). prami(("djeimyz" {fa'u} "djordj"),x1)
++EQ(2)x1:(mensi(_)). prami(("djeimyz" {fa'u} "djordj"),x1)
+ 
+ re da poi ke'a mensi ku'o zo'u la djeimyz. fa'u ke la djordj. ke'e prami da
+ 
+@@ -1151,7 +1151,7 @@
+ > vei ci .a vo [ve'o] prenu cu klama le zarci
+ 
+ non-veridical: zarci(c0)
+-(EQ(3) x1:(prenu(_)). klama(x1,c0) \/ EQ(4) x1:(prenu(_)). klama(x1,c0))
++(EQ(3)x1:(prenu(_)). klama(x1,c0) \/ EQ(4)x1:(prenu(_)). klama(x1,c0))
+ 
+ ju'a nai cy no zarci
+ .i ga ci da poi ke'a prenu ku'o zo'u da klama cy no gi vo da poi ke'a prenu ku'o zo'u da klama cy no
+@@ -1160,7 +1160,7 @@
+ > vei ga ci gi vo [ve'o] prenu cu klama le zarci
+ 
+ non-veridical: zarci(c0)
+-(EQ(3) x1:(prenu(_)). klama(x1,c0) \/ EQ(4) x1:(prenu(_)). klama(x1,c0))
++(EQ(3)x1:(prenu(_)). klama(x1,c0) \/ EQ(4)x1:(prenu(_)). klama(x1,c0))
+ 
+ ju'a nai cy no zarci
+ .i ga ci da poi ke'a prenu ku'o zo'u da klama cy no gi vo da poi ke'a prenu ku'o zo'u da klama cy no
+@@ -1281,14 +1281,14 @@
+ -----
+ > mi viska pa nanmu .ijebabo mi viska pa ninmu
+ 
+-EX x1. (x1=. EQ(1) x2:(nanmu(_)). viska(mi,x2) /\ (ba)(x1). EQ(1) x2:(ninmu(_)). viska(mi,x2))
++EX x1. (x1=. EQ(1)x2:(nanmu(_)). viska(mi,x2) /\ (ba)(x1). EQ(1)x2:(ninmu(_)). viska(mi,x2))
+ 
+ su'o da zo'u ge fi'o du da pa de poi ke'a nanmu ku'o zo'u mi viska de gi ba da pa de poi ke'a ninmu ku'o zo'u mi viska de
+ 
+ -----
+ > mi viska pa nanmu .ijebatu'e mi viska pa ninmu [tu'u]
+ 
+-(EQ(1) x1:(nanmu(_)). viska(mi,x1) /\ (ba)(). EQ(1) x1:(ninmu(_)). viska(mi,x1))
++(EQ(1)x1:(nanmu(_)). viska(mi,x1) /\ (ba)(). EQ(1)x1:(ninmu(_)). viska(mi,x1))
+ 
+ ge pa da poi ke'a nanmu ku'o zo'u mi viska da gi ba ku pa da poi ke'a ninmu ku'o zo'u mi viska da
+ 
+@@ -1303,7 +1303,7 @@
+ > vei ci .ebabo vo [ve'o] tadni cu zvati le kumfa
+ 
+ non-veridical: kumfa(c0)
+-EX x1. (x1=. EQ(3) x2:(tadni(_)). zvati(x2,c0) /\ (ba)(x1). EQ(4) x2:(tadni(_)). zvati(x2,c0))
++EX x1. (x1=. EQ(3)x2:(tadni(_)). zvati(x2,c0) /\ (ba)(x1). EQ(4)x2:(tadni(_)). zvati(x2,c0))
+ 
+ ju'a nai cy no kumfa
+ .i su'o da zo'u ge fi'o du da ci de poi ke'a tadni ku'o zo'u de zvati cy no gi ba da vo de poi ke'a tadni ku'o zo'u de zvati cy no

@@ -1,0 +1,29 @@
+--- examples/9.loj	2024-06-28 17:28:56.137554151 +0300
++++ /tmp/tmp.pMVPL8mtd7	2026-01-28 19:04:01.662160266 +0200
+@@ -623,7 +623,7 @@
+ -----
+ > la .apasionatas. poi se cusku la .artr. rubnstain. cu se nelci mi
+ 
+-(cusku("artr rubnstain",c0) /\ (c0 =< "apasionatas"))
++(cusku("artr rubnstain",c0) /\ (c0 <= "apasionatas"))
+ nelci(mi,c0)
+ 
+ ge la artr rubnstain. cusku cy no gi cy no me la apasionatas. me'u
+@@ -641,7 +641,7 @@
+ -----
+ > la .apasionatas. pe la .artr. rubnstain. se nelci mi
+ 
+-(srana(c0,"artr rubnstain") /\ (c0 =< "apasionatas"))
++(srana(c0,"artr rubnstain") /\ (c0 <= "apasionatas"))
+ nelci(mi,c0)
+ 
+ ge cy no srana la artr rubnstain. gi cy no me la apasionatas. me'u
+@@ -659,7 +659,7 @@
+ -----
+ > la .apasionatas pe cu'u la .artr. rubnstain. cu se nelci mi
+ 
+-({cu'u}("artr rubnstain",c0) /\ (c0 =< "apasionatas"))
++({cu'u}("artr rubnstain",c0) /\ (c0 <= "apasionatas"))
+ nelci(mi,c0)
+ 
+ ge la artr rubnstain. xo'i cu'u cy no gi cy no me la apasionatas. me'u

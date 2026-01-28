@@ -1,0 +1,45 @@
+--- examples/10.loj	2024-06-28 17:28:56.133554149 +0300
++++ /tmp/tmp.amGjo662Q0	2026-01-28 19:04:02.256159792 +0200
+@@ -1763,7 +1763,7 @@
+ > do klama le zdani ca ma
+ 
+ non-veridical: zdani(c0)
+-? x1. (ca)(x1). klama(do,c0)
++?x1. (ca)(x1). klama(do,c0)
+ 
+ ju'a nai cy no zdani
+ .i ma goi ko'a ca ko'a zo'u do klama cy no
+@@ -1773,7 +1773,7 @@
+ 
+ non-veridical: bisli(c1)
+ non-veridical: verba(c0)
+-? x1. (vi)(x1). (pu)(). cadzu(c0,c1)
++?x1. (vi)(x1). (pu)(). cadzu(c0,c1)
+ 
+ ju'a nai cy pa bisli
+ .i ju'a nai cy no verba
+@@ -1795,15 +1795,11 @@
+ 
+ [Fragment: ]
+ 
+-
+-
+ -----
+ > puzu
+ 
+ [Fragment: ]
+ 
+-
+-
+ -----
+ > vi le lunra
+ 
+@@ -1818,8 +1814,6 @@
+ 
+ [Fragment: ]
+ 
+-
+-
+ -----
+ > seka'a le briju
+ 

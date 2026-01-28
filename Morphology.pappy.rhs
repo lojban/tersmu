@@ -1,0 +1,1219 @@
+HEADER:
+-- vim:ft=haskell
+--
+-- adapted from xorxes' BPFK morphology algorithm
+-- http://www.lojban.org/tiki/BPFK+Section%3A+PEG+Morphology+Algorithm
+-- by Martin Bays 2014
+
+-- --- GRAMMAR ---
+-- This grammar classifies words by their morphological class (cmene,
+-- gismu, lujvo, fuhivla, cmavo, and non_lojban_word). 
+-- 
+--The final section sorts cmavo into grammatical classes (A, BAI, BAhE, ..., ZOhU).
+-- 
+-- mi'e ((xorxes))
+
+parser morphology:
+
+{
+import Data.Maybe
+}
+
+top words
+---------------------------------------------------------------------
+
+
+---RULES---
+
+RULE:words
+TYPE:{[String]}
+RHS:
+pause? ws:(w:word pause? -> w)* -> ws
+
+RULE:word
+TYPE:String
+RHS:
+lojban_word / non_lojban_word
+
+RULE:lojban_word
+TYPE:String
+RHS:
+cmene / cmavo / brivla
+
+RULE:brivla
+TYPE:String
+RHS:
+gismu / fuhivla / lujvo
+
+---------------------------------------------------------------------
+
+RULE:cmene
+TYPE:String
+RHS:
+jbocme / zifcme
+
+RULE:zifcme
+TYPE:String
+RHS:
+!h ss:(nucleus / glide / h / s:consonant !pause -> s / digit)* s:consonant &pause -> {concat ss ++ s}
+
+RULE:jbocme
+TYPE:String
+RHS:
+&zifcme ss:(any_syllable / digit)+ &pause -> {concat ss}
+
+--cmene :: String = !h &consonant_final coda? (any_syllable / digit)* &pause
+
+--consonant_final :: String = (non_space &non_space)* consonant &pause
+
+--cmene :: String = !h cmene_syllable* &consonant coda? consonantal_syllable* onset &pause
+
+--cmene_syllable :: String = !doi_la_lai_lahi coda? consonantal_syllable* onset nucleus / digit
+
+--doi_la_lai_lahi :: String = (d o i / l a (h? i)?) !h !nucleus
+
+---------------------------------------------------------------------
+
+RULE:cmavo
+TYPE:String
+RHS:
+!cmene !CVCy_lujvo s:cmavo_form &post_word -> s
+
+RULE:CVCy_lujvo
+TYPE:String
+RHS:
+= s1:CVC_rafsi s2:y ms:h? ss:initial_rafsi* s3:brivla_core -> {s1++s2++fromMaybe "" ms++concat ss++s3}
+    / s1:stressed_CVC_rafsi s2:y s3:short_final_rafsi -> {s1++s2++s3}
+
+RULE:cmavo_form
+TYPE:String
+RHS:
+= !h !cluster s1:onset ss:cmavo_form_sub* s2:(!stressed s:nucleus -> s / s:nucleus !cluster -> s) -> {s1++concat ss++s2}
+    / ss:y+ -> {concat ss}
+    / digit
+
+RULE:cmavo_form_sub
+TYPE:String
+RHS:
+(s1:nucleus s2:h -> {s1++s2})
+
+---------------------------------------------------------------------
+
+RULE:lujvo
+TYPE:String
+RHS:
+!gismu !fuhivla !cmavo ss:initial_rafsi* s:brivla_core -> {concat ss++s}
+
+RULE:brivla_core
+TYPE:String
+RHS:
+fuhivla / gismu / CVV_final_rafsi / s1:stressed_initial_rafsi s2:short_final_rafsi -> {s1++s2}
+
+RULE:stressed_initial_rafsi
+TYPE:String
+RHS:
+stressed_extended_rafsi / stressed_y_rafsi / stressed_y_less_rafsi
+
+RULE:initial_rafsi
+TYPE:String
+RHS:
+extended_rafsi / y_rafsi / !any_extended_rafsi s:y_less_rafsi -> s
+
+RULE:any_extended_rafsi
+TYPE:String
+RHS:
+fuhivla / extended_rafsi / stressed_extended_rafsi
+
+---------------------------------------------------------------------
+
+RULE:fuhivla
+TYPE:String
+RHS:
+s1:fuhivla_head s2:stressed_syllable ss:consonantal_syllable* s3:final_syllable -> {s1++s2++concat ss++s3}
+
+RULE:stressed_extended_rafsi
+TYPE:String
+RHS:
+stressed_brivla_rafsi / stressed_fuhivla_rafsi
+
+RULE:extended_rafsi
+TYPE:String
+RHS:
+brivla_rafsi / fuhivla_rafsi
+
+RULE:stressed_brivla_rafsi
+TYPE:String
+RHS:
+&unstressed_syllable s1:brivla_head s2:stressed_syllable s3:h s4:y -> {s1++s2++s3++s4}
+
+RULE:brivla_rafsi
+TYPE:String
+RHS:
+&(s1:syllable ss:consonantal_syllable* s2:syllable -> {s1++concat ss++s2}) s1:brivla_head s2:h s3:y ms:h? -> {s1++s2++s3++fromMaybe "" ms}
+
+RULE:stressed_fuhivla_rafsi
+TYPE:String
+RHS:
+s1:fuhivla_head s2:stressed_syllable &consonant s3:onset s4:y -> {s1++s2++s3++s4}
+
+RULE:fuhivla_rafsi
+TYPE:String
+RHS:
+&unstressed_syllable s1:fuhivla_head &consonant s2:onset s3:y ms:h? -> {s1++s2++s3++fromMaybe "" ms}
+
+RULE:fuhivla_head
+TYPE:String
+RHS:
+!rafsi_string s:brivla_head -> s
+
+RULE:brivla_head
+TYPE:String
+RHS:
+!cmavo !slinkuhi !h &onset ss:unstressed_syllable* -> {concat ss}
+
+RULE:slinkuhi
+TYPE:String
+RHS:
+s1:consonant s2:rafsi_string -> {s1++s2}
+
+RULE:rafsi_string
+TYPE:String
+RHS:
+ss:y_less_rafsi* s1:(gismu / CVV_final_rafsi / s1:stressed_y_less_rafsi s2:short_final_rafsi -> {s1++s2} / y_rafsi / stressed_y_rafsi / ms:stressed_y_less_rafsi? s1:initial_pair s2:y -> {fromMaybe "" ms++s1++s2}) -> {concat ss++s1}
+
+---------------------------------------------------------------------
+
+RULE:gismu
+TYPE:String
+RHS:
+s1:(s1:initial_pair s2:stressed_vowel -> {s1++s2} / s1:consonant s2:stressed_vowel s3:consonant -> {s1++s2++s3}) &final_syllable s2:consonant s3:vowel &post_word -> {s1++s2++s3}
+
+RULE:CVV_final_rafsi
+TYPE:String
+RHS:
+s1:consonant s2:stressed_vowel s3:h &final_syllable s4:vowel &post_word -> {s1++s2++s3++s4}
+
+RULE:short_final_rafsi
+TYPE:String
+RHS:
+&final_syllable s:(s1:consonant s2:diphthong -> {s1++s2} / s1:initial_pair s2:vowel -> {s1++s2}) &post_word -> s
+
+RULE:stressed_y_rafsi
+TYPE:String
+RHS:
+s1:(stressed_long_rafsi / stressed_CVC_rafsi) s2:y -> {s1++s2}
+
+RULE:stressed_y_less_rafsi
+TYPE:String
+RHS:
+s:stressed_CVC_rafsi !y -> s / stressed_CCV_rafsi / stressed_CVV_rafsi
+
+RULE:stressed_long_rafsi
+TYPE:String
+RHS:
+s1:initial_pair s2:stressed_vowel s3:consonant -> {s1++s2++s3} / s1:consonant s2:stressed_vowel s3:consonant s4:consonant -> {s1++s2++s3++s4}
+
+RULE:stressed_CVC_rafsi
+TYPE:String
+RHS:
+s1:consonant s2:stressed_vowel s3:consonant -> {s1++s2++s3}
+
+RULE:stressed_CCV_rafsi
+TYPE:String
+RHS:
+s1:initial_pair s2:stressed_vowel -> {s1++s2}
+
+RULE:stressed_CVV_rafsi
+TYPE:String
+RHS:
+s1:consonant s2:(s1:unstressed_vowel s2:h s3:stressed_vowel -> {s1++s2++s3} / stressed_diphthong) ms:r_hyphen? -> {s1++s2++fromMaybe "" ms}
+
+RULE:y_rafsi
+TYPE:String
+RHS:
+s1:(long_rafsi / CVC_rafsi) s2:y ms:h? -> {s1++s2++fromMaybe "" ms}
+
+RULE:y_less_rafsi
+TYPE:String
+RHS:
+!y_rafsi s:(s:CVC_rafsi !y -> s / CCV_rafsi / CVV_rafsi) !any_extended_rafsi -> s
+
+RULE:long_rafsi
+TYPE:String
+RHS:
+s1:initial_pair s2:unstressed_vowel s3:consonant -> {s1++s2++s3} / s1:consonant s2:unstressed_vowel s3:consonant s4:consonant -> {s1++s2++s3++s4}
+
+RULE:CVC_rafsi
+TYPE:String
+RHS:
+s1:consonant s2:unstressed_vowel s3:consonant -> {s1++s2++s3}
+
+RULE:CCV_rafsi
+TYPE:String
+RHS:
+s1:initial_pair s2:unstressed_vowel -> {s1++s2}
+
+RULE:CVV_rafsi
+TYPE:String
+RHS:
+s1:consonant s2:(s1:unstressed_vowel s2:h s3:unstressed_vowel -> {s1++s2++s3} / unstressed_diphthong) ms:r_hyphen? -> {s1++s2++fromMaybe "" ms}
+
+RULE:r_hyphen
+TYPE:String
+RHS:
+s:r &consonant -> s / s:n &r -> s
+
+---------------------------------------------------------------------
+
+RULE:final_syllable
+TYPE:String
+RHS:
+s1:onset !y !stressed s2:nucleus !cmene &post_word -> {s1++s2}
+
+RULE:stressed_syllable
+TYPE:String
+RHS:
+&stressed s:syllable -> s / s:syllable &stress -> s
+
+RULE:stressed_diphthong
+TYPE:String
+RHS:
+&stressed s:diphthong -> s / s:diphthong &stress -> s
+
+RULE:stressed_vowel
+TYPE:String
+RHS:
+&stressed s:vowel -> s / s:vowel &stress -> s
+
+RULE:unstressed_syllable
+TYPE:String
+RHS:
+!stressed s:syllable !stress -> s / consonantal_syllable
+
+RULE:unstressed_diphthong
+TYPE:String
+RHS:
+!stressed s:diphthong !stress -> s
+
+RULE:unstressed_vowel
+TYPE:String
+RHS:
+!stressed s:vowel !stress -> s
+
+RULE:stress
+TYPE:String
+RHS:
+ss:consonant* ms:y? s1:syllable s2:pause -> {concat ss++fromMaybe "" ms++s1++s2}
+
+RULE:stressed
+TYPE:String
+RHS:
+s1:onset ss:comma* s2:("A"/"E"/"I"/"O"/"U") -> {s1++concat ss++s2}
+
+RULE:any_syllable
+TYPE:String
+RHS:
+s1:onset s2:nucleus ms:coda? -> {s1++s2++fromMaybe "" ms} / consonantal_syllable
+
+RULE:syllable
+TYPE:String
+RHS:
+s1:onset !y s2:nucleus ms:coda? -> {s1++s2++fromMaybe "" ms}
+
+RULE:consonantal_syllable
+TYPE:String
+RHS:
+s1:consonant s2:syllabic &(consonantal_syllable / onset) ms:(s:consonant &spaces -> s)? -> {s1++s2++fromMaybe "" ms}
+
+RULE:coda
+TYPE:String
+RHS:
+!any_syllable s:consonant &any_syllable -> s / ms1:syllabic? ms2:consonant? &pause -> {fromMaybe "" ms1++fromMaybe "" ms2}
+
+RULE:onset
+TYPE:String
+RHS:
+h / ms:consonant? s:glide -> {fromMaybe "" ms++s} / initial
+
+RULE:nucleus
+TYPE:String
+RHS:
+vowel / diphthong / s:y !nucleus -> s
+
+-------------------------------------------------------------------
+
+RULE:glide
+TYPE:String
+RHS:
+s:(i / u) &nucleus !glide -> s
+
+RULE:diphthong
+TYPE:String
+RHS:
+s:(s1:a s2:i -> {s1++s2} / s1:a s2:u -> {s1++s2} / s1:e s2:i -> {s1++s2} / s1:o s2:i -> {s1++s2}) !nucleus !glide -> s
+
+RULE:vowel
+TYPE:String
+RHS:
+s:(a / e / i / o / u) !nucleus -> s
+
+RULE:a
+TYPE:String
+RHS:
+comma* s:("a"/"A") -> s
+
+RULE:e
+TYPE:String
+RHS:
+comma* s:("e"/"E") -> s
+
+RULE:i
+TYPE:String
+RHS:
+comma* s:("i"/"I") -> s
+
+RULE:o
+TYPE:String
+RHS:
+comma* s:("o"/"O") -> s
+
+RULE:u
+TYPE:String
+RHS:
+comma* s:("u"/"U") -> s
+
+RULE:y
+TYPE:String
+RHS:
+comma* s:("y"/"Y") -> s
+
+---------------------------------------------------------------------
+
+RULE:cluster
+TYPE:String
+RHS:
+s:consonant ss:consonant+ -> {s++concat ss}
+
+RULE:initial_pair
+TYPE:String
+RHS:
+&initial s1:consonant s2:consonant !consonant -> {s1++s2}
+
+RULE:initial
+TYPE:String
+RHS:
+s:(affricate / ms1:sibilant? ms2:other? ms3:liquid? -> {fromMaybe "" ms1++fromMaybe "" ms2++fromMaybe "" ms3}) !consonant !glide -> s
+
+RULE:affricate
+TYPE:String
+RHS:
+s1:t s2:c -> {s1++s2} / s1:t s2:s -> {s1++s2} / s1:d s2:j -> {s1++s2} / s1:d s2:z -> {s1++s2}
+
+RULE:liquid
+TYPE:String
+RHS:
+l / r
+
+RULE:other
+TYPE:String
+RHS:
+p / s:t !l -> s / k / f / x / b / s:d !l -> s / g / v / m / s:n !liquid -> s
+
+RULE:sibilant
+TYPE:String
+RHS:
+c / s:s !x -> s / s:(j / z) !n !liquid -> s
+
+RULE:consonant
+TYPE:String
+RHS:
+voiced / unvoiced / syllabic
+
+RULE:syllabic
+TYPE:String
+RHS:
+l / m / n / r
+
+RULE:voiced
+TYPE:String
+RHS:
+b / d / g / j / v / z
+
+RULE:unvoiced
+TYPE:String
+RHS:
+c / f / k / p / s / t / x
+
+RULE:l
+TYPE:String
+RHS:
+comma* s:("l"/"L") !h !l -> s
+
+RULE:m
+TYPE:String
+RHS:
+comma* s:("m"/"M") !h !m !z -> s
+
+RULE:n
+TYPE:String
+RHS:
+comma* s:("n"/"N") !h !n !affricate -> s
+
+RULE:r
+TYPE:String
+RHS:
+comma* s:("r"/"R") !h !r -> s
+
+RULE:b
+TYPE:String
+RHS:
+comma* s:("b"/"B") !h !b !unvoiced -> s
+
+RULE:d
+TYPE:String
+RHS:
+comma* s:("d"/"D") !h !d !unvoiced -> s
+
+RULE:g
+TYPE:String
+RHS:
+comma* s:("g"/"G") !h !g !unvoiced -> s
+
+RULE:v
+TYPE:String
+RHS:
+comma* s:("v"/"V") !h !v !unvoiced -> s
+
+RULE:j
+TYPE:String
+RHS:
+comma* s:("j"/"J") !h !j !z !unvoiced -> s
+
+RULE:z
+TYPE:String
+RHS:
+comma* s:("z"/"Z") !h !z !j !unvoiced -> s
+
+RULE:s
+TYPE:String
+RHS:
+comma* s:("s"/"S") !h !s !c !voiced -> s
+
+RULE:c
+TYPE:String
+RHS:
+comma* s:("c"/"C") !h !c !s !x !voiced -> s
+
+RULE:x
+TYPE:String
+RHS:
+comma* s:("x"/"X") !h !x !c !k !voiced -> s
+
+RULE:k
+TYPE:String
+RHS:
+comma* s:("k"/"K") !h !k !x !voiced -> s
+
+RULE:f
+TYPE:String
+RHS:
+comma* s:("f"/"F") !h !f !voiced -> s
+
+RULE:p
+TYPE:String
+RHS:
+comma* s:("p"/"P") !h !p !voiced -> s
+
+RULE:t
+TYPE:String
+RHS:
+comma* s:("t"/"T") !h !t !voiced -> s
+
+RULE:h
+TYPE:String
+RHS:
+comma* s:("'"/"h") &nucleus -> s
+
+---------------------------------------------------------------------
+
+RULE:digit
+TYPE:String
+RHS:
+comma* s:("0"/"1"/"2"/"3"/"4"/"5"/"6"/"7"/"8"/"9") !h !nucleus -> s
+
+RULE:post_word
+TYPE:String
+RHS:
+pause / !nucleus s:lojban_word -> s
+
+RULE:pause
+TYPE:String
+RHS:
+ss1:comma* ss2:space_char+ -> {concat ss1++concat ss2} / EOF
+
+-- pappy doesn't do EOF
+
+RULE:EOF
+TYPE:String
+RHS:
+s:space_char -> s
+
+RULE:comma
+TYPE:String
+RHS:
+","
+
+RULE:dot
+TYPE:String
+RHS:
+"."
+
+RULE:non_lojban_word
+TYPE:String
+RHS:
+!lojban_word ss:non_space+ -> {concat ss}
+
+RULE:non_space
+TYPE:String
+RHS:
+!space_char s:dot -> s
+
+RULE:space_char
+TYPE:String
+RHS:
+c:Char &{c `elem` ".\t\n\r?! "} -> {[c]}
+
+---------------------------------------------------------------------
+
+RULE:spaces
+TYPE:String
+RHS:
+!Y s:initial_spaces -> s
+
+RULE:initial_spaces
+TYPE:String
+RHS:
+ss:(initial_spaces_sub / !ybu s:Y -> s)+ ms:EOF? -> {concat ss++fromMaybe "" ms} / EOF
+
+RULE:initial_spaces_sub
+TYPE:String
+RHS:
+ss:comma* s:space_char -> {concat ss++s}
+
+RULE:ybu
+TYPE:String
+RHS:
+s1:Y ss:space_char* s2:BU -> {s1++concat ss++s2}
+
+---------------------------------------------------------------------
+
+RULE:A
+TYPE:String
+RHS:
+&cmavo s:( s:a -> s / s:e -> s / s1:j s2:i -> {s1++s2} / s:o -> s / s:u -> s ) &post_word -> s
+
+RULE:BAI
+TYPE:String
+RHS:
+&cmavo s:( s1:d s2:u s3:h s4:o -> {s1++s2++s3++s4} / s1:s s2:i s3:h s4:u -> {s1++s2++s3++s4} / s1:z s2:a s3:u -> {s1++s2++s3} / s1:k s2:i s3:h s4:i -> {s1++s2++s3++s4} / s1:d s2:u s3:h s4:i -> {s1++s2++s3++s4} / s1:c s2:u s3:h s4:u -> {s1++s2++s3++s4} / s1:t s2:u s3:h s4:i -> {s1++s2++s3++s4} / s1:t s2:i s3:h s4:u -> {s1++s2++s3++s4} / s1:d s2:i s3:h s4:o -> {s1++s2++s3++s4} / s1:j s2:i s3:h s4:u -> {s1++s2++s3++s4} / s1:r s2:i s3:h s4:a -> {s1++s2++s3++s4} / s1:n s2:i s3:h s4:i -> {s1++s2++s3++s4} / s1:m s2:u s3:h s4:i -> {s1++s2++s3++s4} / s1:k s2:i s3:h s4:u -> {s1++s2++s3++s4} / s1:v s2:a s3:h s4:u -> {s1++s2++s3++s4} / s1:k s2:o s3:i -> {s1++s2++s3} / s1:c s2:a s3:h s4:i -> {s1++s2++s3++s4} / s1:t s2:a s3:h s4:i -> {s1++s2++s3++s4} / s1:p s2:u s3:h s4:e -> {s1++s2++s3++s4} / s1:j s2:a s3:h s4:i -> {s1++s2++s3++s4} / s1:k s2:a s3:i -> {s1++s2++s3} / s1:b s2:a s3:i -> {s1++s2++s3} / s1:f s2:i s3:h s4:e -> {s1++s2++s3++s4} / s1:d s2:e s3:h s4:i -> {s1++s2++s3++s4} / s1:c s2:i s3:h s4:o -> {s1++s2++s3++s4} / s1:m s2:a s3:u -> {s1++s2++s3} / s1:m s2:u s3:h s4:u -> {s1++s2++s3++s4} / s1:r s2:i s3:h s4:i -> {s1++s2++s3++s4} / s1:r s2:a s3:h s4:i -> {s1++s2++s3++s4} / s1:k s2:a s3:h s4:a -> {s1++s2++s3++s4} / s1:p s2:a s3:h s4:u -> {s1++s2++s3++s4} / s1:p s2:a s3:h s4:a -> {s1++s2++s3++s4} / s1:l s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:k s2:u s3:h s4:u -> {s1++s2++s3++s4} / s1:t s2:a s3:i -> {s1++s2++s3} / s1:b s2:a s3:u -> {s1++s2++s3} / s1:m s2:a s3:h s4:i -> {s1++s2++s3++s4} / s1:c s2:i s3:h s4:e -> {s1++s2++s3++s4} / s1:f s2:a s3:u -> {s1++s2++s3} / s1:p s2:o s3:h s4:i -> {s1++s2++s3++s4} / s1:c s2:a s3:u -> {s1++s2++s3} / s1:m s2:a s3:h s4:e -> {s1++s2++s3++s4} / s1:c s2:i s3:h s4:u -> {s1++s2++s3++s4} / s1:r s2:a s3:h s4:a -> {s1++s2++s3++s4} / s1:p s2:u s3:h s4:a -> {s1++s2++s3++s4} / s1:l s2:i s3:h s4:e -> {s1++s2++s3++s4} / s1:l s2:a s3:h s4:u -> {s1++s2++s3++s4} / s1:b s2:a s3:h s4:i -> {s1++s2++s3++s4} / s1:k s2:a s3:h s4:i -> {s1++s2++s3++s4} / s1:s s2:a s3:u -> {s1++s2++s3} / s1:f s2:a s3:h s4:e -> {s1++s2++s3++s4} / s1:b s2:e s3:h s4:i -> {s1++s2++s3++s4} / s1:t s2:i s3:h s4:i -> {s1++s2++s3++s4} / s1:j s2:a s3:h s4:e -> {s1++s2++s3++s4} / s1:g s2:a s3:h s4:a -> {s1++s2++s3++s4} / s1:v s2:a s3:h s4:o -> {s1++s2++s3++s4} / s1:j s2:i s3:h s4:o -> {s1++s2++s3++s4} / s1:m s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:d s2:o s3:h s4:e -> {s1++s2++s3++s4} / s1:j s2:i s3:h s4:e -> {s1++s2++s3++s4} / s1:p s2:i s3:h s4:o -> {s1++s2++s3++s4} / s1:g s2:a s3:u -> {s1++s2++s3} / s1:z s2:u s3:h s4:e -> {s1++s2++s3++s4} / s1:m s2:e s3:h s4:e -> {s1++s2++s3++s4} / s1:r s2:a s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:BAhE
+TYPE:String
+RHS:
+&cmavo s:( s1:b s2:a s3:h s4:e -> {s1++s2++s3++s4} / s1:z s2:a s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:BE
+TYPE:String
+RHS:
+&cmavo s:( s1:b s2:e -> {s1++s2} ) &post_word -> s
+
+RULE:BEI
+TYPE:String
+RHS:
+&cmavo s:( s1:b s2:e s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:BEhO
+TYPE:String
+RHS:
+&cmavo s:( s1:b s2:e s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:BIhE
+TYPE:String
+RHS:
+&cmavo s:( s1:b s2:i s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:BIhI
+TYPE:String
+RHS:
+&cmavo s:( s1:m s2:i s3:h s4:i -> {s1++s2++s3++s4} / s1:b s2:i s3:h s4:o -> {s1++s2++s3++s4} / s1:b s2:i s3:h s4:i -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:BO
+TYPE:String
+RHS:
+&cmavo s:( s1:b s2:o -> {s1++s2} ) &post_word -> s
+
+RULE:BOI
+TYPE:String
+RHS:
+&cmavo s:( s1:b s2:o s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:BU
+TYPE:String
+RHS:
+&cmavo s:( s1:b s2:u -> {s1++s2} ) &post_word -> s
+
+RULE:BY
+TYPE:String
+RHS:
+ybu / &cmavo s:( s1:j s2:o s3:h s4:o -> {s1++s2++s3++s4} / s1:r s2:u s3:h s4:o -> {s1++s2++s3++s4} / s1:g s2:e s3:h s4:o -> {s1++s2++s3++s4} / s1:j s2:e s3:h s4:o -> {s1++s2++s3++s4} / s1:l s2:o s3:h s4:a -> {s1++s2++s3++s4} / s1:n s2:a s3:h s4:a -> {s1++s2++s3++s4} / s1:s s2:e s3:h s4:e -> {s1++s2++s3++s4} / s1:t s2:o s3:h s4:a -> {s1++s2++s3++s4} / s1:g s2:a s3:h s4:e -> {s1++s2++s3++s4} / s1:y s2:h s3:y -> {s1++s2++s3} / s1:b s2:y -> {s1++s2} / s1:c s2:y -> {s1++s2} / s1:d s2:y -> {s1++s2} / s1:f s2:y -> {s1++s2} / s1:g s2:y -> {s1++s2} / s1:j s2:y -> {s1++s2} / s1:k s2:y -> {s1++s2} / s1:l s2:y -> {s1++s2} / s1:m s2:y -> {s1++s2} / s1:n s2:y -> {s1++s2} / s1:p s2:y -> {s1++s2} / s1:r s2:y -> {s1++s2} / s1:s s2:y -> {s1++s2} / s1:t s2:y -> {s1++s2} / s1:v s2:y -> {s1++s2} / s1:x s2:y -> {s1++s2} / s1:z s2:y -> {s1++s2} ) &post_word -> s
+
+RULE:CAhA
+TYPE:String
+RHS:
+&cmavo s:( s1:c s2:a s3:h s4:a -> {s1++s2++s3++s4} / s1:p s2:u s3:h s4:i -> {s1++s2++s3++s4} / s1:n s2:u s3:h s4:o -> {s1++s2++s3++s4} / s1:k s2:a s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:CAI
+TYPE:String
+RHS:
+&cmavo s:( s1:p s2:e s3:i -> {s1++s2++s3} / s1:c s2:a s3:i -> {s1++s2++s3} / s1:c s2:u s3:h s4:i -> {s1++s2++s3++s4} / s1:s s2:a s3:i -> {s1++s2++s3} / s1:r s2:u s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:CEI
+TYPE:String
+RHS:
+&cmavo s:( s1:c s2:e s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:CEhE
+TYPE:String
+RHS:
+&cmavo s:( s1:c s2:e s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:CO
+TYPE:String
+RHS:
+&cmavo s:( s1:c s2:o -> {s1++s2} ) &post_word -> s
+
+RULE:COI
+TYPE:String
+RHS:
+&cmavo s:( s1:j s2:u s3:h s4:i -> {s1++s2++s3++s4} / s1:c s2:o s3:i -> {s1++s2++s3} / s1:f s2:i s3:h s4:i -> {s1++s2++s3++s4} / s1:t s2:a s3:h s4:a -> {s1++s2++s3++s4} / s1:m s2:u s3:h s4:o -> {s1++s2++s3++s4} / s1:f s2:e s3:h s4:o -> {s1++s2++s3++s4} / s1:c s2:o s3:h s4:o -> {s1++s2++s3++s4} / s1:p s2:e s3:h s4:u -> {s1++s2++s3++s4} / s1:k s2:e s3:h s4:o -> {s1++s2++s3++s4} / s1:n s2:u s3:h s4:e -> {s1++s2++s3++s4} / s1:r s2:e s3:h s4:i -> {s1++s2++s3++s4} / s1:b s2:e s3:h s4:e -> {s1++s2++s3++s4} / s1:j s2:e s3:h s4:e -> {s1++s2++s3++s4} / s1:m s2:i s3:h s4:e -> {s1++s2++s3++s4} / s1:k s2:i s3:h s4:e -> {s1++s2++s3++s4} / s1:v s2:i s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:CU
+TYPE:String
+RHS:
+&cmavo s:( s1:c s2:u -> {s1++s2} ) &post_word -> s
+
+RULE:CUhE
+TYPE:String
+RHS:
+&cmavo s:( s1:c s2:u s3:h s4:e -> {s1++s2++s3++s4} / s1:n s2:a s3:u -> {s1++s2++s3} ) &post_word -> s
+
+RULE:DAhO
+TYPE:String
+RHS:
+&cmavo s:( s1:d s2:a s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:DOI
+TYPE:String
+RHS:
+&cmavo s:( s1:d s2:o s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:DOhU
+TYPE:String
+RHS:
+&cmavo s:( s1:d s2:o s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:FA
+TYPE:String
+RHS:
+&cmavo s:( s1:f s2:a s3:i -> {s1++s2++s3} / s1:f s2:a -> {s1++s2} / s1:f s2:e -> {s1++s2} / s1:f s2:o -> {s1++s2} / s1:f s2:u -> {s1++s2} / s1:f s2:i s3:h s4:a -> {s1++s2++s3++s4} / s1:f s2:i -> {s1++s2} ) &post_word -> s
+
+RULE:FAhA
+TYPE:String
+RHS:
+&cmavo s:( s1:d s2:u s3:h s4:a -> {s1++s2++s3++s4} / s1:b s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:n s2:e s3:h s4:u -> {s1++s2++s3++s4} / s1:v s2:u s3:h s4:a -> {s1++s2++s3++s4} / s1:g s2:a s3:h s4:u -> {s1++s2++s3++s4} / s1:t s2:i s3:h s4:a -> {s1++s2++s3++s4} / s1:n s2:i s3:h s4:a -> {s1++s2++s3++s4} / s1:c s2:a s3:h s4:u -> {s1++s2++s3++s4} / s1:z s2:u s3:h s4:a -> {s1++s2++s3++s4} / s1:r s2:i s3:h s4:u -> {s1++s2++s3++s4} / s1:r s2:u s3:h s4:u -> {s1++s2++s3++s4} / s1:r s2:e s3:h s4:o -> {s1++s2++s3++s4} / s1:t s2:e s3:h s4:e -> {s1++s2++s3++s4} / s1:b s2:u s3:h s4:u -> {s1++s2++s3++s4} / s1:n s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:p s2:a s3:h s4:o -> {s1++s2++s3++s4} / s1:n s2:e s3:h s4:i -> {s1++s2++s3++s4} / s1:t s2:o s3:h s4:o -> {s1++s2++s3++s4} / s1:z s2:o s3:h s4:i -> {s1++s2++s3++s4} / s1:z s2:e s3:h s4:o -> {s1++s2++s3++s4} / s1:z s2:o s3:h s4:a -> {s1++s2++s3++s4} / s1:f s2:a s3:h s4:a -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:FAhO
+TYPE:String
+RHS:
+&cmavo s:( s1:f s2:a s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:FEhE
+TYPE:String
+RHS:
+&cmavo s:( s1:f s2:e s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:FEhU
+TYPE:String
+RHS:
+&cmavo s:( s1:f s2:e s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:FIhO
+TYPE:String
+RHS:
+&cmavo s:( s1:f s2:i s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:FOI
+TYPE:String
+RHS:
+&cmavo s:( s1:f s2:o s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:FUhA
+TYPE:String
+RHS:
+&cmavo s:( s1:f s2:u s3:h s4:a -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:FUhE
+TYPE:String
+RHS:
+&cmavo s:( s1:f s2:u s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:FUhO
+TYPE:String
+RHS:
+&cmavo s:( s1:f s2:u s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:GA
+TYPE:String
+RHS:
+&cmavo s:( s1:g s2:e s3:h s4:i -> {s1++s2++s3++s4} / s1:g s2:e -> {s1++s2} / s1:g s2:o -> {s1++s2} / s1:g s2:a -> {s1++s2} / s1:g s2:u -> {s1++s2} ) &post_word -> s
+
+RULE:GAhO
+TYPE:String
+RHS:
+&cmavo s:( s1:k s2:e s3:h s4:i -> {s1++s2++s3++s4} / s1:g s2:a s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:GEhU
+TYPE:String
+RHS:
+&cmavo s:( s1:g s2:e s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:GI
+TYPE:String
+RHS:
+&cmavo s:( s1:g s2:i -> {s1++s2} ) &post_word -> s
+
+RULE:GIhA
+TYPE:String
+RHS:
+&cmavo s:( s1:g s2:i s3:h s4:e -> {s1++s2++s3++s4} / s1:g s2:i s3:h s4:i -> {s1++s2++s3++s4} / s1:g s2:i s3:h s4:o -> {s1++s2++s3++s4} / s1:g s2:i s3:h s4:a -> {s1++s2++s3++s4} / s1:g s2:i s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:GOI
+TYPE:String
+RHS:
+&cmavo s:( s1:n s2:o s3:h s4:u -> {s1++s2++s3++s4} / s1:n s2:e -> {s1++s2} / s1:g s2:o s3:i -> {s1++s2++s3} / s1:p s2:o s3:h s4:u -> {s1++s2++s3++s4} / s1:p s2:e -> {s1++s2} / s1:p s2:o s3:h s4:e -> {s1++s2++s3++s4} / s1:p s2:o -> {s1++s2} ) &post_word -> s
+
+RULE:GOhA
+TYPE:String
+RHS:
+&cmavo s:( s1:m s2:o -> {s1++s2} / s1:n s2:e s3:i -> {s1++s2++s3} / s1:g s2:o s3:h s4:u -> {s1++s2++s3++s4} / s1:g s2:o s3:h s4:o -> {s1++s2++s3++s4} / s1:g s2:o s3:h s4:i -> {s1++s2++s3++s4} / s1:n s2:o s3:h s4:a -> {s1++s2++s3++s4} / s1:g s2:o s3:h s4:e -> {s1++s2++s3++s4} / s1:g s2:o s3:h s4:a -> {s1++s2++s3++s4} / s1:d s2:u -> {s1++s2} / s1:b s2:u s3:h s4:a -> {s1++s2++s3++s4} / s1:b s2:u s3:h s4:e -> {s1++s2++s3++s4} / s1:b s2:u s3:h s4:i -> {s1++s2++s3++s4} / s1:c s2:o s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:GUhA
+TYPE:String
+RHS:
+&cmavo s:( s1:g s2:u s3:h s4:e -> {s1++s2++s3++s4} / s1:g s2:u s3:h s4:i -> {s1++s2++s3++s4} / s1:g s2:u s3:h s4:o -> {s1++s2++s3++s4} / s1:g s2:u s3:h s4:a -> {s1++s2++s3++s4} / s1:g s2:u s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:I
+TYPE:String
+RHS:
+&cmavo s:( s:i -> s ) &post_word -> s
+
+RULE:JA
+TYPE:String
+RHS:
+&cmavo s:( s1:j s2:e s3:h s4:i -> {s1++s2++s3++s4} / s1:j s2:e -> {s1++s2} / s1:j s2:o -> {s1++s2} / s1:j s2:a -> {s1++s2} / s1:j s2:u -> {s1++s2} ) &post_word -> s
+
+RULE:JAI
+TYPE:String
+RHS:
+&cmavo s:( s1:j s2:a s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:JOhI
+TYPE:String
+RHS:
+&cmavo s:( s1:j s2:o s3:h s4:i -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:JOI
+TYPE:String
+RHS:
+&cmavo s:( s1:f s2:a s3:h s4:u -> {s1++s2++s3++s4} / s1:p s2:i s3:h s4:u -> {s1++s2++s3++s4} / s1:j s2:o s3:i -> {s1++s2++s3} / s1:c s2:e s3:h s4:o -> {s1++s2++s3++s4} / s1:c s2:e -> {s1++s2} / s1:j s2:o s3:h s4:u -> {s1++s2++s3++s4} / s1:k s2:u s3:h s4:a -> {s1++s2++s3++s4} / s1:j s2:o s3:h s4:e -> {s1++s2++s3++s4} / s1:j s2:u s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:KE
+TYPE:String
+RHS:
+&cmavo s:( s1:k s2:e -> {s1++s2} ) &post_word -> s
+
+RULE:KEhE
+TYPE:String
+RHS:
+&cmavo s:( s1:k s2:e s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:KEI
+TYPE:String
+RHS:
+&cmavo s:( s1:k s2:e s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:KI
+TYPE:String
+RHS:
+&cmavo s:( s1:k s2:i -> {s1++s2} ) &post_word -> s
+
+RULE:KOhA
+TYPE:String
+RHS:
+&cmavo s:( s1:d s2:a s3:h s4:u -> {s1++s2++s3++s4} / s1:d s2:a s3:h s4:e -> {s1++s2++s3++s4} / s1:d s2:i s3:h s4:u -> {s1++s2++s3++s4} / s1:d s2:i s3:h s4:e -> {s1++s2++s3++s4} / s1:d s2:e s3:h s4:u -> {s1++s2++s3++s4} / s1:d s2:e s3:h s4:e -> {s1++s2++s3++s4} / s1:d s2:e s3:i -> {s1++s2++s3} / s1:d s2:o s3:h s4:i -> {s1++s2++s3++s4} / s1:m s2:i s3:h s4:o -> {s1++s2++s3++s4} / s1:m s2:a s3:h s4:a -> {s1++s2++s3++s4} / s1:m s2:i s3:h s4:a -> {s1++s2++s3++s4} / s1:d s2:o s3:h s4:o -> {s1++s2++s3++s4} / s1:k s2:o s3:h s4:a -> {s1++s2++s3++s4} / s1:f s2:o s3:h s4:u -> {s1++s2++s3++s4} / s1:k s2:o s3:h s4:e -> {s1++s2++s3++s4} / s1:k s2:o s3:h s4:i -> {s1++s2++s3++s4} / s1:k s2:o s3:h s4:o -> {s1++s2++s3++s4} / s1:k s2:o s3:h s4:u -> {s1++s2++s3++s4} / s1:f s2:o s3:h s4:a -> {s1++s2++s3++s4} / s1:f s2:o s3:h s4:e -> {s1++s2++s3++s4} / s1:f s2:o s3:h s4:i -> {s1++s2++s3++s4} / s1:f s2:o s3:h s4:o -> {s1++s2++s3++s4} / s1:v s2:o s3:h s4:a -> {s1++s2++s3++s4} / s1:v s2:o s3:h s4:e -> {s1++s2++s3++s4} / s1:v s2:o s3:h s4:i -> {s1++s2++s3++s4} / s1:v s2:o s3:h s4:o -> {s1++s2++s3++s4} / s1:v s2:o s3:h s4:u -> {s1++s2++s3++s4} / s1:r s2:u -> {s1++s2} / s1:r s2:i -> {s1++s2} / s1:r s2:a -> {s1++s2} / s1:t s2:a -> {s1++s2} / s1:t s2:u -> {s1++s2} / s1:t s2:i -> {s1++s2} / s1:z s2:i s3:h s4:o -> {s1++s2++s3++s4} / s1:k s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:m s2:a -> {s1++s2} / s1:z s2:u s3:h s4:i -> {s1++s2++s3++s4} / s1:z s2:o s3:h s4:e -> {s1++s2++s3++s4} / s1:c s2:e s3:h s4:u -> {s1++s2++s3++s4} / s1:d s2:a -> {s1++s2} / s1:d s2:e -> {s1++s2} / s1:d s2:i -> {s1++s2} / s1:k s2:o -> {s1++s2} / s1:m s2:i -> {s1++s2} / s1:d s2:o -> {s1++s2} ) &post_word -> s
+
+RULE:KU
+TYPE:String
+RHS:
+&cmavo s:( s1:k s2:u -> {s1++s2} ) &post_word -> s
+
+RULE:KUhE
+TYPE:String
+RHS:
+&cmavo s:( s1:k s2:u s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:KUhO
+TYPE:String
+RHS:
+&cmavo s:( s1:k s2:u s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:LA
+TYPE:String
+RHS:
+&cmavo s:( s1:l s2:a s3:i -> {s1++s2++s3} / s1:l s2:a s3:h s4:i -> {s1++s2++s3++s4} / s1:l s2:a -> {s1++s2} ) &post_word -> s
+
+RULE:LAU
+TYPE:String
+RHS:
+&cmavo s:( s1:c s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:l s2:a s3:u -> {s1++s2++s3} / s1:z s2:a s3:i -> {s1++s2++s3} / s1:t s2:a s3:u -> {s1++s2++s3} ) &post_word -> s
+
+RULE:LAhE
+TYPE:String
+RHS:
+&cmavo s:( s1:t s2:u s3:h s4:a -> {s1++s2++s3++s4} / s1:l s2:u s3:h s4:a -> {s1++s2++s3++s4} / s1:l s2:u s3:h s4:o -> {s1++s2++s3++s4} / s1:l s2:a s3:h s4:e -> {s1++s2++s3++s4} / s1:v s2:u s3:h s4:i -> {s1++s2++s3++s4} / s1:l s2:u s3:h s4:i -> {s1++s2++s3++s4} / s1:l s2:u s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:LE
+TYPE:String
+RHS:
+&cmavo s:( s1:l s2:e s3:i -> {s1++s2++s3} / s1:l s2:o s3:i -> {s1++s2++s3} / s1:l s2:e s3:h s4:i -> {s1++s2++s3++s4} / s1:l s2:o s3:h s4:i -> {s1++s2++s3++s4} / s1:l s2:e s3:h s4:e -> {s1++s2++s3++s4} / s1:l s2:o s3:h s4:e -> {s1++s2++s3++s4} / s1:l s2:o -> {s1++s2} / s1:l s2:e -> {s1++s2} ) &post_word -> s
+
+RULE:LEhU
+TYPE:String
+RHS:
+&cmavo s:( s1:l s2:e s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:LI
+TYPE:String
+RHS:
+&cmavo s:( s1:m s2:e s3:h s4:o -> {s1++s2++s3++s4} / s1:l s2:i -> {s1++s2} ) &post_word -> s
+
+RULE:LIhU
+TYPE:String
+RHS:
+&cmavo s:( s1:l s2:i s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:LOhO
+TYPE:String
+RHS:
+&cmavo s:( s1:l s2:o s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:LOhU
+TYPE:String
+RHS:
+&cmavo s:( s1:l s2:o s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:LU
+TYPE:String
+RHS:
+&cmavo s:( s1:l s2:u -> {s1++s2} ) &post_word -> s
+
+RULE:LUhU
+TYPE:String
+RHS:
+&cmavo s:( s1:l s2:u s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:MAhO
+TYPE:String
+RHS:
+&cmavo s:( s1:m s2:a s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:MAI
+TYPE:String
+RHS:
+&cmavo s:( s1:m s2:o s3:h s4:o -> {s1++s2++s3++s4} / s1:m s2:a s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:ME
+TYPE:String
+RHS:
+&cmavo s:( s1:m s2:e -> {s1++s2} ) &post_word -> s
+
+RULE:MEhU
+TYPE:String
+RHS:
+&cmavo s:( s1:m s2:e s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:MOhE
+TYPE:String
+RHS:
+&cmavo s:( s1:m s2:o s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:MOhI
+TYPE:String
+RHS:
+&cmavo s:( s1:m s2:o s3:h s4:i -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:MOI
+TYPE:String
+RHS:
+&cmavo s:( s1:m s2:e s3:i -> {s1++s2++s3} / s1:m s2:o s3:i -> {s1++s2++s3} / s1:s s2:i s3:h s4:e -> {s1++s2++s3++s4} / s1:c s2:u s3:h s4:o -> {s1++s2++s3++s4} / s1:v s2:a s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:NA
+TYPE:String
+RHS:
+&cmavo s:( s1:j s2:a s3:h s4:a -> {s1++s2++s3++s4} / s1:n s2:a -> {s1++s2} ) &post_word -> s
+
+RULE:NAI
+TYPE:String
+RHS:
+&cmavo s:( s1:n s2:a s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:NAhE
+TYPE:String
+RHS:
+&cmavo s:( s1:t s2:o s3:h s4:e -> {s1++s2++s3++s4} / s1:j s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:n s2:a s3:h s4:e -> {s1++s2++s3++s4} / s1:n s2:o s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:NAhU
+TYPE:String
+RHS:
+&cmavo s:( s1:n s2:a s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:NIhE
+TYPE:String
+RHS:
+&cmavo s:( s1:n s2:i s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:NIhO
+TYPE:String
+RHS:
+&cmavo s:( s1:n s2:i s3:h s4:o -> {s1++s2++s3++s4} / s1:n s2:o s3:h s4:i -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:NOI
+TYPE:String
+RHS:
+&cmavo s:( s1:v s2:o s3:i -> {s1++s2++s3} / s1:n s2:o s3:i -> {s1++s2++s3} / s1:p s2:o s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:NU
+TYPE:String
+RHS:
+&cmavo s:( s1:n s2:i -> {s1++s2} / s1:d s2:u s3:h s4:u -> {s1++s2++s3++s4} / s1:s s2:i s3:h s4:o -> {s1++s2++s3++s4} / s1:n s2:u -> {s1++s2} / s1:l s2:i s3:h s4:i -> {s1++s2++s3++s4} / s1:k s2:a -> {s1++s2} / s1:j s2:e s3:i -> {s1++s2++s3} / s1:s s2:u s3:h s4:u -> {s1++s2++s3++s4} / s1:z s2:u s3:h s4:o -> {s1++s2++s3++s4} / s1:m s2:u s3:h s4:e -> {s1++s2++s3++s4} / s1:p s2:u s3:h s4:u -> {s1++s2++s3++s4} / s1:z s2:a s3:h s4:i -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:NUhA
+TYPE:String
+RHS:
+&cmavo s:( s1:n s2:u s3:h s4:a -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:NUhI
+TYPE:String
+RHS:
+&cmavo s:( s1:n s2:u s3:h s4:i -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:NUhU
+TYPE:String
+RHS:
+&cmavo s:( s1:n s2:u s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:PA
+TYPE:String
+RHS:
+&cmavo s:( s1:d s2:a s3:u -> {s1++s2++s3} / s1:f s2:e s3:i -> {s1++s2++s3} / s1:g s2:a s3:i -> {s1++s2++s3} / s1:j s2:a s3:u -> {s1++s2++s3} / s1:r s2:e s3:i -> {s1++s2++s3} / s1:v s2:a s3:i -> {s1++s2++s3} / s1:p s2:i s3:h s4:e -> {s1++s2++s3++s4} / s1:p s2:i -> {s1++s2} / s1:f s2:i s3:h s4:u -> {s1++s2++s3++s4} / s1:z s2:a s3:h s4:u -> {s1++s2++s3++s4} / s1:m s2:e s3:h s4:i -> {s1++s2++s3++s4} / s1:n s2:i s3:h s4:u -> {s1++s2++s3++s4} / s1:k s2:i s3:h s4:o -> {s1++s2++s3++s4} / s1:c s2:e s3:h s4:i -> {s1++s2++s3++s4} / s1:m s2:a s3:h s4:u -> {s1++s2++s3++s4} / s1:r s2:a s3:h s4:e -> {s1++s2++s3++s4} / s1:d s2:a s3:h s4:a -> {s1++s2++s3++s4} / s1:s s2:o s3:h s4:a -> {s1++s2++s3++s4} / s1:j s2:i s3:h s4:i -> {s1++s2++s3++s4} / s1:s s2:u s3:h s4:o -> {s1++s2++s3++s4} / s1:s s2:u s3:h s4:e -> {s1++s2++s3++s4} / s1:r s2:o -> {s1++s2} / s1:r s2:a s3:u -> {s1++s2++s3} / s1:s s2:o s3:h s4:u -> {s1++s2++s3++s4} / s1:s s2:o s3:h s4:i -> {s1++s2++s3++s4} / s1:s s2:o s3:h s4:e -> {s1++s2++s3++s4} / s1:s s2:o s3:h s4:o -> {s1++s2++s3++s4} / s1:m s2:o s3:h s4:a -> {s1++s2++s3++s4} / s1:d s2:u s3:h s4:e -> {s1++s2++s3++s4} / s1:t s2:e s3:h s4:o -> {s1++s2++s3++s4} / s1:k s2:a s3:h s4:o -> {s1++s2++s3++s4} / s1:c s2:i s3:h s4:i -> {s1++s2++s3++s4} / s1:t s2:u s3:h s4:o -> {s1++s2++s3++s4} / s1:x s2:o -> {s1++s2} / s1:p s2:a s3:i -> {s1++s2++s3} / s1:n s2:o s3:h s4:o -> {s1++s2++s3++s4} / s1:n s2:o -> {s1++s2} / s1:p s2:a -> {s1++s2} / s1:r s2:e -> {s1++s2} / s1:c s2:i -> {s1++s2} / s1:v s2:o -> {s1++s2} / s1:m s2:u -> {s1++s2} / s1:x s2:a -> {s1++s2} / s1:z s2:e -> {s1++s2} / s1:b s2:i -> {s1++s2} / s1:s s2:o -> {s1++s2} / digit ) &post_word -> s
+
+RULE:PEhE
+TYPE:String
+RHS:
+&cmavo s:( s1:p s2:e s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:PEhO
+TYPE:String
+RHS:
+&cmavo s:( s1:p s2:e s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:PU
+TYPE:String
+RHS:
+&cmavo s:( s1:b s2:a -> {s1++s2} / s1:p s2:u -> {s1++s2} / s1:c s2:a -> {s1++s2} ) &post_word -> s
+
+RULE:RAhO
+TYPE:String
+RHS:
+&cmavo s:( s1:r s2:a s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:ROI
+TYPE:String
+RHS:
+&cmavo s:( s1:r s2:e s3:h s4:u -> {s1++s2++s3++s4} / s1:r s2:o s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:SA
+TYPE:String
+RHS:
+&cmavo s:( s1:s s2:a -> {s1++s2} ) &post_word -> s
+
+RULE:SE
+TYPE:String
+RHS:
+&cmavo s:( s1:s s2:e -> {s1++s2} / s1:t s2:e -> {s1++s2} / s1:v s2:e -> {s1++s2} / s1:x s2:e -> {s1++s2} ) &post_word -> s
+
+RULE:SEI
+TYPE:String
+RHS:
+&cmavo s:( s1:s s2:e s3:i -> {s1++s2++s3} / s1:t s2:i s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:SEhU
+TYPE:String
+RHS:
+&cmavo s:( s1:s s2:e s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:SI
+TYPE:String
+RHS:
+&cmavo s:( s1:s s2:i -> {s1++s2} ) &post_word -> s
+
+RULE:SOI
+TYPE:String
+RHS:
+&cmavo s:( s1:s s2:o s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:SU
+TYPE:String
+RHS:
+&cmavo s:( s1:s s2:u -> {s1++s2} ) &post_word -> s
+
+RULE:TAhE
+TYPE:String
+RHS:
+&cmavo s:( s1:r s2:u s3:h s4:i -> {s1++s2++s3++s4} / s1:t s2:a s3:h s4:e -> {s1++s2++s3++s4} / s1:d s2:i s3:h s4:i -> {s1++s2++s3++s4} / s1:n s2:a s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:TEhU
+TYPE:String
+RHS:
+&cmavo s:( s1:t s2:e s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:TEI
+TYPE:String
+RHS:
+&cmavo s:( s1:t s2:e s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:TO
+TYPE:String
+RHS:
+&cmavo s:( s1:t s2:o s3:h s4:i -> {s1++s2++s3++s4} / s1:t s2:o -> {s1++s2} ) &post_word -> s
+
+RULE:TOI
+TYPE:String
+RHS:
+&cmavo s:( s1:t s2:o s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:TUhE
+TYPE:String
+RHS:
+&cmavo s:( s1:t s2:u s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:TUhU
+TYPE:String
+RHS:
+&cmavo s:( s1:t s2:u s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:UI
+TYPE:String
+RHS:
+&cmavo s:( s1:i s2:h s3:a -> {s1++s2++s3} / s1:i s2:e -> {s1++s2} / s1:a s2:h s3:e -> {s1++s2++s3} / s1:u s2:h s3:i -> {s1++s2++s3} / s1:i s2:h s3:o -> {s1++s2++s3} / s1:i s2:h s3:e -> {s1++s2++s3} / s1:a s2:h s3:a -> {s1++s2++s3} / s1:i s2:a -> {s1++s2} / s1:o s2:h s3:i -> {s1++s2++s3} / s1:o s2:h s3:e -> {s1++s2++s3} / s1:e s2:h s3:e -> {s1++s2++s3} / s1:o s2:i -> {s1++s2} / s1:u s2:o -> {s1++s2} / s1:e s2:h s3:i -> {s1++s2++s3} / s1:u s2:h s3:o -> {s1++s2++s3} / s1:a s2:u -> {s1++s2} / s1:u s2:a -> {s1++s2} / s1:a s2:h s3:i -> {s1++s2++s3} / s1:i s2:h s3:u -> {s1++s2++s3} / s1:i s2:i -> {s1++s2} / s1:u s2:h s3:a -> {s1++s2++s3} / s1:u s2:i -> {s1++s2} / s1:a s2:h s3:o -> {s1++s2++s3} / s1:a s2:i -> {s1++s2} / s1:a s2:h s3:u -> {s1++s2++s3} / s1:i s2:u -> {s1++s2} / s1:e s2:i -> {s1++s2} / s1:o s2:h s3:o -> {s1++s2++s3} / s1:e s2:h s3:a -> {s1++s2++s3} / s1:u s2:u -> {s1++s2} / s1:o s2:h s3:a -> {s1++s2++s3} / s1:o s2:h s3:u -> {s1++s2++s3} / s1:u s2:h s3:u -> {s1++s2++s3} / s1:e s2:h s3:o -> {s1++s2++s3} / s1:i s2:o -> {s1++s2} / s1:e s2:h s3:u -> {s1++s2++s3} / s1:u s2:e -> {s1++s2} / s1:i s2:h s3:i -> {s1++s2++s3} / s1:u s2:h s3:e -> {s1++s2++s3} / s1:b s2:a s3:h s4:a -> {s1++s2++s3++s4} / s1:j s2:a s3:h s4:o -> {s1++s2++s3++s4} / s1:c s2:a s3:h s4:e -> {s1++s2++s3++s4} / s1:s s2:u s3:h s4:a -> {s1++s2++s3++s4} / s1:t s2:i s3:h s4:e -> {s1++s2++s3++s4} / s1:k s2:a s3:h s4:u -> {s1++s2++s3++s4} / s1:s s2:e s3:h s4:o -> {s1++s2++s3++s4} / s1:z s2:a s3:h s4:a -> {s1++s2++s3++s4} / s1:p s2:e s3:h s4:i -> {s1++s2++s3++s4} / s1:r s2:u s3:h s4:a -> {s1++s2++s3++s4} / s1:j s2:u s3:h s4:a -> {s1++s2++s3++s4} / s1:t s2:a s3:h s4:o -> {s1++s2++s3++s4} / s1:r s2:a s3:h s4:u -> {s1++s2++s3++s4} / s1:l s2:i s3:h s4:a -> {s1++s2++s3++s4} / s1:b s2:a s3:h s4:u -> {s1++s2++s3++s4} / s1:m s2:u s3:h s4:a -> {s1++s2++s3++s4} / s1:d s2:o s3:h s4:a -> {s1++s2++s3++s4} / s1:t s2:o s3:h s4:u -> {s1++s2++s3++s4} / s1:v s2:a s3:h s4:i -> {s1++s2++s3++s4} / s1:p s2:a s3:h s4:e -> {s1++s2++s3++s4} / s1:z s2:u s3:h s4:u -> {s1++s2++s3++s4} / s1:s s2:a s3:h s4:e -> {s1++s2++s3++s4} / s1:l s2:a s3:h s4:a -> {s1++s2++s3++s4} / s1:k s2:e s3:h s4:u -> {s1++s2++s3++s4} / s1:s s2:a s3:h s4:u -> {s1++s2++s3++s4} / s1:d s2:a s3:h s4:i -> {s1++s2++s3++s4} / s1:j s2:e s3:h s4:u -> {s1++s2++s3++s4} / s1:s s2:a s3:h s4:a -> {s1++s2++s3++s4} / s1:k s2:a s3:u -> {s1++s2++s3} / s1:t s2:a s3:h s4:u -> {s1++s2++s3++s4} / s1:n s2:a s3:h s4:i -> {s1++s2++s3++s4} / s1:j s2:o s3:h s4:a -> {s1++s2++s3++s4} / s1:b s2:i s3:h s4:u -> {s1++s2++s3++s4} / s1:l s2:i s3:h s4:o -> {s1++s2++s3++s4} / s1:p s2:a s3:u -> {s1++s2++s3} / s1:m s2:i s3:h s4:u -> {s1++s2++s3++s4} / s1:k s2:u s3:h s4:i -> {s1++s2++s3++s4} / s1:j s2:i s3:h s4:a -> {s1++s2++s3++s4} / s1:s s2:i s3:h s4:a -> {s1++s2++s3++s4} / s1:p s2:o s3:h s4:o -> {s1++s2++s3++s4} / s1:p s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:r s2:o s3:h s4:i -> {s1++s2++s3++s4} / s1:r s2:o s3:h s4:e -> {s1++s2++s3++s4} / s1:r s2:o s3:h s4:o -> {s1++s2++s3++s4} / s1:r s2:o s3:h s4:u -> {s1++s2++s3++s4} / s1:r s2:o s3:h s4:a -> {s1++s2++s3++s4} / s1:r s2:e s3:h s4:e -> {s1++s2++s3++s4} / s1:l s2:e s3:h s4:o -> {s1++s2++s3++s4} / s1:j s2:u s3:h s4:o -> {s1++s2++s3++s4} / s1:f s2:u s3:h s4:i -> {s1++s2++s3++s4} / s1:d s2:a s3:i -> {s1++s2++s3} / s1:g s2:a s3:h s4:i -> {s1++s2++s3++s4} / s1:z s2:o s3:h s4:o -> {s1++s2++s3++s4} / s1:b s2:e s3:h s4:u -> {s1++s2++s3++s4} / s1:r s2:i s3:h s4:e -> {s1++s2++s3++s4} / s1:s s2:e s3:h s4:i -> {s1++s2++s3++s4} / s1:s s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:v s2:u s3:h s4:e -> {s1++s2++s3++s4} / s1:k s2:i s3:h s4:a -> {s1++s2++s3++s4} / s1:x s2:u -> {s1++s2} / s1:g s2:e s3:h s4:e -> {s1++s2++s3++s4} / s1:b s2:u s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:VA
+TYPE:String
+RHS:
+&cmavo s:( s1:v s2:i -> {s1++s2} / s1:v s2:a -> {s1++s2} / s1:v s2:u -> {s1++s2} ) &post_word -> s
+
+RULE:VAU
+TYPE:String
+RHS:
+&cmavo s:( s1:v s2:a s3:u -> {s1++s2++s3} ) &post_word -> s
+
+RULE:VEI
+TYPE:String
+RHS:
+&cmavo s:( s1:v s2:e s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:VEhO
+TYPE:String
+RHS:
+&cmavo s:( s1:v s2:e s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:VUhU
+TYPE:String
+RHS:
+&cmavo s:( s1:g s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:f s2:u s3:h s4:u -> {s1++s2++s3++s4} / s1:p s2:i s3:h s4:i -> {s1++s2++s3++s4} / s1:f s2:e s3:h s4:i -> {s1++s2++s3++s4} / s1:v s2:u s3:h s4:u -> {s1++s2++s3++s4} / s1:s s2:u s3:h s4:i -> {s1++s2++s3++s4} / s1:j s2:u s3:h s4:u -> {s1++s2++s3++s4} / s1:g s2:e s3:i -> {s1++s2++s3} / s1:p s2:a s3:h s4:i -> {s1++s2++s3++s4} / s1:f s2:a s3:h s4:i -> {s1++s2++s3++s4} / s1:t s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:c s2:u s3:h s4:a -> {s1++s2++s3++s4} / s1:v s2:a s3:h s4:a -> {s1++s2++s3++s4} / s1:n s2:e s3:h s4:o -> {s1++s2++s3++s4} / s1:d s2:e s3:h s4:o -> {s1++s2++s3++s4} / s1:f s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:s s2:a s3:h s4:o -> {s1++s2++s3++s4} / s1:r s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:r s2:i s3:h s4:o -> {s1++s2++s3++s4} / s1:s s2:a s3:h s4:i -> {s1++s2++s3++s4} / s1:p s2:i s3:h s4:a -> {s1++s2++s3++s4} / s1:s s2:i s3:h s4:i -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:VEhA
+TYPE:String
+RHS:
+&cmavo s:( s1:v s2:e s3:h s4:u -> {s1++s2++s3++s4} / s1:v s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:v s2:e s3:h s4:i -> {s1++s2++s3++s4} / s1:v s2:e s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:VIhA
+TYPE:String
+RHS:
+&cmavo s:( s1:v s2:i s3:h s4:i -> {s1++s2++s3++s4} / s1:v s2:i s3:h s4:a -> {s1++s2++s3++s4} / s1:v s2:i s3:h s4:u -> {s1++s2++s3++s4} / s1:v s2:i s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:VUhO
+TYPE:String
+RHS:
+&cmavo s:( s1:v s2:u s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:XI
+TYPE:String
+RHS:
+&cmavo s:( s1:x s2:i -> {s1++s2} ) &post_word -> s
+
+RULE:Y
+TYPE:String
+RHS:
+&cmavo s:( ss:y+ -> {concat ss} ) &post_word -> s
+
+RULE:ZAhO
+TYPE:String
+RHS:
+&cmavo s:( s1:c s2:o s3:h s4:i -> {s1++s2++s3++s4} / s1:p s2:u s3:h s4:o -> {s1++s2++s3++s4} / s1:c s2:o s3:h s4:u -> {s1++s2++s3++s4} / s1:m s2:o s3:h s4:u -> {s1++s2++s3++s4} / s1:c s2:a s3:h s4:o -> {s1++s2++s3++s4} / s1:c s2:o s3:h s4:a -> {s1++s2++s3++s4} / s1:d s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:b s2:a s3:h s4:o -> {s1++s2++s3++s4} / s1:d s2:i s3:h s4:a -> {s1++s2++s3++s4} / s1:z s2:a s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:ZEhA
+TYPE:String
+RHS:
+&cmavo s:( s1:z s2:e s3:h s4:u -> {s1++s2++s3++s4} / s1:z s2:e s3:h s4:a -> {s1++s2++s3++s4} / s1:z s2:e s3:h s4:i -> {s1++s2++s3++s4} / s1:z s2:e s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:ZEI
+TYPE:String
+RHS:
+&cmavo s:( s1:z s2:e s3:i -> {s1++s2++s3} ) &post_word -> s
+
+RULE:ZI
+TYPE:String
+RHS:
+&cmavo s:( s1:z s2:u -> {s1++s2} / s1:z s2:a -> {s1++s2} / s1:z s2:i -> {s1++s2} ) &post_word -> s
+
+RULE:ZIhE
+TYPE:String
+RHS:
+&cmavo s:( s1:z s2:i s3:h s4:e -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:ZO
+TYPE:String
+RHS:
+&cmavo s:( s1:z s2:o -> {s1++s2} ) &post_word -> s
+
+RULE:ZOI
+TYPE:String
+RHS:
+&cmavo s:( s1:z s2:o s3:i -> {s1++s2++s3} / s1:l s2:a s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
+
+RULE:ZOhU
+TYPE:String
+RHS:
+&cmavo s:( s1:z s2:o s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+

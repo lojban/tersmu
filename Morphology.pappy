@@ -27,7 +27,8 @@ word :: String = lojban_word / non_lojban_word
 
 lojban_word :: String = cmene / cmavo / brivla
 
-brivla :: String = gismu / fuhivla / lujvo
+brivla :: String
+    = gismu / fuhivla / lujvo
 
 ---------------------------------------------------------------------
 
@@ -35,7 +36,8 @@ cmene :: String = jbocme / zifcme
 
 zifcme :: String = !h ss:(nucleus / glide / h / s:consonant !pause -> s / digit)* s:consonant &pause -> {concat ss ++ s}
 
-jbocme :: String = &zifcme ss:(any_syllable / digit)+ &pause -> {concat ss}
+jbocme :: String
+    = &zifcme ss:(any_syllable / digit)+ &pause -> {concat ss}
 
 --cmene :: String = !h &consonant_final coda? (any_syllable / digit)* &pause
 
@@ -59,7 +61,9 @@ cmavo_form :: String
     = !h !cluster s1:onset ss:cmavo_form_sub* s2:(!stressed s:nucleus -> s / s:nucleus !cluster -> s) -> {s1++concat ss++s2}
     / ss:y+ -> {concat ss}
     / digit
-cmavo_form_sub :: String = (s1:nucleus s2:h -> {s1++s2})
+
+cmavo_form_sub :: String
+    = (s1:nucleus s2:h -> {s1++s2})
 
 ---------------------------------------------------------------------
 
@@ -71,13 +75,14 @@ stressed_initial_rafsi :: String = stressed_extended_rafsi / stressed_y_rafsi / 
 
 initial_rafsi :: String = extended_rafsi / y_rafsi / !any_extended_rafsi s:y_less_rafsi -> s
 
-any_extended_rafsi :: String = fuhivla / extended_rafsi / stressed_extended_rafsi
+any_extended_rafsi :: String
+    = fuhivla / extended_rafsi / stressed_extended_rafsi
 
 ---------------------------------------------------------------------
 
 fuhivla :: String = s1:fuhivla_head s2:stressed_syllable ss:consonantal_syllable* s3:final_syllable -> {s1++s2++concat ss++s3}
 
-stressed_extended_rafsi :: String = stressed_brivla_rafsi / stressed_fuhivla_rafsi 
+stressed_extended_rafsi :: String = stressed_brivla_rafsi / stressed_fuhivla_rafsi
 
 extended_rafsi :: String = brivla_rafsi / fuhivla_rafsi
 
@@ -95,7 +100,8 @@ brivla_head :: String = !cmavo !slinkuhi !h &onset ss:unstressed_syllable* -> {c
 
 slinkuhi :: String = s1:consonant s2:rafsi_string -> {s1++s2}
 
-rafsi_string :: String = ss:y_less_rafsi* s1:(gismu / CVV_final_rafsi / s1:stressed_y_less_rafsi s2:short_final_rafsi -> {s1++s2} / y_rafsi / stressed_y_rafsi / ms:stressed_y_less_rafsi? s1:initial_pair s2:y -> {fromMaybe "" ms++s1++s2}) -> {concat ss++s1}
+rafsi_string :: String
+    = ss:y_less_rafsi* s1:(gismu / CVV_final_rafsi / s1:stressed_y_less_rafsi s2:short_final_rafsi -> {s1++s2} / y_rafsi / stressed_y_rafsi / ms:stressed_y_less_rafsi? s1:initial_pair s2:y -> {fromMaybe "" ms++s1++s2}) -> {concat ss++s1}
 
 ---------------------------------------------------------------------
 
@@ -129,11 +135,12 @@ CCV_rafsi :: String = s1:initial_pair s2:unstressed_vowel -> {s1++s2}
 
 CVV_rafsi :: String = s1:consonant s2:(s1:unstressed_vowel s2:h s3:unstressed_vowel -> {s1++s2++s3} / unstressed_diphthong) ms:r_hyphen? -> {s1++s2++fromMaybe "" ms}
 
-r_hyphen :: String = s:r &consonant -> s / s:n &r -> s
+r_hyphen :: String
+    = s:r &consonant -> s / s:n &r -> s
 
 ---------------------------------------------------------------------
 
-final_syllable :: String =  s1:onset !y !stressed s2:nucleus !cmene &post_word -> {s1++s2}
+final_syllable :: String = s1:onset !y !stressed s2:nucleus !cmene &post_word -> {s1++s2}
 
 stressed_syllable :: String = &stressed s:syllable -> s / s:syllable &stress -> s
 
@@ -151,7 +158,7 @@ stress :: String = ss:consonant* ms:y? s1:syllable s2:pause -> {concat ss++fromM
 
 stressed :: String = s1:onset ss:comma* s2:("A"/"E"/"I"/"O"/"U") -> {s1++concat ss++s2}
 
-any_syllable :: String = s1:onset s2:nucleus ms:coda? -> {s1++s2++fromMaybe "" ms} / consonantal_syllable 
+any_syllable :: String = s1:onset s2:nucleus ms:coda? -> {s1++s2++fromMaybe "" ms} / consonantal_syllable
 
 syllable :: String = s1:onset !y s2:nucleus ms:coda? -> {s1++s2++fromMaybe "" ms}
 
@@ -159,9 +166,10 @@ consonantal_syllable :: String = s1:consonant s2:syllabic &(consonantal_syllable
 
 coda :: String = !any_syllable s:consonant &any_syllable -> s / ms1:syllabic? ms2:consonant? &pause -> {fromMaybe "" ms1++fromMaybe "" ms2}
 
-onset :: String =  h / ms:consonant? s:glide -> {fromMaybe "" ms++s} / initial
+onset :: String = h / ms:consonant? s:glide -> {fromMaybe "" ms++s} / initial
 
-nucleus :: String = vowel / diphthong / s:y !nucleus -> s
+nucleus :: String
+    = vowel / diphthong / s:y !nucleus -> s
 
 -------------------------------------------------------------------
 
@@ -181,7 +189,8 @@ o :: String = comma* s:("o"/"O") -> s
 
 u :: String = comma* s:("u"/"U") -> s
 
-y :: String = comma* s:("y"/"Y") -> s
+y :: String
+    = comma* s:("y"/"Y") -> s
 
 ---------------------------------------------------------------------
 
@@ -193,7 +202,7 @@ initial :: String = s:(affricate / ms1:sibilant? ms2:other? ms3:liquid? -> {from
 
 affricate :: String = s1:t s2:c -> {s1++s2} / s1:t s2:s -> {s1++s2} / s1:d s2:j -> {s1++s2} / s1:d s2:z -> {s1++s2}
 
-liquid :: String = l / r 
+liquid :: String = l / r
 
 other :: String = p / s:t !l -> s / k / f / x / b / s:d !l -> s / g / v / m / s:n !liquid -> s
 
@@ -241,7 +250,8 @@ p :: String = comma* s:("p"/"P") !h !p !voiced -> s
 
 t :: String = comma* s:("t"/"T") !h !t !voiced -> s
 
-h :: String = comma* s:("'"/"h") &nucleus -> s
+h :: String
+    = comma* s:("'"/"h") &nucleus -> s
 
 ---------------------------------------------------------------------
 
@@ -249,9 +259,11 @@ digit :: String = comma* s:("0"/"1"/"2"/"3"/"4"/"5"/"6"/"7"/"8"/"9") !h !nucleus
 
 post_word :: String = pause / !nucleus s:lojban_word -> s
 
-pause :: String = ss1:comma* ss2:space_char+ -> {concat ss1++concat ss2} / EOF
+pause :: String
+    = ss1:comma* ss2:space_char+ -> {concat ss1++concat ss2} / EOF
 
 -- pappy doesn't do EOF
+
 EOF :: String = s:space_char -> s
 
 comma :: String = ","
@@ -262,16 +274,19 @@ non_lojban_word :: String = !lojban_word ss:non_space+ -> {concat ss}
 
 non_space :: String = !space_char s:dot -> s
 
-space_char :: String = c:Char &{c `elem` ".\t\n\r?! "} -> {[c]}
+space_char :: String
+    = c:Char &{c `elem` ".\t\n\r?! "} -> {[c]}
 
 ---------------------------------------------------------------------
 
 spaces :: String = !Y s:initial_spaces -> s
 
 initial_spaces :: String = ss:(initial_spaces_sub / !ybu s:Y -> s)+ ms:EOF? -> {concat ss++fromMaybe "" ms} / EOF
-initial_spaces_sub :: String = ss:comma* s:space_char -> {concat ss++s} 
 
-ybu :: String = s1:Y ss:space_char* s2:BU -> {s1++concat ss++s2}
+initial_spaces_sub :: String = ss:comma* s:space_char -> {concat ss++s}
+
+ybu :: String
+    = s1:Y ss:space_char* s2:BU -> {s1++concat ss++s2}
 
 ---------------------------------------------------------------------
 
@@ -518,3 +533,4 @@ ZO :: String = &cmavo s:( s1:z s2:o -> {s1++s2} ) &post_word -> s
 ZOI :: String = &cmavo s:( s1:z s2:o s3:i -> {s1++s2++s3} / s1:l s2:a s3:h s4:o -> {s1++s2++s3++s4} ) &post_word -> s
 
 ZOhU :: String = &cmavo s:( s1:z s2:o s3:h s4:u -> {s1++s2++s3++s4} ) &post_word -> s
+

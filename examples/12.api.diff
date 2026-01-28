@@ -1,0 +1,22 @@
+--- examples/12.loj	2024-06-28 17:28:56.134554150 +0300
++++ /tmp/tmp.74vkxwwSkq	2026-01-28 19:04:02.561159548 +0200
+@@ -72,15 +72,15 @@
+ > b1 balsoi s2 b2 b3
+ 
+ Morphology error:
+-	{b1 balsoi s2 b2 b3 }
+-	 ^
++	{  b1 balsoi s2 b2 b3}
++	   ^
+ 
+ -----
+ > b1 sonci s2 gi'e banli b2 b3
+ 
+ Morphology error:
+-	{b1 sonci s2 gi'e banli b2 b3 }
+-	 ^
++	{  b1 sonci s2 gi'e banli b2 b3}
++	   ^
+ 
+ -----
+ > la djak. cu blakanla

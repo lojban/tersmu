@@ -196,7 +196,7 @@ For a modified version or to build the server:
 
 ## Hacking
 
-- **Parser sources:** `Lojban.hs` and `Morphology.hs` are generated from `Lojban.pappy` and `Morphology.pappy` using a patched [Pappy](http://mbays.freeshell.org/pappy). See the [Makefile](Makefile) for targets and dependencies.
+- **Parser sources:** The canonical grammar is in **Pest** format (`.pest` + `.pappy.rhs`) for portability to Rust. The Makefile generates `Lojban.pappy` and `Morphology.pappy` from `Lojban.pest`/`Lojban.pappy.rhs` and `Morphology.pest`/`Morphology.pappy.rhs` via `scripts/gen_pappy.py`, then a patched [Pappy](http://mbays.freeshell.org/pappy) generates `Lojban.hs` and `Morphology.hs`. To refresh `.pest` and `.pappy.rhs` from edited `.pappy` files, run `python3 scripts/pappy_to_pest.py Lojban.pappy` (and similarly for Morphology). See the [Makefile](Makefile) for targets and dependencies.
 - **Architecture:** See [docs/overview.md](docs/overview.md).
 
 ---
