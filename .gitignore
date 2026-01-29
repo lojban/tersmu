@@ -3,3 +3,6 @@ rust/
 archive/
 .specstory/
 examples/*.diff
+pappy/**/*.o
+pappy/**/*.hi
+pappy/pappy
