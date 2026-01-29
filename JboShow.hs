@@ -401,6 +401,7 @@ instance JboShow ShowBindable where
 	SRel 1 -> "ke'a"
 	SRel n -> "ke'a xi " ++ jbonum n
 	SLambda 1 1 -> "ce'u"
+	SLambda 1 n -> "ce'u xi " ++ jbonum n
 	SLambda l 1 -> "ce'u xi " ++ jbonum l
 	SLambda l n ->
 	    "ce'u xi " ++ jbonum l ++ " xi " ++ jbonum n
