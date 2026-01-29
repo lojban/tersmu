@@ -390,7 +390,7 @@
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 
                 const contentLength = response.headers.get('Content-Length');
-                const total = contentLength ? parseInt(contentLength, 10) : 0;
+                const total = contentLength ? parseInt(contentLength, 10) : 8 * 1024 * 1024;
                 let loaded = 0;
 
                 const reader = response.body.getReader();
@@ -403,9 +403,22 @@
                     loaded += value.length;
                     
                     if (total) {
-                        const percent = Math.round((loaded / total) * 100);
-                        if (progressBar) progressBar.style.width = `${percent}%`;
-                        if (progressText) progressText.textContent = `${percent}%`;
+                        const percentRaw = (loaded / total) * 100;
+                        const percent = Math.min(100, Math.round(percentRaw));
+                        
+                        if (progressBar) {
+                            progressBar.style.width = `${percent}%`;
+                            if (percentRaw > 100) {
+                                progressBar.classList.add('animate-pulse');
+                            }
+                        }
+                        if (progressText) {
+                            if (percentRaw > 100) {
+                                progressText.textContent = `${(loaded / (1024 * 1024)).toFixed(1)} MB`;
+                            } else {
+                                progressText.textContent = `${percent}%`;
+                            }
+                        }
                     } else {
                          if (progressText) progressText.textContent = `${(loaded / (1024 * 1024)).toFixed(1)} MB`;
                          if (progressBar) {
