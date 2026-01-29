@@ -390,7 +390,7 @@
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 
                 const contentLength = response.headers.get('Content-Length');
-                const total = contentLength ? parseInt(contentLength, 10) : 8 * 1024 * 1024;
+                const total = contentLength ? parseInt(contentLength, 10) : 9 * 1024 * 1024;
                 let loaded = 0;
 
                 const reader = response.body.getReader();
