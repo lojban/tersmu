@@ -36,7 +36,23 @@ docker run --rm -it --entrypoint tersmu tersmu
 
 ## Development (Hot Reloading)
 
-For local development, you can use `docker-compose` to start a container that watches your source files and reloads the server automatically using `ghcid`.
+For local development, you can use `docker-compose` with a container that watches your source files and automatically reloads the server using `ghcid`.
+
+### Prerequisites
+
+Before starting the development container, **you must generate the parser files locally** (these are not included in the Dockerfile.dev since files are mounted as volumes):
+
+```bash
+# Generate .pappy files from Pest grammar
+python3 scripts/gen_pappy.py Lojban.pest Lojban.pappy.rhs -o Lojban.pappy
+python3 scripts/gen_pappy.py Morphology.pest Morphology.pappy.rhs -o Morphology.pappy
+
+# Build the pappy tool and generate Haskell modules
+make pappy/pappy/pappy
+make Pappy/Parse.hs Lojban.hs Morphology.hs
+```
+
+**Note:** These files need to exist before you start the container because the build depends on them.
 
 ### Start the development environment
 
@@ -44,16 +60,26 @@ For local development, you can use `docker-compose` to start a container that wa
 docker-compose -f docker-compose.dev.yml up --build
 ```
 
-- **Hot Reloading:** The container mounts your local directory. Any changes to `.hs` files will trigger an incremental rebuild and restart of the `tersmu-server`.
+- **Hot Reloading:** Your local directory is mounted into the container. Any changes to `.hs` files will trigger an automatic incremental rebuild and restart of `tersmu-server` via `ghcid`.
 - **Persistent Cache:** Cabal dependencies and build artifacts are stored in Docker volumes (`cabal_store`, `cabal_dist`) to keep rebuilds fast.
-- **Port:** The dev server also listens on port `8080`.
+- **Port:** The dev server listens on port `8080`.
 
-### Rebuilding the CLI tool
+### Workflow
 
-Since `tersmu-server` executes the `tersmu` binary for parsing, if you change parsing logic, you need to update the binary inside the container:
+1. Edit your `.hs` files locally
+2. Save the file
+3. `ghcid` inside the container automatically detects changes, recompiles, and restarts the server
+4. Test your changes at `http://localhost:8080`
+
+### Rebuilding generated files
+
+If you modify the `.pest` or `.pappy.rhs` grammar files, regenerate the parser files locally:
 
 ```bash
-docker-compose -f docker-compose.dev.yml exec tersmu cabal install exe:tersmu --installdir=/usr/local/bin --overwrite-policy=always
+# Stop the container first (Ctrl+C or docker-compose down)
+python3 scripts/gen_pappy.py Lojban.pest Lojban.pappy.rhs -o Lojban.pappy
+make Lojban.hs
+# Then restart: docker-compose -f docker-compose.dev.yml up
 ```
 
 ---
