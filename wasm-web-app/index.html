@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>tersmu - Lojban Semantic Parser</title>
     <meta name="description" content="A powerful Lojban semantic parser running in your browser via WebAssembly.">
-    
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,6 +29,8 @@
     
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     
     <style>
         [v-cloak] { display: none; }
@@ -52,6 +55,68 @@
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .noselect {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        /* Bottom Bar Styles */
+        #velsku {
+            text-align: left;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            bottom: 0px;
+            left: 0px;
+            position: fixed;
+            background: white;
+            z-index: 50;
+        }
+
+        #velsku ul {
+            padding: 0.1rem;
+            display: flex;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            box-shadow:
+                0 0 0 1px rgb(56 136 233),
+                0 0 0 2px rgb(34 87 213),
+                0 0 0 3px rgb(38 99 224),
+                0 0 0 4px rgb(25 65 165);
+            margin-top: 3px;
+            list-style: none;
+            margin-bottom: 0;
+        }
+
+        .velsku_pamei {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+        }
+
+        #velsku a {
+            color: #2b79e0;
+            text-decoration: none;
+        }
+        
+        #velsku li.social-icon:hover {
+             color: white; /* Corresponds to hover:text-white */
+        }
+        
+        #velsku li.social-icon a {
+            color: inherit; /* inherit from li */
+        }
+
+        #velsku li.social-icon:hover a {
+             color: white;
         }
     </style>
 </head>
@@ -162,12 +227,38 @@
         </div>
     </main>
 
-    <footer class="mt-auto border-t border-slate-200 bg-white py-8">
-        <div class="max-w-5xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p class="text-sm text-slate-500">© 2014 - 2026 tersmu project</p>
-            <div class="flex space-x-6 text-sm">
-                <a href="https://github.com/lojban/tersmu" class="text-slate-400 hover:text-indigo-600 transition-colors">GitHub</a>
-            </div>
+    <footer class="justify-center text-center p-4 print:hidden">
+        <div id="velsku" class="noselect">
+            <ul class="flex flex-row">
+                <!-- Social Links -->
+                <li class="px-2 cursor-pointer hover:bg-blue-500 hover:text-white transition duration-300 rounded social-icon">
+                    <a href="https://github.com/lojban/tersmu" target="_blank" title="GitHub">
+                        <i class="fab fa-github w-4 mt-1"></i>
+                    </a>
+                </li>
+                <li class="px-2 cursor-pointer hover:bg-blue-500 hover:text-white transition duration-300 rounded social-icon">
+                    <a href="https://lojban.org" target="_blank" title="Lojban.org">
+                        <i class="fas fa-globe w-4 mt-1"></i>
+                    </a>
+                </li>
+                <li class="px-2 cursor-pointer hover:bg-blue-500 hover:text-white transition duration-300 rounded social-icon">
+                    <a href="https://mw.lojban.org" target="_blank" title="Lojban Wiki">
+                        <i class="fas fa-book w-4 mt-1"></i>
+                    </a>
+                </li>
+                 <li class="px-2 cursor-pointer hover:text-white transition duration-300">
+                    <a href="https://discord.gg/4KhzRzpmVr" target="_blank" title="Discord">
+                        <i class="fab fa-discord w-4 mt-1"></i>
+                    </a>
+                </li>
+
+                <!-- Live Chat / Updates -->
+                <li>
+                    <a id="velsku_sebenji" href="https://discord.gg/4KhzRzpmVr" target="_blank">
+                        Live chat
+                    </a>
+                </li>
+            </ul>
         </div>
     </footer>
 
@@ -408,7 +499,77 @@
         }
         
         // Load WASM on page load
-        window.addEventListener('DOMContentLoaded', loadWasm);
+        window.addEventListener('DOMContentLoaded', () => {
+             loadWasm();
+             initSocket();
+        });
+
+        // Socket.io integration
+        function initSocket() {
+            if (typeof io === 'undefined') {
+                console.warn('Socket.io library not loaded');
+                return;
+            }
+
+            const trimSocketChunk = (text) =>
+                text.replace(/[\n\r]+$/gims, " ").replace(/<br *\/?>/gims, " ");
+
+            let socket1Chat_connected = false;
+            
+            try {
+                const socket1Chat = io("wss://jbotcan.org:9091", {
+                    transports: ["polling", "websocket"],
+                });
+
+                socket1Chat.on("connect", () => {
+                    console.log("Socket connected:", socket1Chat.id);
+                    socket1Chat_connected = true;
+                });
+
+                socket1Chat.on("connect_error", (err) => {
+                    console.log("1chat connection error:", err);
+                });
+
+                socket1Chat.on("sentFrom", (data) => {
+                    if (!socket1Chat_connected) return;
+                    // data structure based on user snippet: data.data contains the message info
+                    const i = data.data; 
+                    if (!i) return;
+
+                    const msg = {
+                        d: trimSocketChunk(i.chunk || ""),
+                        s: i.channelId,
+                        w: i.author,
+                    };
+
+                    const velsku = document.getElementById("velsku_sebenji");
+                    if (velsku)
+                        velsku.innerHTML =
+                        '<span class="velsku_pamei">' + msg.w + ": " + msg.d + "</span>";
+                });
+
+                socket1Chat.on("history", (data) => {
+                    if (!socket1Chat_connected) return;
+                    // data is array, take last one
+                    if (!Array.isArray(data) || data.length === 0) return;
+                    
+                    const i = data.slice(-1)[0];
+                    if (!i) return;
+                    
+                    const msg = {
+                        d: trimSocketChunk(i.chunk || ""),
+                        s: i.channelId,
+                        w: i.author,
+                    };
+                    const velsku = document.getElementById("velsku_sebenji");
+                    if (velsku)
+                        velsku.innerHTML =
+                        '<span class="velsku_pamei">' + msg.w + ": " + msg.d + "</span>";
+                });
+            } catch (e) {
+                console.error("Socket initialization failed:", e);
+            }
+        }
         
         // Listen for keyboard shortcuts
         document.getElementById('lojban-input').addEventListener('keydown', (e) => {
