@@ -17,6 +17,11 @@ description:
     A semantic parser for the engineered human language Lojban
     (www.lojban.org). It translates lojban text to a predicate logic.
 
+flag server
+      description: Build the tersmu-server executable
+      default: True
+      manual: True
+
 source-repository head
    type:     git
    location: http://gitlab.com/zugz/tersmu/
@@ -42,6 +47,10 @@ executable tersmu
       Morphology Pappy.Basic Pappy.Parse Pappy.Pos ParseM ParseText Util
 
 executable tersmu-server
+      if flag(server)
+        buildable: True
+      else
+        buildable: False
       build-depends: base >=4.3, base < 5
         , aeson >= 1.0
         , bytestring >= 0.10
@@ -54,3 +63,13 @@ executable tersmu-server
       main-is: Server.hs
       ghc-options: -fno-warn-tabs -threaded
       default-language:    Haskell2010
+
+executable tersmu-wasm
+      build-depends: base >=4.3, base < 5
+        , process >= 1.1, containers >= 0.5
+        , mtl >=2.0, transformers >=0.2, syb >= 0.4
+      main-is: MainWasm.hs
+      ghc-options: -fno-warn-tabs -optl-Wl,--export=parseLojban -optl-Wl,--export=hs_init -optl-Wl,--export=malloc -optl-Wl,--export=free -optl-Wl,--no-entry
+      default-language:    Haskell2010
+      other-modules: Bindful JboParse JboProp JboShow JboSyntax Logic Lojban Morph
+          Morphology Pappy.Basic Pappy.Parse Pappy.Pos ParseM ParseText Util

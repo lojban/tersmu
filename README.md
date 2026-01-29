@@ -212,6 +212,34 @@ For a modified version or to build the server:
 
 ---
 
+## WebAssembly Build
+
+tersmu can be compiled to WebAssembly for use in web browsers.
+
+### Building the WASM version
+
+```bash
+./build_wasm.sh
+```
+
+This creates a `wasm-web-app/` directory containing:
+- `tersmu.wasm` - The compiled WebAssembly module
+- `index.html` - Web interface
+- `tersmu.js` - JavaScript wrapper
+
+### Running the WASM web app
+
+```bash
+cd wasm-web-app
+python3 -m http.server 8000
+```
+
+Then open http://localhost:8000 in your browser.
+
+See [wasm-web-app/README.md](wasm-web-app/README.md) for more details.
+
+---
+
 ## Hacking
 
 - **Parser sources:** The canonical grammar is in **Pest** format (`.pest` + `.pappy.rhs`) for portability to Rust. The Makefile generates `Lojban.pappy` and `Morphology.pappy` from `Lojban.pest`/`Lojban.pappy.rhs` and `Morphology.pest`/`Morphology.pappy.rhs` via `scripts/gen_pappy.py`, then a patched [Pappy](http://mbays.freeshell.org/pappy) generates `Lojban.hs` and `Morphology.hs`. To refresh `.pest` and `.pappy.rhs` from edited `.pappy` files, run `python3 scripts/pappy_to_pest.py Lojban.pappy` (and similarly for Morphology). See the [Makefile](Makefile) for targets and dependencies.

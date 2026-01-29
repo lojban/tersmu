@@ -1,0 +1,101 @@
+## Dockerfile for building tersmu as WebAssembly
+##
+## This builds a WASM version of the tersmu parser that can run in browsers.
+## Uses GHC's WebAssembly backend (wasm32-wasi target) via ghc-wasm-meta.
+##
+## The image is structured in two stages to maximise caching:
+##  - wasm-toolchain: installs the heavy wasm toolchain once
+##  - builder: copies the toolchain and only rebuilds when source changes
+##
+## All stages use the same Debian version; override with e.g. --build-arg DEBIAN_VERSION=bookworm-slim
+ARG DEBIAN_VERSION=trixie-slim
+
+FROM debian:${DEBIAN_VERSION} AS wasm-toolchain
+
+# Minimal deps needed for ghc-wasm-meta bootstrap (kept in its own layer for caching)
+# Note: bootstrap.sh ends by running 'make install', so we must have 'make' available here.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    xz-utils \
+    git \
+    jq \
+    unzip \
+    zstd \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /root
+
+# Install wasm toolchain under /root/.ghc-wasm (cached unless this line changes)
+RUN curl https://gitlab.haskell.org/haskell-wasm/ghc-wasm-meta/-/raw/master/bootstrap.sh | sh
+
+
+FROM debian:${DEBIAN_VERSION} AS builder
+
+# Use bash so we can source env scripts in RUN commands
+SHELL ["/bin/bash", "-lc"]
+
+# Build-time deps for tersmu itself (separate from wasm toolchain for better caching)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    xz-utils \
+    build-essential \
+    python3 \
+    make \
+    git \
+    darcs \
+    ghc \
+    libgmp-dev \
+    libffi-dev \
+    zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy preinstalled wasm toolchain from the cached stage
+COPY --from=wasm-toolchain /root/.ghc-wasm /root/.ghc-wasm
+
+# Cabal looks for "ghc-pkg" next to the compiler; wasm toolchain has wasm32-wasi-ghc-pkg
+RUN ln -sf wasm32-wasi-ghc-pkg /root/.ghc-wasm/wasm32-wasi-ghc/bin/ghc-pkg
+
+# Install cabal-install 3.10+ (Debian's 3.4 doesn't support GHC 9.14)
+RUN curl -sSL https://downloads.haskell.org/~cabal/cabal-install-3.10.1.0/cabal-install-3.10.1.0-x86_64-linux-deb11.tar.xz \
+    | tar xJ -C /tmp && (mv /tmp/cabal /usr/local/bin/ 2>/dev/null || mv /tmp/*/cabal /usr/local/bin/) && chmod +x /usr/local/bin/cabal
+
+# Make wasm toolchain (wasm32-wasi-ghc, etc.) available
+ENV PATH="/root/.ghc-wasm/bin:/root/.ghc-wasm/wasm32-wasi-ghc/bin:${PATH}"
+
+WORKDIR /app
+
+# Copy cabal file first for dependency caching
+COPY tersmu.cabal ./
+
+# Copy source files needed for building
+COPY *.hs ./
+COPY pappy/ ./pappy/
+COPY scripts/ ./scripts/
+COPY Lojban.pest Lojban.pappy.rhs Morphology.pest Morphology.pappy.rhs ./
+COPY Makefile ./
+
+# Generate .pappy files from canonical Pest grammar
+RUN python3 scripts/gen_pappy.py Lojban.pest Lojban.pappy.rhs -o Lojban.pappy && \
+    python3 scripts/gen_pappy.py Morphology.pest Morphology.pappy.rhs -o Morphology.pappy
+
+# Build pappy (needed for generating Haskell modules)
+RUN make pappy/pappy/pappy && \
+    make Pappy/Parse.hs Lojban.hs Morphology.hs
+
+# Build with WASM target
+RUN cabal update
+RUN cabal build --with-compiler=/root/.ghc-wasm/wasm32-wasi-ghc/bin/wasm32-wasi-ghc exe:tersmu-wasm -f-server --allow-newer
+
+# Extract WASM file
+RUN mkdir -p /output && \
+    find dist-newstyle -name "*.wasm" -type f | head -1 | xargs -I {} cp {} /output/tersmu.wasm && \
+    ls -lh /output/ || echo "WASM file not found in dist-newstyle"
+
+# Final stage: small runtime image containing just the WASM artifact
+FROM debian:${DEBIAN_VERSION} AS output
+WORKDIR /output
+RUN mkdir -p /output
+COPY --from=builder /output/tersmu.wasm /output/tersmu.wasm
