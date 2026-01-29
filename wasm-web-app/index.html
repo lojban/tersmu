@@ -81,9 +81,15 @@
             <!-- Hero/Input Section -->
             <section class="fade-in">
                 <div class="bg-white rounded-2xl shadow-[0_20px_50px_rgba(79,70,229,0.08)] border border-slate-300 p-4 sm:p-4">
-                    <label for="lojban-input" class="block text-sm font-bold text-slate-900 mb-3">
-                        Lojban Input
-                    </label>
+                    <div class="flex items-center justify-between mb-3">
+                        <label for="lojban-input" class="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                            Lojban Input
+                        </label>
+                        <button onclick="clearInput()" class="flex items-center space-x-1.5 px-2 py-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all text-[11px] font-bold uppercase tracking-tight group">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5 transition-transform group-hover:scale-110"></i>
+                            <span>Clear Area</span>
+                        </button>
+                    </div>
                     <div class="relative">
                         <textarea 
                             id="lojban-input" 
@@ -93,7 +99,6 @@
                     </div>
                     
                     <div class="mt-4 flex flex-wrap gap-2">
-                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2 self-center">Try:</span>
                         <button onclick="setExample('mi klama le zarci')" class="px-3 py-1.5 text-xs font-semibold bg-white text-slate-700 border border-slate-300 rounded-lg hover:border-indigo-300 hover:text-indigo-600 shadow-sm transition-all">mi klama le zarci</button>
                         <button onclick="setExample('do nelci ma')" class="px-3 py-1.5 text-xs font-semibold bg-white text-slate-700 border border-slate-300 rounded-lg hover:border-indigo-300 hover:text-indigo-600 shadow-sm transition-all">do nelci ma</button>
                         <button onclick="setExample('la .alis. cu klama le zarci')" class="px-3 py-1.5 text-xs font-semibold bg-white text-slate-700 border border-slate-300 rounded-lg hover:border-indigo-300 hover:text-indigo-600 shadow-sm transition-all">la .alis. cu klama le zarci</button>
@@ -312,6 +317,15 @@
             input.value = text;
             input.focus();
             handleParse();
+        }
+
+        function clearInput() {
+            const input = document.getElementById('lojban-input');
+            input.value = '';
+            input.focus();
+            document.getElementById('results-area').classList.add('hidden');
+            document.getElementById('parse-error').classList.add('hidden');
+            document.getElementById('parse-loading').classList.add('hidden');
         }
         
         let parseDebounceTimer;
