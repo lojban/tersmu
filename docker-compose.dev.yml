@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  tersmu:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/app
+      - cabal_store:/root/.cabal
+      - cabal_dist:/app/dist-newstyle
+    ports:
+      - "8080:8080"
+    # We use ghcid to watch for file changes and restart the server.
+    # The --test="Main.main" flag tells ghcid to run the 'main' function
+    # after every successful compilation.
+    command: ghcid --command="cabal repl exe:tersmu-server" --test="Main.main"
+    stdin_open: true
+    tty: true
+
+volumes:
+  cabal_store:
+  cabal_dist:

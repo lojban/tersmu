@@ -1,0 +1,48 @@
+FROM haskell:9.8
+
+# Install dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    make \
+    gcc \
+    libc6-dev \
+    libgmp-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install ghcid for hot reloading
+RUN cabal update && cabal install ghcid
+ENV PATH="/root/.cabal/bin:${PATH}"
+
+WORKDIR /app
+
+# Pre-fetch and build dependencies to cache them
+# We copy only the cabal file first
+COPY tersmu.cabal ./
+RUN cabal build --only-dependencies exe:tersmu exe:tersmu-server
+
+# The rest of the code will be mounted as a volume
+# But we copy it now so we can run the initial generation steps
+COPY . .
+
+# Generate .pappy from canonical Pest grammar
+RUN python3 scripts/gen_pappy.py Lojban.pest Lojban.pappy.rhs -o Lojban.pappy \
+ && python3 scripts/gen_pappy.py Morphology.pest Morphology.pappy.rhs -o Morphology.pappy
+
+# Fetch/build the patched Pappy tool, then generate the Haskell modules
+RUN make pappy/pappy/pappy \
+ && make Pappy/Parse.hs Lojban.hs Morphology.hs
+
+# Install tersmu binary to /usr/local/bin initially so the server can call it
+RUN cabal install exe:tersmu --installdir=/usr/local/bin --overwrite-policy=always
+
+# Expose the server port
+EXPOSE 8080
+
+# Default command: run ghcid watching the server
+# We use --command to load the server and --test to run the main function
+# This will reload the server whenever code changes.
+# Note: Since the server calls the 'tersmu' binary, we might need a way
+# to ensure 'tersmu' is also rebuilt. However, for most local dev,
+# developers might want to just run the repl or a watcher.
+CMD ["ghcid", "--command=cabal repl exe:tersmu-server", "--test=Main.main", "--allow-eval"]

@@ -6,41 +6,54 @@
 
 ---
 
-## Quick start (Docker)
+## Production Build (Docker)
 
-The easiest way to run tersmu is with Docker.
-
-### Run the HTTP API (default)
+To build a slim, production-ready image and run the HTTP REST API:
 
 ```bash
-# Build the image
+# Build the production image
 docker build -t tersmu .
 
-# Run the API (foreground)
+# Run the API
 docker run --rm -p 8080:8080 tersmu
-
-# Or run in background
-docker run -d -p 8080:8080 --name tersmu-api tersmu
 ```
 
-The API listens on **http://0.0.0.0:8080**. See [HTTP REST API](#http-rest-api) below.
+The API will be available at `http://localhost:8080`. See [HTTP REST API](#http-rest-api) for usage.
 
 ### Run the CLI parser
 
-To use the command-line parser instead of the API:
+You can also run the command-line parser using the same production image:
 
 ```bash
 # Parse a file
-docker run --rm -it --entrypoint tersmu tersmu /app/examples/1.jbo
+docker run --rm -it --entrypoint tersmu tersmu examples/1.jbo
 
 # Parse from stdin (paste Lojban, then Ctrl-D)
 docker run --rm -it --entrypoint tersmu tersmu
 ```
 
-To parse a file from your host, mount it:
+---
+
+## Development (Hot Reloading)
+
+For local development, you can use `docker-compose` to start a container that watches your source files and reloads the server automatically using `ghcid`.
+
+### Start the development environment
 
 ```bash
-docker run --rm -it -v "$(pwd)/myfile.jbo:/input.jbo:ro" --entrypoint tersmu tersmu -L /input.jbo
+docker-compose -f docker-compose.dev.yml up --build
+```
+
+- **Hot Reloading:** The container mounts your local directory. Any changes to `.hs` files will trigger an incremental rebuild and restart of the `tersmu-server`.
+- **Persistent Cache:** Cabal dependencies and build artifacts are stored in Docker volumes (`cabal_store`, `cabal_dist`) to keep rebuilds fast.
+- **Port:** The dev server also listens on port `8080`.
+
+### Rebuilding the CLI tool
+
+Since `tersmu-server` executes the `tersmu` binary for parsing, if you change parsing logic, you need to update the binary inside the container:
+
+```bash
+docker-compose -f docker-compose.dev.yml exec tersmu cabal install exe:tersmu --installdir=/usr/local/bin --overwrite-policy=always
 ```
 
 ---
@@ -162,43 +175,6 @@ tersmu -L examples/1.jbo
 echo "mi klama le zarci" | tersmu -L
 ```
 
----
-
-## Installation (without Docker)
-
-### From Hackage (Cabal)
-
-```bash
-# Install Cabal if needed (e.g. Debian/Ubuntu)
-sudo apt-get install cabal-install
-
-# Install tersmu
-cabal update && cabal install tersmu
-```
-
-The `tersmu` binary is installed to `~/.cabal/bin/`. Add it to your `PATH` if needed:
-
-```bash
-export PATH="$PATH:$HOME/.cabal/bin"
-```
-
-To install **tersmu-server** (HTTP API) as well, clone the repo and use the instructions in [From source](#from-source).
-
-### From source
-
-For a modified version or to build the server:
-
-1. Install dependencies: GHC, Cabal, `make` (see [Makefile](Makefile) for Pappy).
-2. Build and install:
-
-   ```bash
-   make install
-   ```
-
-   This runs `cabal update && cabal install`, which builds both `tersmu` and `tersmu-server`. The Makefile may first generate `Lojban.hs` and `Morphology.hs`.
-
----
-
 ## Documentation
 
 | Path | Description |
@@ -218,16 +194,20 @@ tersmu can be compiled to WebAssembly for use in web browsers.
 
 ### Building the WASM version
 
+The easiest way to build the WASM module is using the provided script, which uses a specialized Docker environment (`Dockerfile.wasm`) to handle the cross-compilation toolchain:
+
 ```bash
 ./build_wasm.sh
 ```
 
-This creates a `wasm-web-app/` directory containing:
-- `tersmu.wasm` - The compiled WebAssembly module
-- `index.html` - Web interface
-- `tersmu.js` - JavaScript wrapper
+This script:
+1. Builds the `tersmu-wasm-builder` Docker image.
+2. Extracts the compiled `tersmu.wasm` from the container.
+3. Places it in the `wasm-web-app/` directory alongside the HTML/JS frontend.
 
 ### Running the WASM web app
+
+Once built, you can serve the web app locally:
 
 ```bash
 cd wasm-web-app
