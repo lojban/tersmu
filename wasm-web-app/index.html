@@ -327,37 +327,63 @@
             handleParse();
         }
         
-        async function handleParse() {
+        let parseDebounceTimer;
+        
+        document.getElementById('lojban-input').addEventListener('input', () => {
+            clearTimeout(parseDebounceTimer);
+            parseDebounceTimer = setTimeout(() => {
+                handleParse(true);
+            }, 300);
+        });
+        
+        let isParsing = false;
+        
+        async function handleParse(isAuto = false) {
+            if (!isAuto) clearTimeout(parseDebounceTimer);
             const input = document.getElementById('lojban-input').value.trim();
             const resultsArea = document.getElementById('results-area');
             const loading = document.getElementById('parse-loading');
             const errorArea = document.getElementById('parse-error');
             const btn = document.getElementById('parse-btn');
             
-            if (!input || !wasmInstance) return;
+            if (!input || !wasmInstance || isParsing) return;
+            
+            isParsing = true;
             
             // UI States
-            btn.disabled = true;
-            resultsArea.classList.add('hidden');
-            errorArea.classList.add('hidden');
-            loading.classList.remove('hidden');
+            if (!isAuto) {
+                btn.disabled = true;
+                resultsArea.classList.add('hidden');
+                errorArea.classList.add('hidden');
+                loading.classList.remove('hidden');
+            }
             
             try {
                 const result = await tersmuParse(input);
                 const json = JSON.parse(result);
                 
                 if (json.error) {
-                    showError(json.error);
+                    if (!isAuto) {
+                        showError(json.error);
+                    }
                 } else {
                     document.getElementById('logical-output').textContent = json.logical;
                     document.getElementById('canonical-output').textContent = json.canonical;
                     resultsArea.classList.remove('hidden');
+                    if (isAuto) {
+                        errorArea.classList.add('hidden'); // Clear error if it was shown from a previous manual parse
+                    }
                 }
             } catch (err) {
-                showError(err.message);
+                if (!isAuto) {
+                    showError(err.message);
+                }
             } finally {
-                loading.classList.add('hidden');
-                btn.disabled = false;
+                isParsing = false;
+                if (!isAuto) {
+                    loading.classList.add('hidden');
+                    btn.disabled = false;
+                }
             }
         }
 
