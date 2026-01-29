@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>tersmu - Lojban Semantic Parser</title>
+    <meta name="description" content="A powerful Lojban semantic parser running in your browser via WebAssembly.">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                },
+            },
+        }
+    </script>
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    
+    <style>
+        [v-cloak] { display: none; }
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .loading-dots:after {
+            content: '.';
+            animation: dots 1.5s steps(5, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60% { content: '...'; }
+            80%, 100% { content: ''; }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .noselect {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        /* Bottom Bar Styles */
+        #velsku {
+            text-align: left;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            bottom: 0px;
+            left: 0px;
+            position: fixed;
+            background: white;
+            z-index: 50;
+        }
+
+        #velsku ul {
+            padding: 0.1rem;
+            display: flex;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            box-shadow:
+                0 0 0 1px rgb(56 136 233),
+                0 0 0 2px rgb(34 87 213),
+                0 0 0 3px rgb(38 99 224),
+                0 0 0 4px rgb(25 65 165);
+            margin-top: 3px;
+            list-style: none;
+            margin-bottom: 0;
+        }
+
+        .velsku_pamei {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+        }
+
+        #velsku a {
+            color: #2b79e0;
+            text-decoration: none;
+        }
+        
+        #velsku li.social-icon:hover {
+             color: white; /* Corresponds to hover:text-white */
+        }
+        
+        #velsku li.social-icon a {
+            color: inherit; /* inherit from li */
+        }
+
+        #velsku li.social-icon:hover a {
+             color: white;
+        }
+    </style>
+</head>
+<body class="bg-[#f1f5f9] text-slate-950 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white/90 border-b border-slate-300 sticky top-0 z-10 glass shadow-sm">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 py-2 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 p-2 rounded-lg">
+                    <i data-lucide="brain-circuit" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-slate-900">tersmu</h1>
+                    <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Lojban Semantic Parser</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-5xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-12">
+        <div class="space-y-4">
+            <!-- Hero/Input Section -->
+            <section class="fade-in">
+                <div class="bg-white rounded-2xl shadow-[0_20px_50px_rgba(79,70,229,0.08)] border border-slate-300 p-4 sm:p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <label for="lojban-input" class="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                            Lojban Input
+                        </label>
+                        <button onclick="clearInput()" class="flex items-center space-x-1.5 px-2 py-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all text-[11px] font-bold uppercase tracking-tight group">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5 transition-transform group-hover:scale-110"></i>
+                            <span>Clear Area</span>
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <textarea 
+                            id="lojban-input" 
+                            class="w-full min-h-[140px] p-4 text-base sm:text-lg font-mono bg-slate-50/50 border-2 border-slate-300 rounded-xl focus:ring-4 focus:ring-indigo-100/50 focus:border-indigo-600 transition-all outline-none resize-none placeholder:text-slate-400"
+                            placeholder="Type Lojban here... (e.g. la .alis. cu klama le zarci)"
+                        >la .alis. cu klama le zarci</textarea>
+                    </div>
+                    
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <button onclick="setExample('mi klama le zarci')" class="px-3 py-1.5 text-xs font-semibold bg-white text-slate-700 border border-slate-300 rounded-lg hover:border-indigo-300 hover:text-indigo-600 shadow-sm transition-all">mi klama le zarci</button>
+                        <button onclick="setExample('do nelci ma')" class="px-3 py-1.5 text-xs font-semibold bg-white text-slate-700 border border-slate-300 rounded-lg hover:border-indigo-300 hover:text-indigo-600 shadow-sm transition-all">do nelci ma</button>
+                        <button onclick="setExample('la .alis. cu klama le zarci')" class="px-3 py-1.5 text-xs font-semibold bg-white text-slate-700 border border-slate-300 rounded-lg hover:border-indigo-300 hover:text-indigo-600 shadow-sm transition-all">la .alis. cu klama le zarci</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Loading State -->
+            <div id="parse-loading" class="hidden flex flex-col items-center justify-center py-12 space-y-4 fade-in">
+                <div class="relative">
+                    <div class="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+                </div>
+                <p class="text-slate-500 font-medium">Analyzing semantics...</p>
+            </div>
+
+            <!-- WASM Download Progress -->
+            <div id="wasm-download-progress" class="flex flex-col items-center justify-center py-12 space-y-4 fade-in">
+                <div class="w-full max-w-md space-y-3">
+                    <div class="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        <span>Downloading Engine</span>
+                        <span id="download-percentage">0%</span>
+                    </div>
+                    <div class="h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div id="download-bar" class="h-full bg-indigo-600 transition-all duration-200 ease-out" style="width: 0%"></div>
+                    </div>
+                    <p id="download-status-text" class="text-center text-slate-400 text-xs font-medium">Fetching WebAssembly binary...</p>
+                </div>
+            </div>
+
+            <!-- Error State -->
+            <div id="parse-error" class="hidden fade-in px-6 py-4 bg-red-50 border border-red-100 rounded-xl flex items-start space-x-3">
+                <i data-lucide="alert-circle" class="w-6 h-6 text-red-500 shrink-0"></i>
+                <div>
+                    <h3 class="font-bold text-red-800">Parsing Error</h3>
+                    <pre id="error-message" class="mt-1 text-sm text-red-700 font-mono whitespace-pre-wrap"></pre>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-area" class="hidden space-y-4 fade-in">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Logical Form Card -->
+                    <div class="bg-white rounded-2xl shadow-md border border-slate-300 flex flex-col group overflow-hidden">
+                        <div class="px-5 py-4 border-b border-slate-200 bg-slate-100 flex justify-between items-center">
+                            <div class="flex items-center space-x-2">
+                                <i data-lucide="binary" class="w-4 h-4 text-indigo-500"></i>
+                                <h3 class="font-bold text-slate-700 uppercase tracking-wider text-xs">Logical Form</h3>
+                            </div>
+                            <button onclick="copyToClipboard('logical-output', event)" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Copy to clipboard">
+                                <i data-lucide="copy" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <div class="relative flex-grow">
+                            <pre id="logical-output" class="p-6 text-sm font-mono leading-relaxed bg-white text-slate-800 whitespace-pre-wrap min-h-[100px] select-all"></pre>
+                        </div>
+                    </div>
+
+                    <!-- Canonical Form Card -->
+                    <div class="bg-white rounded-2xl shadow-md border border-slate-300 flex flex-col group overflow-hidden">
+                        <div class="px-5 py-4 border-b border-slate-200 bg-slate-100 flex justify-between items-center">
+                            <div class="flex items-center space-x-2">
+                                <i data-lucide="languages" class="w-4 h-4 text-indigo-500"></i>
+                                <h3 class="font-bold text-slate-700 uppercase tracking-wider text-xs">Canonical Form</h3>
+                            </div>
+                            <button onclick="copyToClipboard('canonical-output', event)" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Copy to clipboard">
+                                <i data-lucide="copy" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <div class="relative flex-grow">
+                            <pre id="canonical-output" class="p-6 text-sm font-mono leading-relaxed bg-white text-slate-800 whitespace-pre-wrap min-h-[100px] select-all"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="justify-center text-center p-4 print:hidden">
+        <div id="velsku" class="noselect">
+            <ul class="flex flex-row">
+                <!-- Social Links -->
+                <li class="px-2 cursor-pointer hover:bg-blue-500 hover:text-white transition duration-300 rounded social-icon">
+                    <a href="https://github.com/lojban/tersmu" target="_blank" title="GitHub">
+                        <i class="fab fa-github w-4 mt-1"></i>
+                    </a>
+                </li>
+                <li class="px-2 cursor-pointer hover:bg-blue-500 hover:text-white transition duration-300 rounded social-icon">
+                    <a href="https://lojban.org" target="_blank" title="Lojban.org">
+                        <i class="fas fa-globe w-4 mt-1"></i>
+                    </a>
+                </li>
+                <li class="px-2 cursor-pointer hover:bg-blue-500 hover:text-white transition duration-300 rounded social-icon">
+                    <a href="https://mw.lojban.org" target="_blank" title="Lojban Wiki">
+                        <i class="fas fa-book w-4 mt-1"></i>
+                    </a>
+                </li>
+                 <li class="px-2 cursor-pointer hover:text-white transition duration-300">
+                    <a href="https://discord.gg/4KhzRzpmVr" target="_blank" title="Discord">
+                        <i class="fab fa-discord w-4 mt-1"></i>
+                    </a>
+                </li>
+
+                <!-- Live Chat / Updates -->
+                <li>
+                    <a id="velsku_sebenji" href="https://discord.gg/4KhzRzpmVr" target="_blank">
+                        Live chat
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </footer>
+
+    <script src="tersmu.js"></script>
+    <script>
+        // Init Lucide icons
+        lucide.createIcons();
+
+        let wasmInstance = null;
+        
+        async function loadWasm() {
+
+            
+            try {
+                let wasmMemory;
+                const getMemory = () => {
+                    if (!wasmMemory && wasmInstance) {
+                        wasmMemory = wasmInstance.exports.memory;
+                    }
+                    return wasmMemory;
+                };
+
+                const wasiImport = {
+                    wasi_snapshot_preview1: {
+                        proc_exit: (code) => console.log('Process exited with code:', code),
+                        fd_close: () => 0,
+                        fd_seek: () => 0,
+                        fd_write: (fd, iovs, iovs_len, nwritten) => {
+                            const mem = getMemory();
+                            if (!mem) return 0;
+                            const view = new DataView(mem.buffer);
+                            let total = 0;
+                            let output = '';
+                            for (let i = 0; i < iovs_len; i++) {
+                                const ptr = view.getUint32(iovs + i * 8, true);
+                                const len = view.getUint32(iovs + i * 8 + 4, true);
+                                const buf = new Uint8Array(mem.buffer, ptr, len);
+                                output += new TextDecoder().decode(buf);
+                                total += len;
+                            }
+                            if (fd === 1 || fd === 2) console.log(output);
+                            view.setUint32(nwritten, total, true);
+                            return 0;
+                        },
+                        fd_read: () => 0,
+                        fd_fdstat_get: () => 0,
+                        fd_fdstat_set_flags: () => 0,
+                        fd_fdstat_set_rights: () => 0,
+                        fd_advise: () => 0,
+                        fd_allocate: () => 0,
+                        fd_datasync: () => 0,
+                        fd_sync: () => 0,
+                        fd_tell: () => 0,
+                        fd_readdir: () => 8,
+                        fd_renumber: () => 8,
+                        fd_filestat_get: () => 0,
+                        fd_filestat_set_size: () => 8,
+                        fd_filestat_set_times: () => 8,
+                        fd_pread: () => 8,
+                        fd_pwrite: () => 8,
+                        path_create_directory: () => 8,
+                        path_filestat_get: () => 8,
+                        path_filestat_set_times: () => 8,
+                        path_link: () => 8,
+                        path_open: () => 8,
+                        path_readlink: () => 8,
+                        path_remove_directory: () => 8,
+                        path_rename: () => 8,
+                        path_symlink: () => 8,
+                        path_unlink_file: () => 8,
+                        clock_res_get: () => 0,
+                        sock_accept: () => 8,
+                        sock_recv: () => 8,
+                        sock_send: () => 8,
+                        sock_shutdown: () => 8,
+                        fd_prestat_get: () => 8,
+                        fd_prestat_dir_name: () => 8,
+                        environ_sizes_get: (out_count, out_buf_size) => {
+                            const mem = getMemory();
+                            if (mem) {
+                                const view = new DataView(mem.buffer);
+                                view.setUint32(out_count, 0, true);
+                                view.setUint32(out_buf_size, 0, true);
+                            }
+                            return 0;
+                        },
+                        environ_get: (environ, environ_buf) => 0,
+                        args_sizes_get: (out_count, out_buf_size) => {
+                            const mem = getMemory();
+                            if (mem) {
+                                const view = new DataView(mem.buffer);
+                                view.setUint32(out_count, 0, true);
+                                view.setUint32(out_buf_size, 0, true);
+                            }
+                            return 0;
+                        },
+                        args_get: (args, args_buf) => 0,
+                        clock_time_get: (id, precision, out_time) => 0,
+                        random_get: (buf, len) => {
+                            const mem = getMemory();
+                            if (mem) {
+                                const array = new Uint8Array(mem.buffer, buf, len);
+                                crypto.getRandomValues(array);
+                            }
+                            return 0;
+                        },
+                        poll_oneoff: () => 8,
+                        proc_raise: () => 8,
+                        sched_yield: () => 0,
+                    }
+                };
+                
+                const progressContainer = document.getElementById('wasm-download-progress');
+                const progressBar = document.getElementById('download-bar');
+                const progressText = document.getElementById('download-percentage');
+                const downloadStatus = document.getElementById('download-status-text');
+
+                const response = await fetch('tersmu.wasm');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const contentLength = response.headers.get('Content-Length');
+                const total = contentLength ? parseInt(contentLength, 10) : 9 * 1024 * 1024;
+                let loaded = 0;
+
+                const reader = response.body.getReader();
+                const chunks = [];
+
+                while(true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                    loaded += value.length;
+                    
+                    if (total) {
+                        const percentRaw = (loaded / total) * 100;
+                        const percent = Math.min(100, Math.round(percentRaw));
+                        
+                        if (progressBar) {
+                            progressBar.style.width = `${percent}%`;
+                            if (percentRaw > 100) {
+                                progressBar.classList.add('animate-pulse');
+                            }
+                        }
+                        if (progressText) {
+                            if (percentRaw > 100) {
+                                progressText.textContent = `${(loaded / (1024 * 1024)).toFixed(1)} MB`;
+                            } else {
+                                progressText.textContent = `${percent}%`;
+                            }
+                        }
+                    } else {
+                         if (progressText) progressText.textContent = `${(loaded / (1024 * 1024)).toFixed(1)} MB`;
+                         if (progressBar) {
+                             progressBar.style.width = '100%';
+                             progressBar.classList.add('animate-pulse');
+                         }
+                    }
+                }
+
+                const wasmBytes = new Uint8Array(loaded);
+                let position = 0;
+                for(let chunk of chunks) {
+                    wasmBytes.set(chunk, position);
+                    position += chunk.length;
+                }
+                
+                if (downloadStatus) downloadStatus.textContent = 'Initializing engine...';
+
+                const result = await WebAssembly.instantiate(wasmBytes.buffer, wasiImport);
+                
+                wasmInstance = result.instance;
+                
+                if (typeof initWasm === 'function') {
+                    await initWasm(wasmInstance);
+                }
+                
+                if (progressContainer) progressContainer.classList.add('hidden');
+                
+                // Trigger parse if there's initial text
+                if (document.getElementById('lojban-input').value.trim()) {
+                    handleParse();
+                }
+
+            } catch (error) {
+                console.error('Error loading WASM:', error);
+                const progressContainer = document.getElementById('wasm-download-progress');
+                const downloadStatus = document.getElementById('download-status-text');
+                
+                if (downloadStatus) {
+                    downloadStatus.textContent = 'Failed to load engine.';
+                    downloadStatus.classList.add('text-red-500');
+                }
+            }
+        }
+        
+        function setExample(text) {
+            const input = document.getElementById('lojban-input');
+            input.value = text;
+            input.focus();
+            handleParse();
+        }
+
+        function clearInput() {
+            const input = document.getElementById('lojban-input');
+            input.value = '';
+            input.focus();
+            document.getElementById('results-area').classList.add('hidden');
+            document.getElementById('parse-error').classList.add('hidden');
+            document.getElementById('parse-loading').classList.add('hidden');
+            const progressContainer = document.getElementById('wasm-download-progress');
+            if (progressContainer && wasmInstance) progressContainer.classList.add('hidden'); // Only hide if loaded, otherwise keep showing progress
+        }
+        
+        let parseDebounceTimer;
+        
+        document.getElementById('lojban-input').addEventListener('input', () => {
+            clearTimeout(parseDebounceTimer);
+            parseDebounceTimer = setTimeout(() => {
+                handleParse(true);
+            }, 300);
+        });
+        
+        let isParsing = false;
+        
+        async function handleParse(isAuto = false) {
+            if (!isAuto) clearTimeout(parseDebounceTimer);
+            const input = document.getElementById('lojban-input').value.trim();
+            const resultsArea = document.getElementById('results-area');
+            const loading = document.getElementById('parse-loading');
+            const errorArea = document.getElementById('parse-error');
+            
+            if (!input || !wasmInstance || isParsing) return;
+            
+            isParsing = true;
+            
+            // UI States
+            if (!isAuto) {
+                resultsArea.classList.add('hidden');
+                errorArea.classList.add('hidden');
+                loading.classList.remove('hidden');
+            }
+            
+            try {
+                const result = await tersmuParse(input);
+                const json = JSON.parse(result);
+                
+                if (json.error) {
+                    if (!isAuto) {
+                        showError(json.error);
+                    }
+                } else {
+                    document.getElementById('logical-output').textContent = json.logical;
+                    document.getElementById('canonical-output').textContent = json.canonical;
+                    resultsArea.classList.remove('hidden');
+                    if (isAuto) {
+                        errorArea.classList.add('hidden');
+                    }
+                }
+            } catch (err) {
+                if (!isAuto) {
+                    showError(err.message);
+                }
+            } finally {
+                isParsing = false;
+                if (!isAuto) {
+                    loading.classList.add('hidden');
+                }
+            }
+        }
+
+        function showError(msg) {
+            const errorArea = document.getElementById('parse-error');
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.textContent = msg;
+            errorArea.classList.remove('hidden');
+        }
+
+        function copyToClipboard(id, event) {
+            const text = document.getElementById(id).textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                // Flash success state
+                const btn = event.currentTarget || event.target.closest('button');
+                const originalIcon = btn.innerHTML;
+                btn.innerHTML = '<i data-lucide="check" class="w-4 h-4 text-emerald-500"></i>';
+                lucide.createIcons();
+                setTimeout(() => {
+                    btn.innerHTML = originalIcon;
+                    lucide.createIcons();
+                }, 2000);
+            });
+        }
+        
+        // Load WASM on page load
+        window.addEventListener('DOMContentLoaded', () => {
+             loadWasm();
+             initSocket();
+        });
+
+        // Socket.io integration
+        function initSocket() {
+            if (typeof io === 'undefined') {
+                console.warn('Socket.io library not loaded');
+                return;
+            }
+
+            const trimSocketChunk = (text) =>
+                text.replace(/[\n\r]+$/gims, " ").replace(/<br *\/?>/gims, " ");
+
+            let socket1Chat_connected = false;
+            
+            try {
+                const socket1Chat = io("wss://jbotcan.org:9091", {
+                    transports: ["polling", "websocket"],
+                });
+
+                socket1Chat.on("connect", () => {
+                    console.log("Socket connected:", socket1Chat.id);
+                    socket1Chat_connected = true;
+                });
+
+                socket1Chat.on("connect_error", (err) => {
+                    console.log("1chat connection error:", err);
+                });
+
+                socket1Chat.on("sentFrom", (data) => {
+                    if (!socket1Chat_connected) return;
+                    // data structure based on user snippet: data.data contains the message info
+                    const i = data.data; 
+                    if (!i) return;
+
+                    const msg = {
+                        d: trimSocketChunk(i.chunk || ""),
+                        s: i.channelId,
+                        w: i.author,
+                    };
+
+                    const velsku = document.getElementById("velsku_sebenji");
+                    if (velsku)
+                        velsku.innerHTML =
+                        '<span class="velsku_pamei">' + msg.w + ": " + msg.d + "</span>";
+                });
+
+                socket1Chat.on("history", (data) => {
+                    if (!socket1Chat_connected) return;
+                    // data is array, take last one
+                    if (!Array.isArray(data) || data.length === 0) return;
+                    
+                    const i = data.slice(-1)[0];
+                    if (!i) return;
+                    
+                    const msg = {
+                        d: trimSocketChunk(i.chunk || ""),
+                        s: i.channelId,
+                        w: i.author,
+                    };
+                    const velsku = document.getElementById("velsku_sebenji");
+                    if (velsku)
+                        velsku.innerHTML =
+                        '<span class="velsku_pamei">' + msg.w + ": " + msg.d + "</span>";
+                });
+            } catch (e) {
+                console.error("Socket initialization failed:", e);
+            }
+        }
+        
+        // Listen for keyboard shortcuts
+        document.getElementById('lojban-input').addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                handleParse();
+            }
+        });
+    </script>
+</body>
+</html>
