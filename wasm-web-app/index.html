@@ -134,10 +134,6 @@
                     <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Lojban Semantic Parser</p>
                 </div>
             </div>
-            <div id="wasm-status" class="w-40 flex-none flex items-center justify-center space-x-2 px-3 py-1.5 rounded-full bg-amber-100/80 text-amber-900 text-xs font-bold border border-amber-300 transition-all duration-300">
-                <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
-                <span id="status-text">Engine Loading...</span>
-            </div>
         </div>
     </header>
 
@@ -172,11 +168,25 @@
             </section>
 
             <!-- Loading State -->
-            <div id="parse-loading" class="hidden flex flex-col items-center justify-center py-12 space-y-4">
+            <div id="parse-loading" class="hidden flex flex-col items-center justify-center py-12 space-y-4 fade-in">
                 <div class="relative">
                     <div class="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
                 </div>
                 <p class="text-slate-500 font-medium">Analyzing semantics...</p>
+            </div>
+
+            <!-- WASM Download Progress -->
+            <div id="wasm-download-progress" class="flex flex-col items-center justify-center py-12 space-y-4 fade-in">
+                <div class="w-full max-w-md space-y-3">
+                    <div class="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        <span>Downloading Engine</span>
+                        <span id="download-percentage">0%</span>
+                    </div>
+                    <div class="h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div id="download-bar" class="h-full bg-indigo-600 transition-all duration-200 ease-out" style="width: 0%"></div>
+                    </div>
+                    <p id="download-status-text" class="text-center text-slate-400 text-xs font-medium">Fetching WebAssembly binary...</p>
+                </div>
             </div>
 
             <!-- Error State -->
@@ -270,8 +280,7 @@
         let wasmInstance = null;
         
         async function loadWasm() {
-            const statusIndicator = document.getElementById('wasm-status');
-            const statusText = document.getElementById('status-text');
+
             
             try {
                 let wasmMemory;
@@ -372,8 +381,50 @@
                     }
                 };
                 
-                const wasmBytes = await fetch('tersmu.wasm').then(r => r.arrayBuffer());
-                const result = await WebAssembly.instantiate(wasmBytes, wasiImport);
+                const progressContainer = document.getElementById('wasm-download-progress');
+                const progressBar = document.getElementById('download-bar');
+                const progressText = document.getElementById('download-percentage');
+                const downloadStatus = document.getElementById('download-status-text');
+
+                const response = await fetch('tersmu.wasm');
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const contentLength = response.headers.get('Content-Length');
+                const total = contentLength ? parseInt(contentLength, 10) : 0;
+                let loaded = 0;
+
+                const reader = response.body.getReader();
+                const chunks = [];
+
+                while(true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                    loaded += value.length;
+                    
+                    if (total) {
+                        const percent = Math.round((loaded / total) * 100);
+                        if (progressBar) progressBar.style.width = `${percent}%`;
+                        if (progressText) progressText.textContent = `${percent}%`;
+                    } else {
+                         if (progressText) progressText.textContent = `${(loaded / (1024 * 1024)).toFixed(1)} MB`;
+                         if (progressBar) {
+                             progressBar.style.width = '100%';
+                             progressBar.classList.add('animate-pulse');
+                         }
+                    }
+                }
+
+                const wasmBytes = new Uint8Array(loaded);
+                let position = 0;
+                for(let chunk of chunks) {
+                    wasmBytes.set(chunk, position);
+                    position += chunk.length;
+                }
+                
+                if (downloadStatus) downloadStatus.textContent = 'Initializing engine...';
+
+                const result = await WebAssembly.instantiate(wasmBytes.buffer, wasiImport);
                 
                 wasmInstance = result.instance;
                 
@@ -381,25 +432,22 @@
                     await initWasm(wasmInstance);
                 }
                 
-                statusIndicator.classList.remove('bg-amber-100/80', 'text-amber-900', 'border-amber-300');
-                statusIndicator.classList.add('bg-emerald-100/80', 'text-emerald-900', 'border-emerald-300');
-                statusIndicator.querySelector('div').classList.remove('bg-amber-500');
-                statusIndicator.querySelector('div').classList.add('bg-emerald-600');
-                statusIndicator.querySelector('div').classList.remove('animate-pulse');
-                statusText.textContent = 'Engine Ready';
+                if (progressContainer) progressContainer.classList.add('hidden');
                 
                 // Trigger parse if there's initial text
                 if (document.getElementById('lojban-input').value.trim()) {
-                    handleParse(true);
+                    handleParse();
                 }
 
             } catch (error) {
                 console.error('Error loading WASM:', error);
-                statusIndicator.classList.remove('bg-amber-100/80', 'text-amber-900', 'border-amber-300');
-                statusIndicator.classList.add('bg-red-100/80', 'text-red-900', 'border-red-300');
-                statusIndicator.querySelector('div').classList.remove('bg-amber-500');
-                statusIndicator.querySelector('div').classList.add('bg-red-600');
-                statusText.textContent = 'Load Failed';
+                const progressContainer = document.getElementById('wasm-download-progress');
+                const downloadStatus = document.getElementById('download-status-text');
+                
+                if (downloadStatus) {
+                    downloadStatus.textContent = 'Failed to load engine.';
+                    downloadStatus.classList.add('text-red-500');
+                }
             }
         }
         
@@ -417,6 +465,8 @@
             document.getElementById('results-area').classList.add('hidden');
             document.getElementById('parse-error').classList.add('hidden');
             document.getElementById('parse-loading').classList.add('hidden');
+            const progressContainer = document.getElementById('wasm-download-progress');
+            if (progressContainer && wasmInstance) progressContainer.classList.add('hidden'); // Only hide if loaded, otherwise keep showing progress
         }
         
         let parseDebounceTimer;
