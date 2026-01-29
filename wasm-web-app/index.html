@@ -92,21 +92,11 @@
                         >la .alis. cu klama le zarci</textarea>
                     </div>
                     
-                    <div class="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div class="flex flex-wrap gap-2">
-                            <button onclick="setExample('mi klama le zarci')" class="px-3 py-1.5 text-xs font-semibold bg-white text-slate-700 border border-slate-300 rounded-lg hover:border-indigo-300 hover:text-indigo-600 shadow-sm transition-all">mi klama le zarci</button>
-                            <button onclick="setExample('do nelci ma')" class="px-3 py-1.5 text-xs font-semibold bg-white text-slate-700 border border-slate-300 rounded-lg hover:border-indigo-300 hover:text-indigo-600 shadow-sm transition-all">do nelci ma</button>
-                            <button onclick="setExample('la .alis. cu klama le zarci')" class="px-3 py-1.5 text-xs font-semibold bg-white text-slate-700 border border-slate-300 rounded-lg hover:border-indigo-300 hover:text-indigo-600 shadow-sm transition-all">la .alis. cu klama le zarci</button>
-                        </div>
-                        <button 
-                            id="parse-btn" 
-                            disabled
-                            onclick="handleParse()" 
-                            class="w-full sm:w-auto px-8 py-3.5 bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-300/50 hover:bg-indigo-800 active:scale-[0.98] transition-all flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
-                        >
-                            <i data-lucide="zap" class="w-5 h-5"></i>
-                            <span>Parse Text</span>
-                        </button>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2 self-center">Try:</span>
+                        <button onclick="setExample('mi klama le zarci')" class="px-3 py-1.5 text-xs font-semibold bg-white text-slate-700 border border-slate-300 rounded-lg hover:border-indigo-300 hover:text-indigo-600 shadow-sm transition-all">mi klama le zarci</button>
+                        <button onclick="setExample('do nelci ma')" class="px-3 py-1.5 text-xs font-semibold bg-white text-slate-700 border border-slate-300 rounded-lg hover:border-indigo-300 hover:text-indigo-600 shadow-sm transition-all">do nelci ma</button>
+                        <button onclick="setExample('la .alis. cu klama le zarci')" class="px-3 py-1.5 text-xs font-semibold bg-white text-slate-700 border border-slate-300 rounded-lg hover:border-indigo-300 hover:text-indigo-600 shadow-sm transition-all">la .alis. cu klama le zarci</button>
                     </div>
                 </div>
             </section>
@@ -186,7 +176,6 @@
         async function loadWasm() {
             const statusIndicator = document.getElementById('wasm-status');
             const statusText = document.getElementById('status-text');
-            const parseBtn = document.getElementById('parse-btn');
             
             try {
                 let wasmMemory;
@@ -303,11 +292,9 @@
                 statusIndicator.querySelector('div').classList.remove('animate-pulse');
                 statusText.textContent = 'Engine Ready';
                 
-                parseBtn.disabled = false;
-                
                 // Trigger parse if there's initial text
                 if (document.getElementById('lojban-input').value.trim()) {
-                    handleParse();
+                    handleParse(true);
                 }
 
             } catch (error) {
@@ -344,7 +331,6 @@
             const resultsArea = document.getElementById('results-area');
             const loading = document.getElementById('parse-loading');
             const errorArea = document.getElementById('parse-error');
-            const btn = document.getElementById('parse-btn');
             
             if (!input || !wasmInstance || isParsing) return;
             
@@ -352,7 +338,6 @@
             
             // UI States
             if (!isAuto) {
-                btn.disabled = true;
                 resultsArea.classList.add('hidden');
                 errorArea.classList.add('hidden');
                 loading.classList.remove('hidden');
@@ -371,7 +356,7 @@
                     document.getElementById('canonical-output').textContent = json.canonical;
                     resultsArea.classList.remove('hidden');
                     if (isAuto) {
-                        errorArea.classList.add('hidden'); // Clear error if it was shown from a previous manual parse
+                        errorArea.classList.add('hidden');
                     }
                 }
             } catch (err) {
@@ -382,7 +367,6 @@
                 isParsing = false;
                 if (!isAuto) {
                     loading.classList.add('hidden');
-                    btn.disabled = false;
                 }
             }
         }
