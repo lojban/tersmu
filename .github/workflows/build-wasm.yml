@@ -1,0 +1,53 @@
+name: Build WASM App
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build WASM
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.wasm
+          tags: tersmu-wasm-builder:latest
+          push: false
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract WASM and prepare artifact
+        run: |
+          # Create the output directory
+          mkdir -p wasm-web-app-dist
+          
+          # Extract the WASM file from the image we just built
+          CONTAINER_ID=$(docker create tersmu-wasm-builder:latest)
+          docker cp ${CONTAINER_ID}:/output/tersmu.wasm wasm-web-app-dist/tersmu.wasm
+          docker rm ${CONTAINER_ID}
+          
+          # Copy other web app files
+          cp wasm-web-app/index.html wasm-web-app-dist/
+          cp wasm-web-app/tersmu.js wasm-web-app-dist/
+          cp wasm-web-app/favicon.svg wasm-web-app-dist/ 2>/dev/null || true
+          cp wasm-web-app/README.md wasm-web-app-dist/ 2>/dev/null || true
+
+      - name: Upload WASM Web App Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-web-app
+          path: wasm-web-app-dist/
+          if-no-files-found: error
