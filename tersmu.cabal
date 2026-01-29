@@ -1,5 +1,5 @@
 name:                tersmu
-version:             0.2.2
+version:             0.2.3
 synopsis:            A semantic parser for lojban
 homepage:            https://mbays.sdf.org/tersmu
 license:             GPL-3
@@ -24,7 +24,7 @@ flag server
 
 source-repository head
    type:     git
-   location: http://gitlab.com/zugz/tersmu/
+   location: http://gitlab.com/lojban/tersmu/
 
 library
       exposed-modules: Bindful JboParse JboProp JboShow JboSyntax Logic Morph ParseM ParseText

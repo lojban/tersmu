@@ -35,7 +35,7 @@ import System.Process
 import System.Environment
 import System.Console.GetOpt
 
-versionString = "0.2.2"
+versionString = "0.2.3"
 
 doParse :: [Opt] -> Handle -> Handle -> String -> IO ()
 doParse opts h herr s = case morph s of
