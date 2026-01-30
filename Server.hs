@@ -25,7 +25,7 @@ import Data.Text (strip)
 import Data.Text.Lazy (pack, unpack)
 import Data.Text.Lazy.Encoding (decodeUtf8, encodeUtf8)
 import Network.HTTP.Types (status200, status405)
-import Network.Wai (Application, Request, Response, requestMethod, requestBody, pathInfo, responseLBS)
+import Network.Wai (Application, Request, Response, requestMethod, getRequestBodyChunk, pathInfo, responseLBS)
 import Network.Wai.Handler.Warp (run)
 import System.Process (CreateProcess(..), StdStream(..), proc, createProcess, waitForProcess)
 import System.IO (hPutStr, hClose, hSetBinaryMode)
@@ -102,6 +102,6 @@ strictRequestBody :: Request -> IO B.ByteString
 strictRequestBody req = go B.empty
   where
     go acc = do
-      chunk <- requestBody req
+      chunk <- getRequestBodyChunk req
       if B.null chunk then return acc else go (acc <> chunk)
 
