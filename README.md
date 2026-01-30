@@ -40,24 +40,25 @@ For local development, you can use `docker-compose` with a container that watche
 
 ### Prerequisites
 
-Before starting the development container, **you must generate the parser files locally** (these are not included in the Dockerfile.dev since files are mounted as volumes):
+The parser files must be generated before the application can run. Since the necessary tools (Python, Make) are installed within the Docker image, you should run the generation commands using `docker compose`:
 
 ```bash
-# Generate .pappy files from Pest grammar
-python3 scripts/gen_pappy.py Lojban.pest Lojban.pappy.rhs -o Lojban.pappy
-python3 scripts/gen_pappy.py Morphology.pest Morphology.pappy.rhs -o Morphology.pappy
+# Start the container
+docker compose -f docker-compose.dev.yml up -d
 
-# Build the pappy tool and generate Haskell modules
-make pappy/pappy/pappy
-make Pappy/Parse.hs Lojban.hs Morphology.hs
+# Generate pappy files and Haskell modules inside the container
+docker compose -f docker-compose.dev.yml exec tersmu python3 scripts/gen_pappy.py Lojban.pest Lojban.pappy.rhs -o Lojban.pappy
+docker compose -f docker-compose.dev.yml exec tersmu python3 scripts/gen_pappy.py Morphology.pest Morphology.pappy.rhs -o Morphology.pappy
+docker compose -f docker-compose.dev.yml exec tersmu make pappy/pappy/pappy
+docker compose -f docker-compose.dev.yml exec tersmu make Pappy/Parse.hs Lojban.hs Morphology.hs
 ```
-
-**Note:** These files need to exist before you start the container because the build depends on them.
 
 ### Start the development environment
 
+If you haven't already:
+
 ```bash
-docker-compose -f docker-compose.dev.yml up --build
+docker compose -f docker-compose.dev.yml up --build
 ```
 
 - **Hot Reloading:** Your local directory is mounted into the container. Any changes to `.hs` files will trigger an automatic incremental rebuild and restart of `tersmu-server` via `ghcid`.
@@ -73,14 +74,14 @@ docker-compose -f docker-compose.dev.yml up --build
 
 ### Rebuilding generated files
 
-If you modify the `.pest` or `.pappy.rhs` grammar files, regenerate the parser files locally:
+If you modify the `.pest` or `.pappy.rhs` grammar files, you need to regenerate the parser files. You can do this inside the running container:
 
 ```bash
-# Stop the container first (Ctrl+C or docker-compose down)
-python3 scripts/gen_pappy.py Lojban.pest Lojban.pappy.rhs -o Lojban.pappy
-make Lojban.hs
-# Then restart: docker-compose -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml exec tersmu python3 scripts/gen_pappy.py Lojban.pest Lojban.pappy.rhs -o Lojban.pappy
+docker compose -f docker-compose.dev.yml exec tersmu make Lojban.hs
 ```
+
+`ghcid` will notice the changed `.hs` files and reload automatically.
 
 ---
 
