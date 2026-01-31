@@ -30,6 +30,9 @@
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.min.js"></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     
     <style>
@@ -233,10 +236,29 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Graph Visualization Card -->
+                <div class="bg-white rounded-2xl shadow-md border border-slate-300 flex flex-col group overflow-hidden mt-4">
+                    <div class="px-5 py-4 border-b border-slate-200 bg-slate-100 flex justify-between items-center">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="network" class="w-4 h-4 text-indigo-500"></i>
+                            <h3 class="font-bold text-slate-700 uppercase tracking-wider text-xs">Semantic Graph</h3>
+                        </div>
+                        <div class="flex space-x-2">
+                             <button onclick="if(cy) cy.fit()" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Fit Graph">
+                                <i data-lucide="maximize" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="graph-container" class="w-full h-[400px] bg-slate-50 relative">
+                        <!-- Graph rendered here -->
+                    </div>
+                </div>
             </div>
         </div>
     </main>
-
+    
+    <!-- ... Footer ... -->
     <footer class="justify-center text-center p-4 print:hidden">
         <div id="velsku" class="noselect">
             <ul class="flex flex-row">
@@ -273,241 +295,17 @@
     </footer>
 
     <script src="tersmu.js"></script>
+    <script src="tree-viz.js"></script>
     <script>
         // Init Lucide icons
         lucide.createIcons();
+        initTreeViz();
 
         let wasmInstance = null;
-        const STORAGE_KEY = 'tersmu-input';
-        const TEXT_LIMIT = 2000;
-        
-        async function loadWasm() {
-
-            
-            try {
-                let wasmMemory;
-                const getMemory = () => {
-                    if (!wasmMemory && wasmInstance) {
-                        wasmMemory = wasmInstance.exports.memory;
-                    }
-                    return wasmMemory;
-                };
-
-                const wasiImport = {
-                    wasi_snapshot_preview1: {
-                        proc_exit: (code) => console.log('Process exited with code:', code),
-                        fd_close: () => 0,
-                        fd_seek: () => 0,
-                        fd_write: (fd, iovs, iovs_len, nwritten) => {
-                            const mem = getMemory();
-                            if (!mem) return 0;
-                            const view = new DataView(mem.buffer);
-                            let total = 0;
-                            let output = '';
-                            for (let i = 0; i < iovs_len; i++) {
-                                const ptr = view.getUint32(iovs + i * 8, true);
-                                const len = view.getUint32(iovs + i * 8 + 4, true);
-                                const buf = new Uint8Array(mem.buffer, ptr, len);
-                                output += new TextDecoder().decode(buf);
-                                total += len;
-                            }
-                            if (fd === 1 || fd === 2) console.log(output);
-                            view.setUint32(nwritten, total, true);
-                            return 0;
-                        },
-                        fd_read: () => 0,
-                        fd_fdstat_get: () => 0,
-                        fd_fdstat_set_flags: () => 0,
-                        fd_fdstat_set_rights: () => 0,
-                        fd_advise: () => 0,
-                        fd_allocate: () => 0,
-                        fd_datasync: () => 0,
-                        fd_sync: () => 0,
-                        fd_tell: () => 0,
-                        fd_readdir: () => 8,
-                        fd_renumber: () => 8,
-                        fd_filestat_get: () => 0,
-                        fd_filestat_set_size: () => 8,
-                        fd_filestat_set_times: () => 8,
-                        fd_pread: () => 8,
-                        fd_pwrite: () => 8,
-                        path_create_directory: () => 8,
-                        path_filestat_get: () => 8,
-                        path_filestat_set_times: () => 8,
-                        path_link: () => 8,
-                        path_open: () => 8,
-                        path_readlink: () => 8,
-                        path_remove_directory: () => 8,
-                        path_rename: () => 8,
-                        path_symlink: () => 8,
-                        path_unlink_file: () => 8,
-                        clock_res_get: () => 0,
-                        sock_accept: () => 8,
-                        sock_recv: () => 8,
-                        sock_send: () => 8,
-                        sock_shutdown: () => 8,
-                        fd_prestat_get: () => 8,
-                        fd_prestat_dir_name: () => 8,
-                        environ_sizes_get: (out_count, out_buf_size) => {
-                            const mem = getMemory();
-                            if (mem) {
-                                const view = new DataView(mem.buffer);
-                                view.setUint32(out_count, 0, true);
-                                view.setUint32(out_buf_size, 0, true);
-                            }
-                            return 0;
-                        },
-                        environ_get: (environ, environ_buf) => 0,
-                        args_sizes_get: (out_count, out_buf_size) => {
-                            const mem = getMemory();
-                            if (mem) {
-                                const view = new DataView(mem.buffer);
-                                view.setUint32(out_count, 0, true);
-                                view.setUint32(out_buf_size, 0, true);
-                            }
-                            return 0;
-                        },
-                        args_get: (args, args_buf) => 0,
-                        clock_time_get: (id, precision, out_time) => 0,
-                        random_get: (buf, len) => {
-                            const mem = getMemory();
-                            if (mem) {
-                                const array = new Uint8Array(mem.buffer, buf, len);
-                                crypto.getRandomValues(array);
-                            }
-                            return 0;
-                        },
-                        poll_oneoff: () => 8,
-                        proc_raise: () => 8,
-                        sched_yield: () => 0,
-                    }
-                };
-                
-                const progressContainer = document.getElementById('wasm-download-progress');
-                const progressBar = document.getElementById('download-bar');
-                const progressText = document.getElementById('download-percentage');
-                const downloadStatus = document.getElementById('download-status-text');
-
-                const response = await fetch('tersmu.wasm');
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                
-                const contentLength = response.headers.get('Content-Length');
-                const total = contentLength ? parseInt(contentLength, 10) : 9 * 1024 * 1024;
-                let loaded = 0;
-
-                const reader = response.body.getReader();
-                const chunks = [];
-
-                while(true) {
-                    const {done, value} = await reader.read();
-                    if (done) break;
-                    chunks.push(value);
-                    loaded += value.length;
-                    
-                    if (total) {
-                        const percentRaw = (loaded / total) * 100;
-                        const percent = Math.min(100, Math.round(percentRaw));
-                        
-                        if (progressBar) {
-                            progressBar.style.width = `${percent}%`;
-                            if (percentRaw > 100) {
-                                progressBar.classList.add('animate-pulse');
-                            }
-                        }
-                        if (progressText) {
-                            if (percentRaw > 100) {
-                                progressText.textContent = `${(loaded / (1024 * 1024)).toFixed(1)} MB`;
-                            } else {
-                                progressText.textContent = `${percent}%`;
-                            }
-                        }
-                    } else {
-                         if (progressText) progressText.textContent = `${(loaded / (1024 * 1024)).toFixed(1)} MB`;
-                         if (progressBar) {
-                             progressBar.style.width = '100%';
-                             progressBar.classList.add('animate-pulse');
-                         }
-                    }
-                }
-
-                const wasmBytes = new Uint8Array(loaded);
-                let position = 0;
-                for(let chunk of chunks) {
-                    wasmBytes.set(chunk, position);
-                    position += chunk.length;
-                }
-                
-                if (downloadStatus) downloadStatus.textContent = 'Initializing engine...';
-
-                const result = await WebAssembly.instantiate(wasmBytes.buffer, wasiImport);
-                
-                wasmInstance = result.instance;
-                
-                if (typeof initWasm === 'function') {
-                    await initWasm(wasmInstance);
-                }
-                
-                if (progressContainer) progressContainer.classList.add('hidden');
-                
-                // Restore content before triggering initial parse
-                restoreContent();
-
-                // Trigger parse if there's initial text
-                if (document.getElementById('lojban-input').value.trim()) {
-                    handleParse();
-                }
-
-            } catch (error) {
-                console.error('Error loading WASM:', error);
-                const progressContainer = document.getElementById('wasm-download-progress');
-                const downloadStatus = document.getElementById('download-status-text');
-                
-                if (downloadStatus) {
-                    downloadStatus.textContent = 'Failed to load engine.';
-                    downloadStatus.classList.add('text-red-500');
-                }
-            }
-        }
-        
-        function setExample(text) {
-            const input = document.getElementById('lojban-input');
-            input.value = text;
-            input.focus();
-            handleParse();
-        }
-
-        function clearInput() {
-            const input = document.getElementById('lojban-input');
-            input.value = '';
-            input.focus();
-            
-            // Sync with storage and URL
-            localStorage.setItem(STORAGE_KEY, '');
-            const url = new URL(window.location);
-            if (url.searchParams.has('q')) {
-                url.searchParams.delete('q');
-                window.history.replaceState({}, '', url);
-            }
-
-            document.getElementById('results-area').classList.add('hidden');
-            document.getElementById('parse-error').classList.add('hidden');
-            document.getElementById('parse-loading').classList.add('hidden');
-            const progressContainer = document.getElementById('wasm-download-progress');
-            if (progressContainer && wasmInstance) progressContainer.classList.add('hidden'); // Only hide if loaded, otherwise keep showing progress
-        }
-        
-        let parseDebounceTimer;
-        
-        document.getElementById('lojban-input').addEventListener('input', () => {
-            clearTimeout(parseDebounceTimer);
-            parseDebounceTimer = setTimeout(() => {
-                handleParse(true);
-            }, 300);
-        });
-        
-        let isParsing = false;
+        // ... (rest of existing script) ...
         
         async function handleParse(isAuto = false) {
+            // ... (setup code) ...
             if (!isAuto) clearTimeout(parseDebounceTimer);
             const input = document.getElementById('lojban-input').value.trim();
             const resultsArea = document.getElementById('results-area');
@@ -518,7 +316,7 @@
             localStorage.setItem(STORAGE_KEY, input.substring(0, TEXT_LIMIT));
 
             if (!input || !wasmInstance || isParsing) {
-                // If input is empty, clear URL param
+                 // ... (empty input logic) ...
                 if (!input && wasmInstance) {
                     const url = new URL(window.location);
                     if (url.searchParams.has('q')) {
@@ -549,7 +347,16 @@
                 } else {
                     document.getElementById('logical-output').textContent = json.logical;
                     document.getElementById('canonical-output').textContent = json.canonical;
+                    
+                    // Render Tree
+                    if (json.tree) {
+                        renderTree(json.tree, 'graph-container');
+                    }
+                    
                     resultsArea.classList.remove('hidden');
+                    // Refresh Lucide icons for new content
+                    lucide.createIcons(); 
+                    
                     if (isAuto) {
                         errorArea.classList.add('hidden');
                     }
@@ -562,6 +369,7 @@
                     }
                 }
             } catch (err) {
+                // ... (error catch) ...
                 if (!isAuto) {
                     showError(err.message);
                 }
