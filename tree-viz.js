@@ -315,36 +315,24 @@ function renderTree(treeData, containerId) {
             links: edges.map(e => ({ source: e.data.source, target: e.data.target }))
         };
 
-        Graph3D = ForceGraph3D()(container)
+        const extraRenderers = window.CSS2DRenderer ? [new window.CSS2DRenderer()] : [];
+
+        Graph3D = ForceGraph3D({ extraRenderers })(container)
             .width(container.clientWidth)
             .height(container.clientHeight)
             .graphData(gData)
             .backgroundColor('#101020')
             .linkColor(() => 'rgba(255,255,255,0.6)')
-            .nodeCanvasObject((node, ctx, globalScale) => {
-                const label = node.text;
-                const fontSize = 12/globalScale;
-                ctx.font = `${fontSize}px Sans-Serif`;
-                const textWidth = ctx.measureText(label).width;
-                const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding
-
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                ctx.fillRect(node.x - bckgDimensions[0] / 2, node.y - bckgDimensions[1] / 2, ...bckgDimensions);
-
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillStyle = node.color;
-                ctx.fillText(label, node.x, node.y);
-                
-                node.__bckgDimensions = bckgDimensions; // to re-use in nodePointerAreaPaint
+            .nodeThreeObject(node => {
+                const sprite = new SpriteText(node.text);
+                sprite.color = node.color;
+                sprite.textHeight = 8;
+                sprite.backgroundColor = 'rgba(0,0,0,0.9)';
+                sprite.padding = 4;
+                sprite.borderRadius = 4;
+                return sprite;
             })
-            .nodePointerAreaPaint((node, color, ctx) => {
-                ctx.fillStyle = color;
-                const bckgDimensions = node.__bckgDimensions;
-                if (bckgDimensions) {
-                    ctx.fillRect(node.x - bckgDimensions[0] / 2, node.y - bckgDimensions[1] / 2, ...bckgDimensions);
-                }
-            });
+            .nodeThreeObjectExtend(true);
             
         if (config.config.dagMode) {
             Graph3D.dagMode(config.config.dagMode)
