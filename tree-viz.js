@@ -59,11 +59,6 @@ function initTreeViz() {
             console.warn('CiSE plugin not found in globals', {windowCise: !!window.cise, windowCytoscapeCise: !!window.cytoscapeCise});
         }
 
-        // Handle 3D globals for SpriteText
-        if (typeof ForceGraph3D !== 'undefined' && ForceGraph3D.THREE) {
-            window.THREE = ForceGraph3D.THREE;
-        }
-
         // Register nodeHtmlLabel
         if (typeof window.cytoscapeNodeHtmlLabel !== 'undefined') {
             window.cytoscapeNodeHtmlLabel(cytoscape);
@@ -239,13 +234,14 @@ function transformToNLPFormat(node) {
     const nlpNode = {
         rule: '',
         text: '',
-        type: 'NODE', // or ROOT or VALUE
+        type: 'NODE',
         children: []
     };
 
     if (Array.isArray(node)) {
         nlpNode.type = 'ROOT';
         nlpNode.rule = 'Text';
+        nlpNode.text = '';
         nlpNode.children = node.map(n => transformToNLPFormat(n)).filter(n => n);
         return nlpNode;
     }
@@ -253,43 +249,77 @@ function transformToNLPFormat(node) {
     // Determine properties
     switch (node.type) {
         case 'relation':
-            nlpNode.rule = node.relation.type || 'BRIVLA'; // fallback
-            nlpNode.text = node.relation.name;
+            nlpNode.rule = node.relation.type || 'BRIVLA';
+            nlpNode.text = node.relation.name || '';
             // Terms are children
-             if (node.terms && node.terms.length > 0) {
-                 nlpNode.children = node.terms.map(term => {
-                    let label = term.value || term.type;
-                    if (term.type === 'joiked') label = `${term.joik} (${term.term1.value} ${term.term2.value})`;
-                    return { rule: 'sumti', text: label, type: 'VALUE', children: [] };
-                 });
-             }
+            if (node.terms && node.terms.length > 0) {
+                nlpNode.children = node.terms.map((term, idx) => {
+                    let label = term.value || term.type || '';
+                    if (term.type === 'joiked') {
+                        label = `${term.joik} (${term.term1?.value || ''} ${term.term2?.value || ''})`;
+                    }
+                    return { 
+                        rule: 'sumti', 
+                        text: label, 
+                        type: 'VALUE', 
+                        children: [] 
+                    };
+                });
+            }
             break;
         case 'modal':
             nlpNode.rule = 'BAI';
-            nlpNode.text = node.modal.tag || node.modal.type;
-            if (node.child) nlpNode.children.push(transformToNLPFormat(node.child));
+            nlpNode.text = node.modal?.tag || node.modal?.type || '';
+            if (node.child) {
+                const childNode = transformToNLPFormat(node.child);
+                if (childNode) nlpNode.children.push(childNode);
+            }
             break;
         case 'quantified':
-             nlpNode.rule = 'quant';
-             nlpNode.text = `${node.quantifier.quantifier} ${node.quantifier.variable}`;
-             if (node.restriction) nlpNode.children.push(transformToNLPFormat(node.restriction));
-             if (node.child) nlpNode.children.push(transformToNLPFormat(node.child));
-             break;
+            nlpNode.rule = 'quant';
+            nlpNode.text = `${node.quantifier?.quantifier || ''} ${node.quantifier?.variable || ''}`.trim();
+            if (node.restriction) {
+                const restrNode = transformToNLPFormat(node.restriction);
+                if (restrNode) nlpNode.children.push(restrNode);
+            }
+            if (node.child) {
+                const childNode = transformToNLPFormat(node.child);
+                if (childNode) nlpNode.children.push(childNode);
+            }
+            break;
         case 'connected':
         case 'non-log-connected':
             nlpNode.rule = 'JOI';
-            nlpNode.text = node.connective;
-            if (node.left) nlpNode.children.push(transformToNLPFormat(node.left));
-            if (node.right) nlpNode.children.push(transformToNLPFormat(node.right));
+            nlpNode.text = node.connective || '';
+            if (node.left) {
+                const leftNode = transformToNLPFormat(node.left);
+                if (leftNode) nlpNode.children.push(leftNode);
+            }
+            if (node.right) {
+                const rightNode = transformToNLPFormat(node.right);
+                if (rightNode) nlpNode.children.push(rightNode);
+            }
+            break;
+        case 'not':
+            nlpNode.rule = 'NA';
+            nlpNode.text = '¬';
+            if (node.child) {
+                const childNode = transformToNLPFormat(node.child);
+                if (childNode) nlpNode.children.push(childNode);
+            }
             break;
         default:
-            nlpNode.rule = node.type;
-            nlpNode.text = '?';
+            nlpNode.rule = node.type || '?';
+            nlpNode.text = node.text || '';
     }
 
-    if(nlpNode.children.length === 0 && !nlpNode.text) {
+    // Determine final type based on whether we have children
+    if (nlpNode.children.length === 0 && nlpNode.text) {
         nlpNode.type = 'VALUE'; // Leaf
+    } else if (nlpNode.children.length === 0 && !nlpNode.text) {
+        // Empty node - use rule as text
         nlpNode.text = nlpNode.rule;
+        nlpNode.type = 'VALUE';
     }
 
     return nlpNode;
@@ -385,9 +415,12 @@ function renderTree(treeData, containerId) {
             .linkDirectionalArrowRelPos(1)
             .d3Force("collision", d3.forceCollide(node => 15))
             .nodeThreeObject(node => {
-                const Sprite = window.SpriteText || SpriteText;
-                if (!Sprite) return null;
-                const sprite = new Sprite(node.text || node.rule);
+                const SpriteText = window.SpriteText;
+                if (!SpriteText) {
+                    console.error('SpriteText not available');
+                    return null;
+                }
+                const sprite = new SpriteText(node.text || node.rule);
                 sprite.color = node.color;
                 sprite.textHeight = 10;
                 sprite.backgroundColor = 'rgba(0,0,0,0.8)';
