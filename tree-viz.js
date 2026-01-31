@@ -1,4 +1,5 @@
 // Tree Visualization module using Cytoscape.js
+let cy = null;
 
 const layoutConfigs = {
   dagreH: { name: "dagre", rankDir: "LR", spacingFactor: 1.2, padding: 30, animate: true, animationDuration: 500, fit: true },
