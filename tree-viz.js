@@ -1,6 +1,10 @@
 // Tree Visualization module using Cytoscape.js
 let cy = null;
 
+const hashCode = (s) => s.split("").reduce((a, b) => (a << 5) - a + b.charCodeAt(0), 0);
+const number2ColorHue = (number) => Math.floor(((number * 360) / 7.618) % 360);
+const bgString2Int = (number, { s = "90%", l = "80%" }) => `hsl(${number2ColorHue(hashCode(number))},${s},${l})`;
+
 const layoutConfigs = {
   dagreH: { name: "dagre", rankDir: "LR", spacingFactor: 1.2, padding: 30, animate: true, animationDuration: 500, fit: true },
   dagreV: { name: "dagre", rankDir: "TB", spacingFactor: 1.2, padding: 30, animate: true, animationDuration: 500, fit: true },
@@ -13,11 +17,15 @@ const layoutConfigs = {
   cose: { name: "cose", animate: true, fit: true },
   cola: { name: "cola", animate: true, fit: true, maxSimulationTime: 4000 },
   elk: { name: "elk", algorithm: "mrtree", padding: 20, elk: { 'elk.direction': 'RIGHT' } },
+  elk_box: { name: "elk", algorithm: "box", padding: 20 },
+  elk_force: { name: "elk", algorithm: "force", padding: 20 },
+  elk_layered: { name: "elk", algorithm: "layered", padding: 20 },
+  elk_stress: { name: "elk", algorithm: "stress", padding: 20 },
   NLPTree: { renderer: "NLPTree", name: "NLPTree", config: { alignBottom: false } },
   NLPTreeB: { renderer: "NLPTree", name: "NLPTree", config: { alignBottom: true } },
-  three: { renderer: "three", name: "three", config: { dagMode: null, dagLevelDistance: 50 } },
-  threeLR: { renderer: "three", name: "three", config: { dagMode: 'lr', dagLevelDistance: 50 } },
-  threeTD: { renderer: "three", name: "three", config: { dagMode: 'td', dagLevelDistance: 50 } }
+  three: { renderer: "three", name: "three", config: { dagMode: null, dagLevelDistance: 70 } },
+  threeLR: { renderer: "three", name: "three", config: { dagMode: 'lr', dagLevelDistance: 70 } },
+  threeTD: { renderer: "three", name: "three", config: { dagMode: 'td', dagLevelDistance: 70 } }
 };
 
 function initTreeViz() {
@@ -33,12 +41,32 @@ function initTreeViz() {
         if (typeof cytoscapeCola !== 'undefined') cytoscape.use(cytoscapeCola);
         if (typeof cytoscapeElk !== 'undefined') cytoscape.use(cytoscapeElk);
         
+        // Debugging CiSE dependencies
+        console.log('CiSE Dependencies Check:', {
+            layoutBase: typeof window.layoutBase,
+            coseBase: typeof window.coseBase,
+            cytoscapeCise: typeof window.cytoscapeCise,
+            cise: typeof window.cise,
+            'cytoscape-cise': typeof window['cytoscape-cise']
+        });
+
         // CiSE often has different global names depending on CDN
-        const cisePlugin = typeof cytoscapeCise !== 'undefined' ? cytoscapeCise : (window.cise || window['cytoscape-cise']);
+        const cisePlugin = window.cytoscapeCise || window.cise || window['cytoscape-cise'];
         if (cisePlugin) {
             cytoscape.use(cisePlugin);
+            console.log('CiSE plugin registered successfully');
         } else {
-            console.warn('CiSE plugin not found in globals');
+            console.warn('CiSE plugin not found in globals', {windowCise: !!window.cise, windowCytoscapeCise: !!window.cytoscapeCise});
+        }
+
+        // Handle 3D globals for SpriteText
+        if (typeof ForceGraph3D !== 'undefined' && ForceGraph3D.THREE) {
+            window.THREE = ForceGraph3D.THREE;
+        }
+
+        // Register nodeHtmlLabel
+        if (typeof window.cytoscapeNodeHtmlLabel !== 'undefined') {
+            window.cytoscapeNodeHtmlLabel(cytoscape);
         }
     } catch (e) {
         console.error('Error registering Cytoscape extensions:', e);
@@ -55,28 +83,34 @@ function transformTreeToGraph(treeData) {
 
     function traverse(node, parentId = null, labelPrefix = '') {
         const id = nextId();
-        let label = '';
+        let rule = '';
+        let text = '';
         let type = 'default';
-        let classes = [];
 
         if (!node) return null;
 
         switch (node.type) {
             case 'relation':
-                label = node.relation.name;
+                rule = node.relation.type || 'BRIVLA';
+                text = node.relation.name;
                 type = 'relation';
-                classes.push('relation');
-                if (node.relation.type) classes.push(node.relation.type);
                 
                 if (node.terms && node.terms.length > 0) {
                     node.terms.forEach((term, idx) => {
                         const termId = nextId();
-                        let termLabel = term.value || term.type;
-                        if (term.type === 'joiked') termLabel = `${term.joik} (${term.term1.value} ${term.term2.value})`;
+                        let termText = term.value || term.type;
+                        if (term.type === 'joiked') termText = `${term.joik} (${term.term1.value} ${term.term2.value})`;
                         
                         nodes.push({ 
-                            data: { id: termId, label: termLabel, type: 'term' },
-                            classes: ['term', term.type]
+                            data: { 
+                                id: termId, 
+                                rule: 'sumti', 
+                                text: termText, 
+                                type: 'term',
+                                display: 1,
+                                collapse: 0,
+                                color: bgString2Int('sumti', { s: "90%", l: "80%" })
+                            },
                         });
                         edges.push({ 
                             data: { source: id, target: termId, label: `x${idx + 1}` } 
@@ -86,43 +120,51 @@ function transformTreeToGraph(treeData) {
                 break;
 
             case 'modal':
-                label = (node.modal.tag || node.modal.type);
+                rule = 'BAI';
+                text = (node.modal.tag || node.modal.type);
                 type = 'modal';
-                classes.push('modal');
                 if (node.child) traverse(node.child, id);
                 break;
 
             case 'quantified':
-                label = `${node.quantifier.quantifier} ${node.quantifier.variable}`;
+                rule = 'quant';
+                text = `${node.quantifier.quantifier} ${node.quantifier.variable}`;
                 type = 'quantifier';
-                classes.push('quantifier');
                 if (node.restriction) traverse(node.restriction, id, 'restr');
                 if (node.child) traverse(node.child, id);
                 break;
 
             case 'connected':
             case 'non-log-connected':
-                label = node.connective;
+                rule = 'JOI';
+                text = node.connective;
                 type = 'connective';
-                classes.push('connective');
                 if (node.left) traverse(node.left, id, 'L');
                 if (node.right) traverse(node.right, id, 'R');
                 break;
 
             case 'not':
-                label = '¬';
+                rule = 'NA';
+                text = '¬';
                 type = 'logic';
-                classes.push('logic');
                 if (node.child) traverse(node.child, id);
                 break;
                 
             default:
-                label = node.type || '?';
+                rule = node.type || '?';
+                text = '';
         }
 
         nodes.push({ 
-            data: { id, label, type }, 
-            classes: classes 
+            data: { 
+                id, 
+                rule, 
+                text, 
+                type,
+                display: 1,
+                collapse: 0,
+                color: bgString2Int(rule, { s: "90%", l: "80%" })
+            }
         });
 
         if (parentId) {
@@ -135,7 +177,7 @@ function transformTreeToGraph(treeData) {
     if (Array.isArray(treeData)) {
         if (treeData.length > 1) {
             const rootId = 'root';
-            nodes.push({ data: { id: rootId, label: 'Text', type: 'root' }, classes: ['root'] });
+            nodes.push({ data: { id: rootId, rule: 'Text', text: '', type: 'root', display: 1, collapse: 0, color: '#f8fafc' } });
             treeData.forEach(tree => traverse(tree, rootId));
         } else {
             treeData.forEach(tree => traverse(tree));
@@ -148,15 +190,16 @@ function transformTreeToGraph(treeData) {
 }
 
 function getWidth(node) {
-    const label = node.data('label') || '';
-    const charWidth = 8;
-    const padding = 20;
-    const minWidth = 60;
-    return Math.max(minWidth, label.length * charWidth + padding);
+    const ctx = document.createElement("canvas").getContext("2d");
+    ctx.font = "bold 12px Inter, sans-serif";
+    const ruleWidth = ctx.measureText(node.data('rule') || "").width;
+    ctx.font = "italic 11px Inter, sans-serif";
+    const textWidth = ctx.measureText(node.data('text') || "").width;
+    return Math.max(ruleWidth, textWidth, 60) + 30;
 }
 
 function getHeight(node) {
-    return 40;
+    return (node.data('text') && node.data('rule')) ? 60 : 45;
 }
 
 function getPadding(node) {
@@ -299,7 +342,7 @@ function renderTree(treeData, containerId) {
 
     // Get layout
     const selector = document.getElementById('layout-selector');
-    if (selector) currentLayout = selector.value;
+    const currentLayout = selector ? selector.value : 'dagreH';
     const config = layoutConfigs[currentLayout] || layoutConfigs.dagreH;
 
     cleanup();
@@ -322,12 +365,7 @@ function renderTree(treeData, containerId) {
     } else if (config.renderer === 'three') {
         const { nodes, edges } = transformTreeToGraph(treeData);
         const gData = {
-            nodes: nodes.map(n => ({ 
-                id: n.data.id, 
-                rule: n.data.type, 
-                text: n.data.label, 
-                color: get3DColor(n.data.type) 
-            })),
+            nodes: nodes.map(n => ({ ...n.data })),
             links: edges.map(e => ({ source: e.data.source, target: e.data.target }))
         };
 
@@ -340,12 +378,16 @@ function renderTree(treeData, containerId) {
             .backgroundColor('#050510')
             .showNavInfo(false)
             .linkColor(() => 'rgba(255,255,255,0.4)')
+            .linkDirectionalParticles(2)
+            .linkDirectionalParticleWidth(1)
+            .linkDirectionalParticleSpeed(0.006)
             .linkDirectionalArrowLength(3.5)
             .linkDirectionalArrowRelPos(1)
+            .d3Force("collision", d3.forceCollide(node => 15))
             .nodeThreeObject(node => {
                 const Sprite = window.SpriteText || SpriteText;
                 if (!Sprite) return null;
-                const sprite = new Sprite(node.text);
+                const sprite = new Sprite(node.text || node.rule);
                 sprite.color = node.color;
                 sprite.textHeight = 10;
                 sprite.backgroundColor = 'rgba(0,0,0,0.8)';
@@ -368,12 +410,69 @@ function renderTree(treeData, containerId) {
             elements: elements,
             boxSelectionEnabled: false,
             autounselectify: true,
-            style: getCyStyle(), // Use helper for style
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'label': '', // Labels are handled by nodeHtmlLabel
+                        'width': getWidth,
+                        'height': getHeight,
+                        'shape': 'round-rectangle',
+                        'background-color': 'data(color)',
+                        'border-width': '1px',
+                        'border-color': '#333637',
+                        'text-opacity': 0.8
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 2,
+                        'line-color': '#aaa', 
+                        'target-arrow-color': '#aaa',
+                        'target-arrow-shape': 'triangle',
+                        'curve-style': 'bezier',
+                        'label': 'data(label)',
+                        'font-size': '10px',
+                        'color': '#555',
+                        'text-background-color': '#f8fafc',
+                        'text-background-opacity': 0.8,
+                        'text-background-padding': '2px',
+                        'text-rotation': 'autorotate',
+                        'line-style': 'dashed',
+                        'line-dash-pattern': [8, 4]
+                    }
+                }
+            ],
             layout: config,
             minZoom: 0.1,
             maxZoom: 3,
             wheelSensitivity: 0.2
         });
+
+        if (typeof cy.nodeHtmlLabel === 'function') {
+            cy.nodeHtmlLabel([{
+                query: 'node',
+                tpl: (data) => `
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; font-family: Inter, sans-serif; pointer-events: none;">
+                        <div style="font-size: 11px; font-weight: bold; color: rgba(0,0,0,0.7); text-transform: uppercase; margin-bottom: 2px;">${data.rule}</div>
+                        ${data.text ? `<div style="font-size: 12px; font-style: italic; color: #000; font-weight: 500;">${data.text}</div>` : ''}
+                    </div>
+                `
+            }]);
+        }
+
+        cy.on('tap', 'node', function() {
+            const successors = this.successors();
+            if (this.data('collapse')) {
+                successors.show();
+                this.data('collapse', 0);
+            } else {
+                successors.hide();
+                this.data('collapse', 1);
+            }
+        });
+        
         cy.edges().forEach(loopAnimation);
         cy.ready(() => {
             cy.fit(config.padding || 30); 
@@ -388,104 +487,6 @@ function renderTree(treeData, containerId) {
             }
         }, 500);
     }
-}
-
-function get3DColor(type) {
-    if (type === 'relation') return '#4f46e5';
-    if (type === 'term') return '#0ea5e9';
-    if (type === 'connective') return '#f59e0b';
-    if (type === 'quantifier') return '#10b981';
-    return '#64748b';
-}
-
-function getCyStyle() {
-    return [
-            {
-                selector: 'node',
-                style: {
-                    'label': 'data(label)',
-                    'text-valign': 'center',
-                    'text-halign': 'center',
-                    'color': '#000',
-                    'font-family': 'Inter, sans-serif',
-                    'font-size': '12px',
-                    'font-weight': 'bold',
-                    'text-wrap': 'wrap',
-                    'text-max-width': '80px',
-                    'width': getWidth,
-                    'height': getHeight,
-                    'padding': getPadding,
-                    'shape': 'round-rectangle',
-                    'background-color': '#ffe',
-                    'border-width': '1px',
-                    'border-color': '#333637',
-                    'text-opacity': 0.8
-                }
-            },
-            {
-                selector: 'node.relation',
-                style: {
-                    'background-color': '#eef2ff', 
-                    'border-color': '#4f46e5',
-                    'color': '#312e81'
-                }
-            },
-            {
-                selector: 'node.term',
-                style: {
-                    'background-color': '#f0f9ff', 
-                    'border-color': '#0ea5e9',
-                    'color': '#0c4a6e',
-                    'font-size': '11px'
-                }
-            },
-            {
-                selector: 'node.connective',
-                style: {
-                    'background-color': '#fffbeb', 
-                    'border-color': '#f59e0b',
-                    'color': '#78350f',
-                    'shape': 'diamond'
-                }
-            },
-            {
-                selector: 'node.quantifier',
-                style: {
-                    'background-color': '#ecfdf5', 
-                    'border-color': '#10b981',
-                    'color': '#064e3b',
-                    'shape': 'hexagon'
-                }
-            },
-            {
-                selector: 'node.modal',
-                style: {
-                    'background-color': '#fdf2f8', 
-                    'border-color': '#ec4899',
-                    'color': '#831843',
-                    'shape': 'tag'
-                }
-            },
-            {
-                selector: 'edge',
-                style: {
-                    'width': 2,
-                    'line-color': '#aaa', 
-                    'target-arrow-color': '#aaa',
-                    'target-arrow-shape': 'triangle',
-                    'curve-style': 'bezier',
-                    'label': 'data(label)',
-                    'font-size': '10px',
-                    'color': '#555',
-                    'text-background-color': '#fff',
-                    'text-background-opacity': 0.8,
-                    'text-background-padding': '2px',
-                    'text-rotation': 'autorotate',
-                    'line-style': 'dashed',
-                    'line-dash-pattern': [8, 4]
-                }
-            }
-        ];
 }
 
 function updateLayout() {

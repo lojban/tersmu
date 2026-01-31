@@ -35,16 +35,28 @@
     <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/klayjs@0.4.1/klay.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cytoscape-klay@3.1.4/cytoscape-klay.min.js"></script>
-    <script src="https://unpkg.com/layout-base@2.0.1/layout-base.js"></script>
-    <script src="https://unpkg.com/cose-base@2.2.0/cose-base.js"></script>
+    <!-- Layout Dependencies -->
+    <script src="https://unpkg.com/layout-base@1.0.2/layout-base.js"></script>
+    <script>window.layoutBase = window.layoutBase || window.LayoutBase;</script>
+    <script src="https://unpkg.com/cose-base@1.0.3/cose-base.js"></script>
+    <script>window.coseBase = window.coseBase || window.CoseBase;</script>
     <script src="https://unpkg.com/cytoscape-cise@1.0.0/cytoscape-cise.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/webcola@3.4.0/WebCola/cola.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cytoscape-cola@2.5.1/cytoscape-cola.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/elkjs@0.8.2/lib/elk.bundled.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cytoscape-elk@2.2.0/cytoscape-elk.min.js"></script>
-    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-    <script src="https://unpkg.com/three-spritetext@1.9.0/dist/three-spritetext.min.js"></script>
+    <script src="https://unpkg.com/cytoscape-node-html-label@1.2.1/dist/cytoscape-node-html-label.min.js"></script>
+    
+    <!-- 3D Dependencies -->
     <script src="https://unpkg.com/3d-force-graph@1.73.0/dist/3d-force-graph.min.js"></script>
+    <script>
+        // Bridge THREE from ForceGraph3D to the global scope for other 3D plugins
+        if (typeof ForceGraph3D !== 'undefined' && ForceGraph3D.THREE) {
+            window.THREE = ForceGraph3D.THREE;
+        }
+    </script>
+    <script src="https://unpkg.com/three-spritetext@1.9.1/dist/three-spritetext.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     
     <style>
@@ -263,6 +275,10 @@
                                 <option value="klayH">Klay Horizontal</option>
                                 <option value="klayV">Klay Vertical</option>
                                 <option value="elk">ELK</option>
+                                <option value="elk_box">ELK Box</option>
+                                <option value="elk_layered">ELK Layered</option>
+                                <option value="elk_stress">ELK Stress</option>
+                                <option value="elk_force">ELK Force</option>
                                 <option value="NLPTree">Linguistic Tree</option>
                                 <option value="NLPTreeB">Linguistic Tree (Bottom)</option>
                                 <option value="three">3D Force</option>
