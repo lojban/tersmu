@@ -243,6 +243,8 @@ let nlpTreeInstance = null;
 function cleanup() {
     // Clean Cytoscape
     if (cy) {
+        // Unmount first
+        cy.unmount();
         cy.destroy();
         cy = null;
     }
@@ -251,21 +253,17 @@ function cleanup() {
     const container = document.getElementById(window.graphContainerId);
     if (!container) return;
     
-    // Remove 3D canvas/elements if added by 3d-force-graph
-    // 3d-force-graph appends canvas to container. We can clear container HTML?
-    // But we want to keep the select dropdown if it's INSIDE the container?
-    // Wait, layout-selector is in the HEADER, graph-container is separate. So we can clear graph-container.
-    
-    // Clean NLP Tree Canvas
-    const canvas = container.querySelector('canvas');
-    if (canvas) canvas.remove();
-    
-    // Clear container content (safe because selector is outside)
+    // Clear container content (removes canvas, 3d graph, etc)
+    // IMPORTANT: layout-selector is NOT in this container, it's in the header.
+    // So clearing this is safe.
     container.innerHTML = '';
     
     if (Graph3D) {
-        Graph3D._destructor && Graph3D._destructor(); // if explicitly exposed?
+        Graph3D._destructor && Graph3D._destructor();
         Graph3D = null;
+    }
+    if (nlpTreeInstance) {
+        nlpTreeInstance = null;
     }
 }
 
@@ -296,6 +294,7 @@ function renderTree(treeData, containerId) {
         if (!nlpData) return;
         
         const canvas = document.createElement("canvas");
+        // Ensure high resolution
         canvas.style.width = '100%';
         canvas.style.height = '100%';
         container.appendChild(canvas);
@@ -306,7 +305,6 @@ function renderTree(treeData, containerId) {
     
     } else if (config.renderer === 'three') {
         const { nodes, edges } = transformTreeToGraph(treeData);
-        // Map edges to links { source, target }
         const gData = {
             nodes: nodes.map(n => ({ 
                 id: n.data.id, 
@@ -321,10 +319,32 @@ function renderTree(treeData, containerId) {
             .width(container.clientWidth)
             .height(container.clientHeight)
             .graphData(gData)
-            .nodeLabel('text')
-            .nodeAutoColorBy('rule')
-            .backgroundColor('#f1f5f9') // Match slate-50
-            .linkColor(() => '#64748b');
+            .backgroundColor('#101020')
+            .linkColor(() => 'rgba(255,255,255,0.6)')
+            .nodeCanvasObject((node, ctx, globalScale) => {
+                const label = node.text;
+                const fontSize = 12/globalScale;
+                ctx.font = `${fontSize}px Sans-Serif`;
+                const textWidth = ctx.measureText(label).width;
+                const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding
+
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(node.x - bckgDimensions[0] / 2, node.y - bckgDimensions[1] / 2, ...bckgDimensions);
+
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = node.color;
+                ctx.fillText(label, node.x, node.y);
+                
+                node.__bckgDimensions = bckgDimensions; // to re-use in nodePointerAreaPaint
+            })
+            .nodePointerAreaPaint((node, color, ctx) => {
+                ctx.fillStyle = color;
+                const bckgDimensions = node.__bckgDimensions;
+                if (bckgDimensions) {
+                    ctx.fillRect(node.x - bckgDimensions[0] / 2, node.y - bckgDimensions[1] / 2, ...bckgDimensions);
+                }
+            });
             
         if (config.config.dagMode) {
             Graph3D.dagMode(config.config.dagMode)
