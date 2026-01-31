@@ -45,6 +45,8 @@ jobs:
           # Copy other web app files
           cp wasm-web-app/index.html wasm-web-app-dist/
           cp wasm-web-app/tersmu.js wasm-web-app-dist/
+          cp wasm-web-app/tree-viz.js wasm-web-app-dist/
+          cp wasm-web-app/nlp-tree.js wasm-web-app-dist/
           cp wasm-web-app/favicon.svg wasm-web-app-dist/ 2>/dev/null || true
           cp wasm-web-app/README.md wasm-web-app-dist/ 2>/dev/null || true
 

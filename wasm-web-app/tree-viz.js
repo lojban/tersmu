@@ -1,6 +1,26 @@
 // Tree Visualization module using Cytoscape.js
-
 let cy = null;
+
+const hashCode = (s) => s.split("").reduce((a, b) => (a << 5) - a + b.charCodeAt(0), 0);
+const number2ColorHue = (number) => Math.floor(((number * 360) / 7.618) % 360);
+const bgString2Int = (number, { s = "90%", l = "80%" }) => `hsl(${number2ColorHue(hashCode(number))},${s},${l})`;
+
+const layoutConfigs = {
+  dagreH: { name: "dagre", rankDir: "LR", spacingFactor: 1.2, padding: 30, animate: true, animationDuration: 500, fit: true },
+  dagreV: { name: "dagre", rankDir: "TB", spacingFactor: 1.2, padding: 30, animate: true, animationDuration: 500, fit: true },
+  klayH: { name: "klay", padding: 4, nodeDimensionsIncludeLabels: true, klay: { direction: "RIGHT", spacing: 40, mergeEdges: false, nodeLayering: "NETWORK_SIMPLEX" }, animate: true, animationDuration: 500, fit: true },
+  klayV: { name: "klay", padding: 4, nodeDimensionsIncludeLabels: true, klay: { direction: "DOWN", spacing: 40, mergeEdges: false, nodeLayering: "NETWORK_SIMPLEX", nodePlacement: "LINEAR_SEGMENTS" }, animate: true, animationDuration: 500, fit: true },
+  grid: { name: "grid", animate: true, fit: true },
+  concentric: { name: "concentric", animate: true, fit: true },
+  breadthfirst: { name: "breadthfirst", circle: false, animate: true, fit: true },
+  cose: { name: "cose", animate: true, fit: true },
+  cola: { name: "cola", animate: true, fit: true, maxSimulationTime: 4000 },
+  NLPTree: { renderer: "NLPTree", name: "NLPTree", config: { alignBottom: false } },
+  NLPTreeB: { renderer: "NLPTree", name: "NLPTree", config: { alignBottom: true } },
+  three: { renderer: "three", name: "three", config: { dagMode: null, dagLevelDistance: 70 } },
+  threeLR: { renderer: "three", name: "three", config: { dagMode: 'lr', dagLevelDistance: 70 } },
+  threeTD: { renderer: "three", name: "three", config: { dagMode: 'td', dagLevelDistance: 70 } }
+};
 
 function initTreeViz() {
     // Check if cytoscape is loaded
@@ -8,9 +28,18 @@ function initTreeViz() {
         console.warn('Cytoscape.js not loaded');
         return;
     }
-    // Register dagre if present and not already registered
-    if (typeof cytoscapeDagre !== 'undefined') {
-        cytoscape.use(cytoscapeDagre);
+    // Register extensions
+    try {
+        if (typeof cytoscapeDagre !== 'undefined') cytoscape.use(cytoscapeDagre);
+        if (typeof cytoscapeKlay !== 'undefined') cytoscape.use(cytoscapeKlay);
+        if (typeof cytoscapeCola !== 'undefined') cytoscape.use(cytoscapeCola);
+
+        // Register nodeHtmlLabel
+        if (typeof window.cytoscapeNodeHtmlLabel !== 'undefined') {
+            window.cytoscapeNodeHtmlLabel(cytoscape);
+        }
+    } catch (e) {
+        console.error('Error registering Cytoscape extensions:', e);
     }
 }
 
@@ -24,30 +53,34 @@ function transformTreeToGraph(treeData) {
 
     function traverse(node, parentId = null, labelPrefix = '') {
         const id = nextId();
-        let label = '';
+        let rule = '';
+        let text = '';
         let type = 'default';
-        let classes = [];
 
         if (!node) return null;
 
-        // Determine node properties based on type
         switch (node.type) {
             case 'relation':
-                label = node.relation.name;
+                rule = node.relation.type || 'BRIVLA';
+                text = node.relation.name;
                 type = 'relation';
-                classes.push('relation');
-                if (node.relation.type) classes.push(node.relation.type);
                 
-                // Process terms
                 if (node.terms && node.terms.length > 0) {
                     node.terms.forEach((term, idx) => {
                         const termId = nextId();
-                        let termLabel = term.value || term.type;
-                        if (term.type === 'joiked') termLabel = `${term.joik} (${term.term1.value} ${term.term2.value})`;
+                        let termText = term.value || term.type;
+                        if (term.type === 'joiked') termText = `${term.joik} (${term.term1.value} ${term.term2.value})`;
                         
                         nodes.push({ 
-                            data: { id: termId, label: termLabel, type: 'term' },
-                            classes: ['term', term.type]
+                            data: { 
+                                id: termId, 
+                                rule: 'sumti', 
+                                text: termText, 
+                                type: 'term',
+                                display: 1,
+                                collapse: 0,
+                                color: bgString2Int('sumti', { s: "90%", l: "80%" })
+                            },
                         });
                         edges.push({ 
                             data: { source: id, target: termId, label: `x${idx + 1}` } 
@@ -57,43 +90,51 @@ function transformTreeToGraph(treeData) {
                 break;
 
             case 'modal':
-                label = (node.modal.tag || node.modal.type);
+                rule = 'BAI';
+                text = (node.modal.tag || node.modal.type);
                 type = 'modal';
-                classes.push('modal');
                 if (node.child) traverse(node.child, id);
                 break;
 
             case 'quantified':
-                label = `${node.quantifier.quantifier} ${node.quantifier.variable}`;
+                rule = 'quant';
+                text = `${node.quantifier.quantifier} ${node.quantifier.variable}`;
                 type = 'quantifier';
-                classes.push('quantifier');
                 if (node.restriction) traverse(node.restriction, id, 'restr');
                 if (node.child) traverse(node.child, id);
                 break;
 
             case 'connected':
             case 'non-log-connected':
-                label = node.connective;
+                rule = 'JOI';
+                text = node.connective;
                 type = 'connective';
-                classes.push('connective');
                 if (node.left) traverse(node.left, id, 'L');
                 if (node.right) traverse(node.right, id, 'R');
                 break;
 
             case 'not':
-                label = '¬';
+                rule = 'NA';
+                text = '¬';
                 type = 'logic';
-                classes.push('logic');
                 if (node.child) traverse(node.child, id);
                 break;
                 
             default:
-                label = node.type || '?';
+                rule = node.type || '?';
+                text = '';
         }
 
         nodes.push({ 
-            data: { id, label, type }, 
-            classes: classes 
+            data: { 
+                id, 
+                rule, 
+                text, 
+                type,
+                display: 1,
+                collapse: 0,
+                color: bgString2Int(rule, { s: "90%", l: "80%" })
+            }
         });
 
         if (parentId) {
@@ -103,12 +144,10 @@ function transformTreeToGraph(treeData) {
         }
     }
 
-    // Handle array of trees (e.g. multiple sentences)
     if (Array.isArray(treeData)) {
-        // Create a virtual root if multiple sentences
         if (treeData.length > 1) {
             const rootId = 'root';
-            nodes.push({ data: { id: rootId, label: 'Text', type: 'root' }, classes: ['root'] });
+            nodes.push({ data: { id: rootId, rule: 'Text', text: '', type: 'root', display: 1, collapse: 0, color: '#f8fafc' } });
             treeData.forEach(tree => traverse(tree, rootId));
         } else {
             treeData.forEach(tree => traverse(tree));
@@ -120,125 +159,236 @@ function transformTreeToGraph(treeData) {
     return { nodes, edges };
 }
 
-function renderTree(treeData, containerId) {
-    if (!treeData) return;
-    
-    const elements = transformTreeToGraph(treeData);
-    const container = document.getElementById(containerId);
-    
-    if (!container) return;
+function getWidth(node) {
+    const ctx = document.createElement("canvas").getContext("2d");
+    ctx.font = "bold 12px Inter, sans-serif";
+    const ruleWidth = ctx.measureText(node.data('rule') || "").width;
+    ctx.font = "italic 11px Inter, sans-serif";
+    const textWidth = ctx.measureText(node.data('text') || "").width;
+    return Math.max(ruleWidth, textWidth, 60) + 30;
+}
 
-    // Destroy existing instance
+function getHeight(node) {
+    return (node.data('text') && node.data('rule')) ? 60 : 45;
+}
+
+function getPadding(node) {
+    return '10px';
+}
+
+const loopAnimation = (eles) => {
+    if (!cy || cy.destroyed()) return;
+    const ani = eles.animation(
+        {
+            style: {
+                "line-dash-offset": 24,
+                "line-dash-pattern": [8, 4],
+            },
+        },
+        {
+            duration: 1450,
+        }
+    );
+
+    ani
+        .reverse()
+        .play()
+        .promise("complete")
+        .then(() => {
+            if (cy && !cy.destroyed()) {
+                loopAnimation(eles);
+            }
+        });
+};
+
+// 3D Force Graph instance
+let Graph3D = null;
+
+function cleanup() {
+    // Clean Cytoscape
     if (cy) {
+        // Unmount first
+        cy.unmount();
         cy.destroy();
+        cy = null;
+    }
+    
+    // Clean 3D
+    const container = document.getElementById(window.graphContainerId);
+    if (!container) return;
+    
+    // Clear container content (removes canvas, 3d graph, etc)
+    // IMPORTANT: layout-selector is NOT in this container, it's in the header.
+    // So clearing this is safe.
+    container.innerHTML = '';
+    
+    if (Graph3D) {
+        Graph3D._destructor && Graph3D._destructor();
+        Graph3D = null;
+    }
+}
+
+function renderTree(treeData, containerId) {
+    if (treeData) {
+        window.lastTreeData = treeData;
+        window.graphContainerId = containerId;
+    } else {
+        treeData = window.lastTreeData;
+        containerId = window.graphContainerId;
     }
 
-    cy = cytoscape({
-        container: container,
-        elements: elements,
-        style: [
-            {
-                selector: 'node',
-                style: {
-                    'label': 'data(label)',
-                    'text-valign': 'center',
-                    'text-halign': 'center',
-                    'color': '#fff',
-                    'font-family': 'Inter, sans-serif',
-                    'font-size': '12px',
-                    'font-weight': 'bold',
-                    'text-wrap': 'wrap',
-                    'text-max-width': '80px',
-                    'width': 'label',
-                    'height': 'label',
-                    'padding': '10px',
-                    'shape': 'round-rectangle',
-                    'background-color': '#64748b' // default slate-500
-                }
-            },
-            {
-                selector: 'node.relation',
-                style: {
-                    'background-color': '#4f46e5', // indigo-600
-                    'shape': 'ellipse'
-                }
-            },
-            {
-                selector: 'node.term',
-                style: {
-                    'background-color': '#0ea5e9', // sky-500
-                    'shape': 'round-rectangle',
-                    'font-size': '11px'
-                }
-            },
-            {
-                selector: 'node.term.constant',
-                style: { 'background-color': '#6366f1' } // indigo-500
-            },
-            {
-                selector: 'node.term.named',
-                style: { 'background-color': '#8b5cf6' } // violet-500
-            },
-            {
-                selector: 'node.connective',
-                style: {
-                    'background-color': '#f59e0b', // amber-500
-                    'shape': 'diamond'
-                }
-            },
-            {
-                selector: 'node.quantifier',
-                style: {
-                    'background-color': '#10b981', // emerald-500
-                    'shape': 'hexagon'
-                }
-            },
-            {
-                selector: 'node.modal',
-                style: {
-                    'background-color': '#ec4899', // pink-500
-                    'shape': 'tag'
-                }
-            },
-            {
-                selector: 'edge',
-                style: {
-                    'width': 2,
-                    'line-color': '#cbd5e1', // slate-300
-                    'target-arrow-color': '#cbd5e1',
-                    'target-arrow-shape': 'triangle',
-                    'curve-style': 'bezier',
-                    'label': 'data(label)',
-                    'font-size': '10px',
-                    'color': '#94a3b8',
-                    'text-background-color': '#fff',
-                    'text-background-opacity': 1,
-                    'text-background-padding': '2px',
-                    'text-rotation': 'autorotate'
-                }
-            }
-        ],
-        layout: {
-            name: 'dagre',
-            rankDir: 'TB',
-            spacingFactor: 1.2,
-            padding: 20,
-            animate: true,
-            animationDuration: 500
-        },
-        minZoom: 0.5,
-        maxZoom: 3,
-        wheelSensitivity: 0.2
-    });
+    if (!treeData || !containerId) return;
 
-    // Fit on resize
-    window.addEventListener('resize', () => {
-        if (cy) cy.fit();
-    });
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    // Get layout
+    const selector = document.getElementById('layout-selector');
+    const currentLayout = selector ? selector.value : 'dagreH';
+    const config = layoutConfigs[currentLayout] || layoutConfigs.dagreH;
+
+    cleanup();
+
+    // RENDER BASED ON TYPE
+    if (config.renderer === 'three') {
+        const { nodes, edges } = transformTreeToGraph(treeData);
+        const gData = {
+            nodes: nodes.map(n => ({ ...n.data })),
+            links: edges.map(e => ({ source: e.data.source, target: e.data.target }))
+        };
+
+        const extraRenderers = window.CSS2DRenderer ? [new window.CSS2DRenderer()] : [];
+
+        Graph3D = ForceGraph3D({ extraRenderers })(container)
+            .width(container.clientWidth)
+            .height(container.clientHeight)
+            .graphData(gData)
+            .backgroundColor('#050510')
+            .showNavInfo(false)
+            .linkColor(() => 'rgba(255,255,255,0.4)')
+            .linkDirectionalParticles(2)
+            .linkDirectionalParticleWidth(1)
+            .linkDirectionalParticleSpeed(0.006)
+            .linkDirectionalArrowLength(3.5)
+            .linkDirectionalArrowRelPos(1)
+            .d3Force("collision", d3.forceCollide(node => 15))
+            .nodeThreeObject(node => {
+                const SpriteText = window.SpriteText;
+                if (!SpriteText) {
+                    console.error('SpriteText not available');
+                    return null;
+                }
+                const sprite = new SpriteText(node.text || node.rule);
+                sprite.color = node.color;
+                sprite.textHeight = 10;
+                sprite.backgroundColor = 'rgba(0,0,0,0.8)';
+                sprite.padding = [2, 4];
+                sprite.borderRadius = 2;
+                return sprite;
+            })
+            .nodeThreeObjectExtend(true);
+            
+        if (config.config.dagMode) {
+            Graph3D.dagMode(config.config.dagMode)
+                   .dagLevelDistance(config.config.dagLevelDistance);
+        }
+        
+    } else {
+        // Cytoscape
+        const elements = transformTreeToGraph(treeData);
+        cy = cytoscape({
+            container: container,
+            elements: elements,
+            boxSelectionEnabled: false,
+            autounselectify: true,
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'label': '', // Labels are handled by nodeHtmlLabel
+                        'width': getWidth,
+                        'height': getHeight,
+                        'shape': 'round-rectangle',
+                        'background-color': 'data(color)',
+                        'border-width': '1px',
+                        'border-color': '#333637',
+                        'text-opacity': 0.8
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 2,
+                        'line-color': '#aaa', 
+                        'target-arrow-color': '#aaa',
+                        'target-arrow-shape': 'triangle',
+                        'curve-style': 'bezier',
+                        'label': 'data(label)',
+                        'font-size': '10px',
+                        'color': '#555',
+                        'text-background-color': '#f8fafc',
+                        'text-background-opacity': 0.8,
+                        'text-background-padding': '2px',
+                        'text-rotation': 'autorotate',
+                        'line-style': 'dashed',
+                        'line-dash-pattern': [8, 4]
+                    }
+                }
+            ],
+            layout: config,
+            minZoom: 0.1,
+            maxZoom: 3,
+            wheelSensitivity: 0.2
+        });
+
+        if (typeof cy.nodeHtmlLabel === 'function') {
+            cy.nodeHtmlLabel([{
+                query: 'node',
+                tpl: (data) => `
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; font-family: Inter, sans-serif; pointer-events: none;">
+                        <div style="font-size: 11px; font-weight: bold; color: rgba(0,0,0,0.7); text-transform: uppercase; margin-bottom: 2px;">${data.rule}</div>
+                        ${data.text ? `<div style="font-size: 12px; font-style: italic; color: #000; font-weight: 500;">${data.text}</div>` : ''}
+                    </div>
+                `
+            }]);
+        }
+
+        cy.on('tap', 'node', function() {
+            const successors = this.successors();
+            if (this.data('collapse')) {
+                successors.show();
+                this.data('collapse', 0);
+            } else {
+                successors.hide();
+                this.data('collapse', 1);
+            }
+        });
+        
+        cy.edges().forEach(loopAnimation);
+        cy.ready(() => {
+            cy.fit(config.padding || 30); 
+            cy.center();
+        });
+        
+        // Force fit after a delay to handle container transition/animations
+        setTimeout(() => {
+            if (cy) {
+                cy.fit(config.padding || 30);
+                cy.center();
+            }
+        }, 500);
+    }
+}
+
+function updateLayout() {
+   if (window.lastTreeData) {
+       renderTree(window.lastTreeData, window.graphContainerId);
+   }
 }
 
 // Export functions
 if (typeof window !== 'undefined') {
     window.renderTree = renderTree;
     window.initTreeViz = initTreeViz;
+    window.updateLayout = updateLayout;
 }
