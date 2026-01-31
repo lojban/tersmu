@@ -22,7 +22,7 @@ import Logic
 import Bindful
 import Morph
 
-import JboTree (jboPropToTree, toJson)
+import JboTree (jboPropToGraph, toJson)
 import JboProp (propTexticules)
 import Data.List (intercalate)
 
@@ -42,7 +42,8 @@ parseLineToResult s = case morph s of
             let jboText = evalParseStateM (JboParse.evalText text)
                 logical = evalBindful (logjboshow False jboText)
                 canonical = evalBindful (logjboshow True jboText)
-                treeJson = "[" ++ intercalate "," (map (toJson . jboPropToTree) (propTexticules jboText)) ++ "]"
+                graphs = map (toJson . jboPropToGraph) (propTexticules jboText)
+                treeJson = "[" ++ intercalate "," graphs ++ "]"
             in Right (logical, canonical, treeJson)
 
 errorMessage :: String -> Int -> String -> String

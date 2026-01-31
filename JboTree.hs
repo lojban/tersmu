@@ -8,6 +8,26 @@ import qualified Logic (Term)
 import Data.List (intercalate)
 import Control.Monad.State
 import Data.Maybe (fromMaybe)
+import qualified Data.Map.Strict as Map
+
+-- Graph representation for DAG output
+data PropGraph = PropGraph
+    { pgNodes :: [GraphNode]
+    , pgEdges :: [GraphEdge]
+    } deriving (Show, Eq)
+
+data GraphNode = GraphNode
+    { gnId :: String
+    , gnType :: String
+    , gnRule :: String
+    , gnText :: String
+    } deriving (Show, Eq)
+
+data GraphEdge = GraphEdge
+    { geSource :: String
+    , geTarget :: String
+    , geLabel :: String
+    } deriving (Show, Eq)
 
 -- | A serializable AST representation of JboProp
 data PropTree
@@ -47,9 +67,161 @@ data TermTree
     | TTValue String          -- li ...
     | TTQuote String
     | TTComplex String        -- Fallback for complex terms
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 
--- | Convert a JboProp to a PropTree
+-- | Convert a JboProp to a PropGraph (DAG format with shared nodes)
+jboPropToGraph :: JboProp -> PropGraph
+jboPropToGraph p = 
+    let (rootId, st) = runState (convertPropToGraph p) (GraphState 0 [] [] Map.empty)
+    in PropGraph (gsNodes st) (gsEdges st)
+
+-- State for graph construction
+data GraphState = GraphState
+    { gsNextId :: Int
+    , gsNodes :: [GraphNode]
+    , gsEdges :: [GraphEdge]
+    , gsTermCache :: Map.Map TermTree String  -- Cache for shared terms
+    } deriving (Show)
+
+type GraphM = State GraphState
+
+newNodeId :: GraphM String
+newNodeId = do
+    st <- get
+    let nid = gsNextId st
+    put $ st { gsNextId = nid + 1 }
+    return $ "n" ++ show nid
+
+addNode :: String -> String -> String -> String -> GraphM ()
+addNode nid typ rule txt = do
+    st <- get
+    put $ st { gsNodes = GraphNode nid typ rule txt : gsNodes st }
+
+addEdge :: String -> String -> String -> GraphM ()
+addEdge src tgt lbl = do
+    st <- get
+    put $ st { gsEdges = GraphEdge src tgt lbl : gsEdges st }
+
+-- Convert proposition to graph, returning the root node ID
+convertPropToGraph :: JboProp -> GraphM String
+convertPropToGraph (Not p) = do
+    nid <- newNodeId
+    addNode nid "logic" "NA" "¬"
+    childId <- convertPropToGraph p
+    addEdge nid childId ""
+    return nid
+
+convertPropToGraph (Connected c p1 p2) = do
+    nid <- newNodeId
+    addNode nid "connective" "JOI" (show c)
+    leftId <- convertPropToGraph p1
+    rightId <- convertPropToGraph p2
+    addEdge nid leftId "L"
+    addEdge nid rightId "R"
+    return nid
+
+convertPropToGraph (NonLogConnected c p1 p2) = do
+    nid <- newNodeId
+    addNode nid "connective" "JOI" (show c)
+    leftId <- convertPropToGraph p1
+    rightId <- convertPropToGraph p2
+    addEdge nid leftId "L"
+    addEdge nid rightId "R"
+    return nid
+
+convertPropToGraph (Quantified q mr p) = do
+    nid <- newNodeId
+    n <- gets gsNextId
+    let varName = "x_" ++ show n
+    addNode nid "quantifier" "quant" (show q ++ " " ++ varName)
+    case mr of
+        Nothing -> return ()
+        Just r -> do
+            restrId <- convertPropToGraph (r n)
+            addEdge nid restrId "restr"
+    bodyId <- convertPropToGraph (p n)
+    addEdge nid bodyId ""
+    return nid
+
+convertPropToGraph (Modal m p) = do
+    nid <- newNodeId
+    let (typ, tag, mterm) = case m of
+            JboTagged tag mt -> ("modal", Just $ show tag, mt)
+            WithEventAs t -> ("modal", Just "event", Just t)
+            QTruthModal -> ("modal", Just "truth", Nothing)
+            NonVeridical -> ("modal", Just "non-veridical", Nothing)
+    addNode nid "modal" "BAI" (fromMaybe "" tag)
+    case mterm of
+        Just t -> do
+            termId <- convertTermToGraph t
+            addEdge nid termId "term"
+        Nothing -> return ()
+    childId <- convertPropToGraph p
+    addEdge nid childId ""
+    return nid
+
+convertPropToGraph (Rel r ts) = do
+    nid <- newNodeId
+    let RelInfo name rtype = convertRel r
+    addNode nid "relation" rtype name
+    mapM_ (\(idx, t) -> do
+        termId <- convertTermToGraph t
+        addEdge nid termId ("x" ++ show (idx + 1))
+        ) (zip [0..] ts)
+    return nid
+
+convertPropToGraph Eet = do
+    nid <- newNodeId
+    addNode nid "eet" "eet" ""
+    return nid
+
+-- Convert term to graph, with caching for shared references
+convertTermToGraph :: JboTerm -> GraphM String
+convertTermToGraph term = do
+    let tt = evalState (convertTerm term) 1
+    -- Check if we've already created a node for this term
+    cache <- gets gsTermCache
+    case Map.lookup tt cache of
+        Just existingId -> return existingId  -- Reuse existing node
+        Nothing -> do
+            -- Create new node
+            nid <- newNodeId
+            let (typ, txt) = case tt of
+                    TTVar s -> ("var", s)
+                    TTConstant s -> ("constant", s)
+                    TTNamed s -> ("named", s)
+                    TTUnfilled -> ("unfilled", "")
+                    TTValue s -> ("value", s)
+                    TTQuote s -> ("quote", s)
+                    TTComplex s -> ("complex", s)
+                    TTJoiked j t1 t2 -> ("joiked", j)
+                    TTQualified q t -> ("qualified", q)
+            addNode nid typ "sumti" txt
+            -- Cache this term
+            st <- get
+            put $ st { gsTermCache = Map.insert tt nid (gsTermCache st) }
+            -- Handle composite terms
+            case tt of
+                TTJoiked _ t1 t2 -> do
+                    id1 <- convertTermToGraph (termTreeToJboTerm t1)
+                    id2 <- convertTermToGraph (termTreeToJboTerm t2)
+                    addEdge nid id1 "1"
+                    addEdge nid id2 "2"
+                TTQualified _ t -> do
+                    tid <- convertTermToGraph (termTreeToJboTerm t)
+                    addEdge nid tid ""
+                _ -> return ()
+            return nid
+
+-- Helper to convert TermTree back to JboTerm (simplified, lossy)
+termTreeToJboTerm :: TermTree -> JboTerm
+termTreeToJboTerm (TTVar s) = Var 0  -- Simplified
+termTreeToJboTerm (TTConstant s) = Constant 0 []
+termTreeToJboTerm (TTNamed s) = Named s
+termTreeToJboTerm TTUnfilled = Unfilled
+termTreeToJboTerm _ = Unfilled
+
+-- Original tree conversion (kept for backward compatibility)
 jboPropToTree :: JboProp -> PropTree
 jboPropToTree p = evalState (convertProp p) 1
 
@@ -134,6 +306,24 @@ convertTerm (QualifiedTerm _ t) = do
 class JsonSerializable a where
     toJson :: a -> String
 
+instance JsonSerializable PropGraph where
+    toJson (PropGraph nodes edges) = 
+        "{\"nodes\":[" ++ intercalate "," (map toJson (reverse nodes)) ++ 
+        "],\"edges\":[" ++ intercalate "," (map toJson (reverse edges)) ++ "]}"
+
+instance JsonSerializable GraphNode where
+    toJson (GraphNode nid typ rule txt) =
+        "{\"id\":\"" ++ jsonEscape nid ++ 
+        "\",\"type\":\"" ++ jsonEscape typ ++ 
+        "\",\"rule\":\"" ++ jsonEscape rule ++ 
+        "\",\"text\":\"" ++ jsonEscape txt ++ "\"}"
+
+instance JsonSerializable GraphEdge where
+    toJson (GraphEdge src tgt lbl) =
+        "{\"source\":\"" ++ jsonEscape src ++ 
+        "\",\"target\":\"" ++ jsonEscape tgt ++ 
+        "\",\"label\":\"" ++ jsonEscape lbl ++ "\"}"
+
 instance JsonSerializable PropTree where
     toJson (PTNot p) = "{\"type\":\"not\",\"child\":" ++ toJson p ++ "}"
     toJson (PTConnected c p1 p2) = "{\"type\":\"connected\",\"connective\":\"" ++ jsonEscape c ++ "\",\"left\":" ++ toJson p1 ++ ",\"right\":" ++ toJson p2 ++ "}"
@@ -159,7 +349,7 @@ instance JsonSerializable TermTree where
     toJson (TTNamed s) = "{\"type\":\"named\",\"value\":\"" ++ jsonEscape s ++ "\"}"
     toJson TTUnfilled = "{\"type\":\"unfilled\"}"
     toJson (TTJoiked j t1 t2) = "{\"type\":\"joiked\",\"joik\":\"" ++ jsonEscape j ++ "\",\"term1\":" ++ toJson t1 ++ ",\"term2\":" ++ toJson t2 ++ "}"
-    toJson (TTQualified q t) = "{\"type\":\"qualified\",\"qualifier\":\"" ++ jsonEscape q ++ "\",\"term\":" ++ toJson t ++ "}"
+    toJson (TTQualified q t) = "{\"type\":\"qualified\",\"qualifier\":\"" ++ jsonEscape q ++ "\",\"term\":" ++ toJson t ++ "\"}"
     toJson (TTValue s) = "{\"type\":\"value\",\"value\":\"" ++ jsonEscape s ++ "\"}"
     toJson (TTQuote s) = "{\"type\":\"quote\",\"value\":\"" ++ jsonEscape s ++ "\"}"
     toJson (TTComplex s) = "{\"type\":\"complex\",\"value\":\"" ++ jsonEscape s ++ "\"}"
