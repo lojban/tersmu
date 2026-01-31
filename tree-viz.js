@@ -27,11 +27,22 @@ function initTreeViz() {
         return;
     }
     // Register extensions
-    if (typeof cytoscapeDagre !== 'undefined') cytoscape.use(cytoscapeDagre);
-    if (typeof cytoscapeKlay !== 'undefined') cytoscape.use(cytoscapeKlay);
-    if (typeof cytoscapeCise !== 'undefined') cytoscape.use(cytoscapeCise);
-    if (typeof cytoscapeCola !== 'undefined') cytoscape.use(cytoscapeCola);
-    if (typeof cytoscapeElk !== 'undefined') cytoscape.use(cytoscapeElk);
+    try {
+        if (typeof cytoscapeDagre !== 'undefined') cytoscape.use(cytoscapeDagre);
+        if (typeof cytoscapeKlay !== 'undefined') cytoscape.use(cytoscapeKlay);
+        if (typeof cytoscapeCola !== 'undefined') cytoscape.use(cytoscapeCola);
+        if (typeof cytoscapeElk !== 'undefined') cytoscape.use(cytoscapeElk);
+        
+        // CiSE often has different global names depending on CDN
+        const cisePlugin = typeof cytoscapeCise !== 'undefined' ? cytoscapeCise : (window.cise || window['cytoscape-cise']);
+        if (cisePlugin) {
+            cytoscape.use(cisePlugin);
+        } else {
+            console.warn('CiSE plugin not found in globals');
+        }
+    } catch (e) {
+        console.error('Error registering Cytoscape extensions:', e);
+    }
 }
 
 // Transform PropTree JSON to Cytoscape elements
@@ -153,6 +164,7 @@ function getPadding(node) {
 }
 
 const loopAnimation = (eles) => {
+    if (!cy || cy.destroyed()) return;
     const ani = eles.animation(
         {
             style: {
@@ -169,7 +181,11 @@ const loopAnimation = (eles) => {
         .reverse()
         .play()
         .promise("complete")
-        .then(() => loopAnimation(eles));
+        .then(() => {
+            if (cy && !cy.destroyed()) {
+                loopAnimation(eles);
+            }
+        });
 };
 
 // Transform PropTree JSON to NLP Tree Node structure
@@ -321,15 +337,20 @@ function renderTree(treeData, containerId) {
             .width(container.clientWidth)
             .height(container.clientHeight)
             .graphData(gData)
-            .backgroundColor('#101020')
-            .linkColor(() => 'rgba(255,255,255,0.6)')
+            .backgroundColor('#050510')
+            .showNavInfo(false)
+            .linkColor(() => 'rgba(255,255,255,0.4)')
+            .linkDirectionalArrowLength(3.5)
+            .linkDirectionalArrowRelPos(1)
             .nodeThreeObject(node => {
-                const sprite = new SpriteText(node.text);
+                const Sprite = window.SpriteText || SpriteText;
+                if (!Sprite) return null;
+                const sprite = new Sprite(node.text);
                 sprite.color = node.color;
-                sprite.textHeight = 8;
-                sprite.backgroundColor = 'rgba(0,0,0,0.9)';
-                sprite.padding = 4;
-                sprite.borderRadius = 4;
+                sprite.textHeight = 10;
+                sprite.backgroundColor = 'rgba(0,0,0,0.8)';
+                sprite.padding = [2, 4];
+                sprite.borderRadius = 2;
                 return sprite;
             })
             .nodeThreeObjectExtend(true);
