@@ -33,6 +33,144 @@ function initTreeViz() {
     if (typeof cytoscapeElk !== 'undefined') cytoscape.use(cytoscapeElk);
 }
 
+// Transform PropTree JSON to Cytoscape elements
+function transformTreeToGraph(treeData) {
+    const nodes = [];
+    const edges = [];
+    let idCounter = 0;
+
+    function nextId() { return `n${idCounter++}`; }
+
+    function traverse(node, parentId = null, labelPrefix = '') {
+        const id = nextId();
+        let label = '';
+        let type = 'default';
+        let classes = [];
+
+        if (!node) return null;
+
+        switch (node.type) {
+            case 'relation':
+                label = node.relation.name;
+                type = 'relation';
+                classes.push('relation');
+                if (node.relation.type) classes.push(node.relation.type);
+                
+                if (node.terms && node.terms.length > 0) {
+                    node.terms.forEach((term, idx) => {
+                        const termId = nextId();
+                        let termLabel = term.value || term.type;
+                        if (term.type === 'joiked') termLabel = `${term.joik} (${term.term1.value} ${term.term2.value})`;
+                        
+                        nodes.push({ 
+                            data: { id: termId, label: termLabel, type: 'term' },
+                            classes: ['term', term.type]
+                        });
+                        edges.push({ 
+                            data: { source: id, target: termId, label: `x${idx + 1}` } 
+                        });
+                    });
+                }
+                break;
+
+            case 'modal':
+                label = (node.modal.tag || node.modal.type);
+                type = 'modal';
+                classes.push('modal');
+                if (node.child) traverse(node.child, id);
+                break;
+
+            case 'quantified':
+                label = `${node.quantifier.quantifier} ${node.quantifier.variable}`;
+                type = 'quantifier';
+                classes.push('quantifier');
+                if (node.restriction) traverse(node.restriction, id, 'restr');
+                if (node.child) traverse(node.child, id);
+                break;
+
+            case 'connected':
+            case 'non-log-connected':
+                label = node.connective;
+                type = 'connective';
+                classes.push('connective');
+                if (node.left) traverse(node.left, id, 'L');
+                if (node.right) traverse(node.right, id, 'R');
+                break;
+
+            case 'not':
+                label = '¬';
+                type = 'logic';
+                classes.push('logic');
+                if (node.child) traverse(node.child, id);
+                break;
+                
+            default:
+                label = node.type || '?';
+        }
+
+        nodes.push({ 
+            data: { id, label, type }, 
+            classes: classes 
+        });
+
+        if (parentId) {
+            edges.push({ 
+                data: { source: parentId, target: id, label: labelPrefix } 
+            });
+        }
+    }
+
+    if (Array.isArray(treeData)) {
+        if (treeData.length > 1) {
+            const rootId = 'root';
+            nodes.push({ data: { id: rootId, label: 'Text', type: 'root' }, classes: ['root'] });
+            treeData.forEach(tree => traverse(tree, rootId));
+        } else {
+            treeData.forEach(tree => traverse(tree));
+        }
+    } else {
+        traverse(treeData);
+    }
+
+    return { nodes, edges };
+}
+
+function getWidth(node) {
+    const label = node.data('label') || '';
+    const charWidth = 8;
+    const padding = 20;
+    const minWidth = 60;
+    return Math.max(minWidth, label.length * charWidth + padding);
+}
+
+function getHeight(node) {
+    return 40;
+}
+
+function getPadding(node) {
+    return '10px';
+}
+
+const loopAnimation = (eles) => {
+    const ani = eles.animation(
+        {
+            style: {
+                "line-dash-offset": 24,
+                "line-dash-pattern": [8, 4],
+            },
+        },
+        {
+            duration: 1450,
+        }
+    );
+
+    ani
+        .reverse()
+        .play()
+        .promise("complete")
+        .then(() => loopAnimation(eles));
+};
+
 // Transform PropTree JSON to NLP Tree Node structure
 function transformToNLPFormat(node) {
     if (!node) return null;
