@@ -43,55 +43,8 @@ function initTreeViz() {
     }
 }
 
-// Transform PropTree JSON or PropGraph JSON to Cytoscape elements
+// Transform PropTree JSON to Cytoscape elements
 function transformTreeToGraph(treeData) {
-    // Check if this is already in graph format (has nodes and edges)
-    if (treeData && treeData.nodes && treeData.edges) {
-        // New graph format - already has nodes and edges
-        return transformGraphFormat(treeData);
-    }
-    
-    // Old tree format - convert to nodes/edges
-    return transformTreeFormat(treeData);
-}
-
-// Handle new graph format from Haskell
-function transformGraphFormat(graphData) {
-    const nodes = [];
-    const edges = [];
-    
-    // Process nodes
-    graphData.nodes.forEach(node => {
-        const color = bgString2Int(node.rule || node.type, { s: "90%", l: "80%" });
-        nodes.push({
-            data: {
-                id: node.id,
-                rule: node.rule,
-                text: node.text,
-                type: node.type,
-                display: 1,
-                collapse: 0,
-                color: color
-            }
-        });
-    });
-    
-    // Process edges
-    graphData.edges.forEach(edge => {
-        edges.push({
-            data: {
-                source: edge.source,
-                target: edge.target,
-                label: edge.label || ''
-            }
-        });
-    });
-    
-    return { nodes, edges };
-}
-
-// Handle old tree format (backward compatibility)
-function transformTreeFormat(treeData) {
     const nodes = [];
     const edges = [];
     let idCounter = 0;
