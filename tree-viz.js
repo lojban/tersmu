@@ -222,19 +222,33 @@ function renderTree(treeData, containerId) {
             name: 'dagre',
             rankDir: 'TB',
             spacingFactor: 1.2,
-            padding: 20,
+            padding: 30,
             animate: true,
             animationDuration: 500
         },
-        minZoom: 0.5,
+        minZoom: 0.3,
         maxZoom: 3,
         wheelSensitivity: 0.2
     });
 
-    // Fit on resize
-    window.addEventListener('resize', () => {
-        if (cy) cy.fit();
+    // Center and fit the graph with padding after layout completes
+    cy.ready(() => {
+        cy.fit(50); // 50px padding
+        cy.center();
     });
+
+    // Fit on resize with debouncing
+    let resizeTimeout;
+    const resizeHandler = () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            if (cy) {
+                cy.fit(50);
+                cy.center();
+            }
+        }, 100);
+    };
+    window.addEventListener('resize', resizeHandler);
 }
 
 // Export functions
