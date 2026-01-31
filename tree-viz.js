@@ -120,6 +120,44 @@ function transformTreeToGraph(treeData) {
     return { nodes, edges };
 }
 
+// Helper functions from old parser
+function getWidth(node) {
+    const label = node.data('label') || '';
+    // Approximate width calculation
+    const charWidth = 8;
+    const padding = 20;
+    const minWidth = 60;
+    return Math.max(minWidth, label.length * charWidth + padding);
+}
+
+function getHeight(node) {
+    return 40; // Standard height
+}
+
+function getPadding(node) {
+    return '10px';
+}
+
+const loopAnimation = (eles) => {
+    const ani = eles.animation(
+        {
+            style: {
+                "line-dash-offset": 24,
+                "line-dash-pattern": [8, 4],
+            },
+        },
+        {
+            duration: 1450,
+        }
+    );
+
+    ani
+        .reverse()
+        .play()
+        .promise("complete")
+        .then(() => loopAnimation(eles));
+};
+
 function renderTree(treeData, containerId) {
     if (!treeData) return;
     
@@ -136,6 +174,8 @@ function renderTree(treeData, containerId) {
     cy = cytoscape({
         container: container,
         elements: elements,
+        boxSelectionEnabled: false,
+        autounselectify: true,
         style: [
             {
                 selector: 'node',
@@ -143,60 +183,63 @@ function renderTree(treeData, containerId) {
                     'label': 'data(label)',
                     'text-valign': 'center',
                     'text-halign': 'center',
-                    'color': '#fff',
+                    'color': '#000',
                     'font-family': 'Inter, sans-serif',
                     'font-size': '12px',
                     'font-weight': 'bold',
                     'text-wrap': 'wrap',
                     'text-max-width': '80px',
-                    'width': 'label',
-                    'height': 'label',
-                    'padding': '10px',
+                    'width': getWidth,
+                    'height': getHeight,
+                    'padding': getPadding,
                     'shape': 'round-rectangle',
-                    'background-color': '#64748b' // default slate-500
+                    'background-color': '#ffe',
+                    'border-width': '1px',
+                    'border-color': '#333637',
+                    'text-opacity': 0.8
                 }
             },
             {
                 selector: 'node.relation',
                 style: {
-                    'background-color': '#4f46e5', // indigo-600
-                    'shape': 'ellipse'
+                    'background-color': '#eef2ff', // Indigo tint
+                    'border-color': '#4f46e5',
+                    'color': '#312e81'
                 }
             },
             {
                 selector: 'node.term',
                 style: {
-                    'background-color': '#0ea5e9', // sky-500
-                    'shape': 'round-rectangle',
+                    'background-color': '#f0f9ff', // Sky tint
+                    'border-color': '#0ea5e9',
+                    'color': '#0c4a6e',
                     'font-size': '11px'
                 }
             },
             {
-                selector: 'node.term.constant',
-                style: { 'background-color': '#6366f1' } // indigo-500
-            },
-            {
-                selector: 'node.term.named',
-                style: { 'background-color': '#8b5cf6' } // violet-500
-            },
-            {
                 selector: 'node.connective',
                 style: {
-                    'background-color': '#f59e0b', // amber-500
+                    'background-color': '#fffbeb', // Amber tint
+                    'border-color': '#f59e0b',
+                    'color': '#78350f',
                     'shape': 'diamond'
                 }
             },
             {
                 selector: 'node.quantifier',
                 style: {
-                    'background-color': '#10b981', // emerald-500
+                    'background-color': '#ecfdf5', // Emerald tint
+                    'border-color': '#10b981',
+                    'color': '#064e3b',
                     'shape': 'hexagon'
                 }
             },
             {
                 selector: 'node.modal',
                 style: {
-                    'background-color': '#ec4899', // pink-500
+                    'background-color': '#fdf2f8', // Pink tint
+                    'border-color': '#ec4899',
+                    'color': '#831843',
                     'shape': 'tag'
                 }
             },
@@ -204,17 +247,19 @@ function renderTree(treeData, containerId) {
                 selector: 'edge',
                 style: {
                     'width': 2,
-                    'line-color': '#cbd5e1', // slate-300
-                    'target-arrow-color': '#cbd5e1',
+                    'line-color': '#aaa', 
+                    'target-arrow-color': '#aaa',
                     'target-arrow-shape': 'triangle',
                     'curve-style': 'bezier',
                     'label': 'data(label)',
                     'font-size': '10px',
-                    'color': '#94a3b8',
+                    'color': '#555',
                     'text-background-color': '#fff',
-                    'text-background-opacity': 1,
+                    'text-background-opacity': 0.8,
                     'text-background-padding': '2px',
-                    'text-rotation': 'autorotate'
+                    'text-rotation': 'autorotate',
+                    'line-style': 'dashed',
+                    'line-dash-pattern': [8, 4]
                 }
             }
         ],
@@ -224,31 +269,30 @@ function renderTree(treeData, containerId) {
             spacingFactor: 1.2,
             padding: 30,
             animate: true,
-            animationDuration: 500
+            animationDuration: 500,
+            fit: true
         },
-        minZoom: 0.3,
+        minZoom: 0.1, // Allow zooming out further
         maxZoom: 3,
         wheelSensitivity: 0.2
     });
 
-    // Center and fit the graph with padding after layout completes
+    // Animate edges
+    cy.edges().forEach(loopAnimation);
+
+    // Initial fit
     cy.ready(() => {
-        cy.fit(50); // 50px padding
+        cy.fit(30); // Fit with 30px padding
         cy.center();
     });
 
-    // Fit on resize with debouncing
-    let resizeTimeout;
-    const resizeHandler = () => {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
-            if (cy) {
-                cy.fit(50);
-                cy.center();
-            }
-        }, 100);
-    };
-    window.addEventListener('resize', resizeHandler);
+    // Fit on resize
+    window.addEventListener('resize', () => {
+        if (cy) {
+            cy.fit(30);
+            cy.center();
+        }
+    });
 }
 
 // Export functions
