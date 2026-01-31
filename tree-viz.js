@@ -211,6 +211,14 @@ function renderTree(treeData, containerId) {
             cy.fit(config.padding || 30); 
             cy.center();
         });
+        
+        // Force fit after a delay to handle container transition/animations
+        setTimeout(() => {
+            if (cy) {
+                cy.fit(config.padding || 30);
+                cy.center();
+            }
+        }, 500);
     }
 }
 

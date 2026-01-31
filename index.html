@@ -600,16 +600,19 @@
                     document.getElementById('logical-output').textContent = json.logical;
                     document.getElementById('canonical-output').textContent = json.canonical;
                     
-                    // Render Tree
-                    if (json.tree) {
-                        if (typeof renderTree === 'function') {
-                            renderTree(json.tree, 'graph-container');
-                        }
-                    }
-                    
                     resultsArea.classList.remove('hidden');
                     // Refresh Lucide icons for new content
                     lucide.createIcons(); 
+                    
+                    // Render Tree after UI is visible so dimensions are correct
+                    if (json.tree) {
+                        // Small timeout to allow fade-in to start/layout to stabilize
+                        setTimeout(() => {
+                            if (typeof renderTree === 'function') {
+                                renderTree(json.tree, 'graph-container');
+                            }
+                        }, 50);
+                    } 
                     
                     if (isAuto) {
                         errorArea.classList.add('hidden');
