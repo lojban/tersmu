@@ -13,14 +13,8 @@ const layoutConfigs = {
   grid: { name: "grid", animate: true, fit: true },
   concentric: { name: "concentric", animate: true, fit: true },
   breadthfirst: { name: "breadthfirst", circle: false, animate: true, fit: true },
-  cise: { name: "cise", animate: true, fit: true },
   cose: { name: "cose", animate: true, fit: true },
   cola: { name: "cola", animate: true, fit: true, maxSimulationTime: 4000 },
-  elk: { name: "elk", algorithm: "mrtree", padding: 20, elk: { 'elk.direction': 'RIGHT' } },
-  elk_box: { name: "elk", algorithm: "box", padding: 20 },
-  elk_force: { name: "elk", algorithm: "force", padding: 20 },
-  elk_layered: { name: "elk", algorithm: "layered", padding: 20 },
-  elk_stress: { name: "elk", algorithm: "stress", padding: 20 },
   NLPTree: { renderer: "NLPTree", name: "NLPTree", config: { alignBottom: false } },
   NLPTreeB: { renderer: "NLPTree", name: "NLPTree", config: { alignBottom: true } },
   three: { renderer: "three", name: "three", config: { dagMode: null, dagLevelDistance: 70 } },
@@ -39,25 +33,6 @@ function initTreeViz() {
         if (typeof cytoscapeDagre !== 'undefined') cytoscape.use(cytoscapeDagre);
         if (typeof cytoscapeKlay !== 'undefined') cytoscape.use(cytoscapeKlay);
         if (typeof cytoscapeCola !== 'undefined') cytoscape.use(cytoscapeCola);
-        if (typeof cytoscapeElk !== 'undefined') cytoscape.use(cytoscapeElk);
-        
-        // Debugging CiSE dependencies
-        console.log('CiSE Dependencies Check:', {
-            layoutBase: typeof window.layoutBase,
-            coseBase: typeof window.coseBase,
-            cytoscapeCise: typeof window.cytoscapeCise,
-            cise: typeof window.cise,
-            'cytoscape-cise': typeof window['cytoscape-cise']
-        });
-
-        // CiSE often has different global names depending on CDN
-        const cisePlugin = window.cytoscapeCise || window.cise || window['cytoscape-cise'];
-        if (cisePlugin) {
-            cytoscape.use(cisePlugin);
-            console.log('CiSE plugin registered successfully');
-        } else {
-            console.warn('CiSE plugin not found in globals', {windowCise: !!window.cise, windowCytoscapeCise: !!window.cytoscapeCise});
-        }
 
         // Register nodeHtmlLabel
         if (typeof window.cytoscapeNodeHtmlLabel !== 'undefined') {
@@ -226,108 +201,8 @@ const loopAnimation = (eles) => {
         });
 };
 
-// Transform PropTree JSON to NLP Tree Node structure
-function transformToNLPFormat(node) {
-    if (!node) return null;
-    
-    // Base object
-    const nlpNode = {
-        rule: '',
-        text: '',
-        type: 'NODE',
-        children: []
-    };
-
-    if (Array.isArray(node)) {
-        nlpNode.type = 'ROOT';
-        nlpNode.rule = 'Text';
-        nlpNode.text = '';
-        nlpNode.children = node.map(n => transformToNLPFormat(n)).filter(n => n);
-        return nlpNode;
-    }
-
-    // Determine properties
-    switch (node.type) {
-        case 'relation':
-            nlpNode.rule = node.relation.type || 'BRIVLA';
-            nlpNode.text = node.relation.name || '';
-            // Terms are children
-            if (node.terms && node.terms.length > 0) {
-                nlpNode.children = node.terms.map((term, idx) => {
-                    let label = term.value || term.type || '';
-                    if (term.type === 'joiked') {
-                        label = `${term.joik} (${term.term1?.value || ''} ${term.term2?.value || ''})`;
-                    }
-                    return { 
-                        rule: 'sumti', 
-                        text: label, 
-                        type: 'VALUE', 
-                        children: [] 
-                    };
-                });
-            }
-            break;
-        case 'modal':
-            nlpNode.rule = 'BAI';
-            nlpNode.text = node.modal?.tag || node.modal?.type || '';
-            if (node.child) {
-                const childNode = transformToNLPFormat(node.child);
-                if (childNode) nlpNode.children.push(childNode);
-            }
-            break;
-        case 'quantified':
-            nlpNode.rule = 'quant';
-            nlpNode.text = `${node.quantifier?.quantifier || ''} ${node.quantifier?.variable || ''}`.trim();
-            if (node.restriction) {
-                const restrNode = transformToNLPFormat(node.restriction);
-                if (restrNode) nlpNode.children.push(restrNode);
-            }
-            if (node.child) {
-                const childNode = transformToNLPFormat(node.child);
-                if (childNode) nlpNode.children.push(childNode);
-            }
-            break;
-        case 'connected':
-        case 'non-log-connected':
-            nlpNode.rule = 'JOI';
-            nlpNode.text = node.connective || '';
-            if (node.left) {
-                const leftNode = transformToNLPFormat(node.left);
-                if (leftNode) nlpNode.children.push(leftNode);
-            }
-            if (node.right) {
-                const rightNode = transformToNLPFormat(node.right);
-                if (rightNode) nlpNode.children.push(rightNode);
-            }
-            break;
-        case 'not':
-            nlpNode.rule = 'NA';
-            nlpNode.text = '¬';
-            if (node.child) {
-                const childNode = transformToNLPFormat(node.child);
-                if (childNode) nlpNode.children.push(childNode);
-            }
-            break;
-        default:
-            nlpNode.rule = node.type || '?';
-            nlpNode.text = node.text || '';
-    }
-
-    // Determine final type based on whether we have children
-    if (nlpNode.children.length === 0 && nlpNode.text) {
-        nlpNode.type = 'VALUE'; // Leaf
-    } else if (nlpNode.children.length === 0 && !nlpNode.text) {
-        // Empty node - use rule as text
-        nlpNode.text = nlpNode.rule;
-        nlpNode.type = 'VALUE';
-    }
-
-    return nlpNode;
-}
-
 // 3D Force Graph instance
 let Graph3D = null;
-let nlpTreeInstance = null;
 
 function cleanup() {
     // Clean Cytoscape
@@ -350,9 +225,6 @@ function cleanup() {
     if (Graph3D) {
         Graph3D._destructor && Graph3D._destructor();
         Graph3D = null;
-    }
-    if (nlpTreeInstance) {
-        nlpTreeInstance = null;
     }
 }
 
@@ -378,21 +250,7 @@ function renderTree(treeData, containerId) {
     cleanup();
 
     // RENDER BASED ON TYPE
-    if (config.renderer === 'NLPTree') {
-        const nlpData = transformToNLPFormat(treeData);
-        if (!nlpData) return;
-        
-        const canvas = document.createElement("canvas");
-        // Ensure high resolution
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
-        container.appendChild(canvas);
-        
-        nlpTreeInstance = new NLPTree(canvas);
-        nlpTreeInstance.setAlignBottom(!!config.config.alignBottom);
-        nlpTreeInstance.draw(nlpData);
-    
-    } else if (config.renderer === 'three') {
+    if (config.renderer === 'three') {
         const { nodes, edges } = transformTreeToGraph(treeData);
         const gData = {
             nodes: nodes.map(n => ({ ...n.data })),

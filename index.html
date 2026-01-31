@@ -48,22 +48,9 @@
     </script>
     <script src="https://unpkg.com/three-spritetext@1.9.1/dist/three-spritetext.min.js"></script>
     
-    <!-- Layout Dependencies (load BEFORE cytoscape-cise) -->
-    <script src="https://unpkg.com/layout-base@1.0.2/layout-base.js"></script>
-    <script>
-        window.layoutBase = window.layoutBase || window.LayoutBase;
-        console.log('layoutBase loaded:', typeof window.layoutBase);
-    </script>
-    <script src="https://unpkg.com/cose-base@1.0.3/cose-base.js"></script>
-    <script>
-        window.coseBase = window.coseBase || window.CoseBase;
-        console.log('coseBase loaded:', typeof window.coseBase);
-    </script>
-    <script src="https://unpkg.com/cytoscape-cise@1.0.0/cytoscape-cise.js"></script>
+    <!-- Cola layout -->
     <script src="https://cdn.jsdelivr.net/npm/webcola@3.4.0/WebCola/cola.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cytoscape-cola@2.5.1/cytoscape-cola.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/elkjs@0.8.2/lib/elk.bundled.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/cytoscape-elk@2.2.0/cytoscape-elk.min.js"></script>
     <script src="https://unpkg.com/cytoscape-node-html-label@1.2.1/dist/cytoscape-node-html-label.min.js"></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     
@@ -282,17 +269,9 @@
                                 <option value="dagreV">Dagre Vertical</option>
                                 <option value="klayH">Klay Horizontal</option>
                                 <option value="klayV">Klay Vertical</option>
-                                <option value="elk">ELK</option>
-                                <option value="elk_box">ELK Box</option>
-                                <option value="elk_layered">ELK Layered</option>
-                                <option value="elk_stress">ELK Stress</option>
-                                <option value="elk_force">ELK Force</option>
-                                <option value="NLPTree">Linguistic Tree</option>
-                                <option value="NLPTreeB">Linguistic Tree (Bottom)</option>
                                 <option value="three">3D Force</option>
                                 <option value="threeLR">3D Horizontal</option>
                                 <option value="threeTD">3D Vertical</option>
-                                <option value="cise">Cise</option>
                                 <option value="cola">Cola</option>
                                 <option value="grid">Grid</option>
                                 <option value="concentric">Concentric</option>
