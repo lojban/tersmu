@@ -22,14 +22,18 @@ import Logic
 import Bindful
 import Morph
 
+import JboTree (jboPropToTree, toJson)
+import JboProp (propTexticules)
+import Data.List (intercalate)
+
 import Data.Char
 import Data.Either
 import Foreign.C.String
 import Foreign.Marshal.Alloc (free)
 
 -- Simple parsing function that takes a string and returns JSON-like result
--- Returns: Right (logical, canonical) or Left error_message
-parseLineToResult :: String -> Either String (String, String)
+-- Returns: Right (logical, canonical, tree_json) or Left error_message
+parseLineToResult :: String -> Either String (String, String, String)
 parseLineToResult s = case morph s of
     Left errpos -> Left $ errorMessage "Morphology error" errpos s
     Right textStr -> case parseText textStr of
@@ -38,7 +42,8 @@ parseLineToResult s = case morph s of
             let jboText = evalParseStateM (JboParse.evalText text)
                 logical = evalBindful (logjboshow False jboText)
                 canonical = evalBindful (logjboshow True jboText)
-            in Right (logical, canonical)
+                treeJson = "[" ++ intercalate "," (map (toJson . jboPropToTree) (propTexticules jboText)) ++ "]"
+            in Right (logical, canonical, treeJson)
 
 errorMessage :: String -> Int -> String -> String
 errorMessage errstr pos s = let context = 40 in
@@ -62,18 +67,19 @@ jsonEscape = concatMap $ \c -> case c of
     _ -> [c]
 
 -- Convert result to JSON string
-resultToJson :: String -> Either String (String, String) -> String
+resultToJson :: String -> Either String (String, String, String) -> String
 resultToJson input result =
     case result of
         Left err ->
             "{\"input\":\"" ++ jsonEscape (trimStr input) ++
-            "\",\"logical\":null,\"canonical\":null,\"error\":\"" ++
+            "\",\"logical\":null,\"canonical\":null,\"tree\":null,\"error\":\"" ++
             jsonEscape (trimStr err) ++ "\"}"
-        Right (loj, jbo) ->
+        Right (loj, jbo, tree) ->
             "{\"input\":\"" ++ jsonEscape (trimStr input) ++
             "\",\"logical\":\"" ++ jsonEscape (trimStr loj) ++
             "\",\"canonical\":\"" ++ jsonEscape (trimStr jbo) ++
-            "\",\"error\":null}"
+            "\",\"tree\":" ++ tree ++
+            ",\"error\":null}"
 
 -- Main exported function: parse a Lojban string and return JSON
 parseLojban :: String -> String

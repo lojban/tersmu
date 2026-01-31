@@ -106,6 +106,7 @@ Send the Lojban text as the request body (plain text, UTF-8). One line per sente
 - `input` — the trimmed input line
 - `logical` — logical form (bracket notation), or `null` on error
 - `canonical` — canonicalized Lojban form, or `null` on error
+- `tree` — structured AST (JSON array), or `null` on error
 - `error` — `null` on success, or the error message (morphology/parse) on failure
 
 **Multiple lines:** One JSON object with key `results` — an array of objects, each with the same keys as above.
@@ -131,6 +132,25 @@ curl -s -X POST -H "Content-Type: text/plain; charset=utf-8" \
   "input": "mi klama le zarci",
   "logical": "non-veridical: zarci(c0)\nklama(mi,c0)",
   "canonical": "ju'a nai cy no zarci\n.i mi klama cy no",
+  "tree": [
+    {
+      "type": "modal",
+      "modal": { "type": "veridical", "tag": "non-veridical", "term": null },
+      "child": {
+        "type": "relation",
+        "relation": { "name": "zarci", "type": "brivla" },
+        "terms": [{ "type": "constant", "value": "c0" }]
+      }
+    },
+    {
+      "type": "relation",
+      "relation": { "name": "klama", "type": "brivla" },
+      "terms": [
+        { "type": "named", "value": "mi" },
+        { "type": "constant", "value": "c0" }
+      ]
+    }
+  ],
   "error": null
 }
 ```
@@ -142,6 +162,7 @@ curl -s -X POST -H "Content-Type: text/plain; charset=utf-8" \
   "input": "mi klama",
   "logical": null,
   "canonical": null,
+  "tree": null,
   "error": "Parse error:\n\t{...}\n\t ^"
 }
 ```
@@ -191,6 +212,7 @@ tersmu [OPTIONS] [FILE]
 | `-u`          | `--utf8`     | Output UTF-8 (default: ASCII) |
 | `-h`          | `--help`     | Show help |
 | `-v`          | `--version`  | Show version |
+|             | `--json`     | Output one JSON object per line (NDJSON) with input, logical, canonical, tree, error |
 
 **Examples:**
 

@@ -27,7 +27,7 @@ source-repository head
    location: http://gitlab.com/lojban/tersmu/
 
 library
-      exposed-modules: Bindful JboParse JboProp JboShow JboSyntax Logic Morph ParseM ParseText
+      exposed-modules: Bindful JboParse JboProp JboShow JboSyntax JboTree Logic Morph ParseM ParseText
       other-modules: Lojban Morphology Pappy.Basic Pappy.Parse Pappy.Pos Util
       build-depends: base >=4.3, base < 5
         , process >= 1.1, containers >= 0.5
@@ -43,7 +43,7 @@ executable tersmu
       ghc-options: -fno-warn-tabs
       default-language:    Haskell2010
 
-  other-modules: Bindful JboParse JboProp JboShow JboSyntax Logic Lojban Morph
+  other-modules: Bindful JboParse JboProp JboShow JboSyntax JboTree Logic Lojban Morph
       Morphology Pappy.Basic Pappy.Parse Pappy.Pos ParseM ParseText Util
 
 executable tersmu-server
@@ -70,6 +70,7 @@ executable tersmu-wasm
         , mtl >=2.0, transformers >=0.2, syb >= 0.4
       main-is: MainWasm.hs
       ghc-options: -fno-warn-tabs -optl-Wl,--export=parseLojban -optl-Wl,--export=hs_init -optl-Wl,--export=malloc -optl-Wl,--export=free -optl-Wl,--no-entry
+      -- -optl-Wl,--export=parseLojban -optl-Wl,--export=hs_init -optl-Wl,--export=malloc -optl-Wl,--export=free -optl-Wl,--no-entry
       default-language:    Haskell2010
-      other-modules: Bindful JboParse JboProp JboShow JboSyntax Logic Lojban Morph
+      other-modules: Bindful JboParse JboProp JboShow JboSyntax JboTree Logic Lojban Morph
           Morphology Pappy.Basic Pappy.Parse Pappy.Pos ParseM ParseText Util

@@ -4,3 +4,5 @@
 archive/
 target/
 rust/
+wasm-web-app/
+Pappy/

@@ -30,6 +30,9 @@
     <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.min.js"></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     
     <style>
@@ -233,6 +236,24 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Graph Visualization Card -->
+                <div class="bg-white rounded-2xl shadow-md border border-slate-300 flex flex-col group overflow-hidden mt-4">
+                    <div class="px-5 py-4 border-b border-slate-200 bg-slate-100 flex justify-between items-center">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="network" class="w-4 h-4 text-indigo-500"></i>
+                            <h3 class="font-bold text-slate-700 uppercase tracking-wider text-xs">Semantic Graph</h3>
+                        </div>
+                        <div class="flex space-x-2">
+                             <button onclick="if(cy) cy.fit()" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Fit Graph">
+                                <i data-lucide="maximize" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="graph-container" class="w-full h-[400px] bg-slate-50 relative">
+                        <!-- Graph rendered here -->
+                    </div>
+                </div>
             </div>
         </div>
     </main>
@@ -273,9 +294,11 @@
     </footer>
 
     <script src="tersmu.js"></script>
+    <script src="tree-viz.js"></script>
     <script>
         // Init Lucide icons
         lucide.createIcons();
+        if (typeof initTreeViz === 'function') initTreeViz();
 
         let wasmInstance = null;
         const STORAGE_KEY = 'tersmu-input';
@@ -549,7 +572,18 @@
                 } else {
                     document.getElementById('logical-output').textContent = json.logical;
                     document.getElementById('canonical-output').textContent = json.canonical;
+                    
+                    // Render Tree
+                    if (json.tree) {
+                        if (typeof renderTree === 'function') {
+                            renderTree(json.tree, 'graph-container');
+                        }
+                    }
+                    
                     resultsArea.classList.remove('hidden');
+                    // Refresh Lucide icons for new content
+                    lucide.createIcons(); 
+                    
                     if (isAuto) {
                         errorArea.classList.add('hidden');
                     }

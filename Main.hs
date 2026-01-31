@@ -18,6 +18,8 @@ import JboShow
 import Logic
 import Bindful
 import Morph
+import JboTree (jboPropToTree, toJson)
+import JboProp (propTexticules)
 
 import Control.Monad (when)
 import Control.Monad.State
@@ -75,7 +77,7 @@ errorMessage errstr pos s = let context = 40 in
 	"\n\n"
 
 -- Parse one line to either error message or (logical_form, canonical_form)
-parseLineToResult :: String -> Either String (String, String)
+parseLineToResult :: String -> Either String (String, String, String)
 parseLineToResult s = case morph s of
     Left errpos -> Left $ errorMessage "Morphology error" errpos s
     Right textStr -> case parseText textStr of
@@ -84,7 +86,8 @@ parseLineToResult s = case morph s of
 	    let jboText = evalParseStateM (JboParse.evalText text)
 		logical = evalBindful (logjboshow False jboText)
 		canonical = evalBindful (logjboshow True jboText)
-	    in Right (logical, canonical)
+                treeJson = "[" ++ intercalate "," (map (toJson . jboPropToTree) (propTexticules jboText)) ++ "]"
+	    in Right (logical, canonical, treeJson)
 
 jsonEscape :: String -> String
 jsonEscape = concatMap $ \c -> case c of
@@ -95,7 +98,7 @@ jsonEscape = concatMap $ \c -> case c of
     '\t' -> "\\t"
     _ -> [c]
 
-jsonOneLine :: [Opt] -> String -> Either String (String, String) -> String
+jsonOneLine :: [Opt] -> String -> Either String (String, String, String) -> String
 jsonOneLine opts input result =
     -- NOTE: without --utf8, we must avoid emitting non-ASCII to stdout
     -- (common in minimal Docker images), otherwise write failures can truncate JSON.
@@ -103,13 +106,14 @@ jsonOneLine opts input result =
     in case result of
         Left err ->
             "{\"input\":\"" ++ jsonEscape (trimStr input) ++
-            "\",\"logical\":null,\"canonical\":null,\"error\":\"" ++
+            "\",\"logical\":null,\"canonical\":null,\"tree\":null,\"error\":\"" ++
             jsonEscape (trimStr (enc err)) ++ "\"}"
-        Right (loj, jbo) ->
+        Right (loj, jbo, tree) ->
             "{\"input\":\"" ++ jsonEscape (trimStr input) ++
             "\",\"logical\":\"" ++ jsonEscape (trimStr (enc loj)) ++
             "\",\"canonical\":\"" ++ jsonEscape (trimStr (enc jbo)) ++
-            "\",\"error\":null}"
+            "\",\"tree\":" ++ tree ++
+            ",\"error\":null}"
 
 data OutputType = Jbo | Loj | Both
     deriving (Eq, Ord, Show)
