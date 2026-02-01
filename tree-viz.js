@@ -108,29 +108,10 @@ function transformGraphFormat(graphData) {
             if (node.data.relType) rule = node.data.relType.toUpperCase();
             else if (node.data.termType) rule = node.data.termType.toUpperCase();
             
-            // New semantic types
-            if (node.data.vocType) {
-                text = node.data.vocType.join(' ');
-                rule = 'COI';
-            }
-            if (node.data.indicator) {
-                text = node.data.indicator + (node.data.nai ? ' nai' : '');
-                rule = 'UI';
-            } 
-            if (node.data.sideType) {
-                // Bracketed/discursive usually acts as a container or anchor
-                rule = node.data.sideType.toUpperCase();
-            }
-
             // Allow selmaho to override rule if present (requested by user)
             if (node.data.selmaho) rule = node.data.selmaho;
         }
         
-        let color = bgString2Int(rule, { s: "90%", l: "80%" });
-        if (type === 'vocative') color = '#ffcc80'; // Orange-ish
-        if (type === 'indicator') color = '#ce93d8'; // Purple-ish
-        if (type === 'bracketed') color = '#e0e0e0'; // Grey
-
         return {
             data: {
                 id: node.id,
@@ -139,7 +120,7 @@ function transformGraphFormat(graphData) {
                 type: type,
                 display: 1,
                 collapse: 0,
-                color: color
+                color: bgString2Int(rule, { s: "90%", l: "80%" })
             }
         };
     });
@@ -319,15 +300,44 @@ const loopAnimation = (eles) => {
         });
 };
 
+function cleanup() {
+    // Clean Cytoscape
+    if (cy) {
+        // Unmount first
+        cy.unmount();
+        cy.destroy();
+        cy = null;
+    }
+    
+    const container = document.getElementById(window.graphContainerId);
+    if (!container) return;
+    
+    // Clear container content (removes canvas, etc)
+    container.innerHTML = '';
+}
+
 function renderTree(treeData, containerId) {
-    // ...
-    // Cytoscape
+    if (treeData) {
+        window.lastTreeData = treeData;
+        window.graphContainerId = containerId;
+    } else {
+        treeData = window.lastTreeData;
+        containerId = window.graphContainerId;
+    }
+
+    if (!treeData || !containerId) return;
+
     const container = document.getElementById(containerId);
-    
-    // Determine layout config
-    const currentLayout = localStorage.getItem('tersmu_layout') || 'dagreH';
+    if (!container) return;
+
+    // Get layout
+    const selector = document.getElementById('layout-selector');
+    const currentLayout = selector ? selector.value : 'dagreH';
     const config = layoutConfigs[currentLayout] || layoutConfigs.dagreH;
-    
+
+    cleanup();
+
+    // Cytoscape
     const elements = transformTreeToGraph(treeData);
     cy = cytoscape({
         container: container,
@@ -363,25 +373,8 @@ function renderTree(treeData, containerId) {
                     'text-background-opacity': 0.8,
                     'text-background-padding': '2px',
                     'text-rotation': 'autorotate',
-                    'line-style': 'solid'
-                }
-            },
-            {
-                selector: 'edge[label = "side"]',
-                style: {
                     'line-style': 'dashed',
-                    'line-dash-pattern': [6, 3],
-                    'line-color': '#999',
-                    'target-arrow-color': '#999',
-                    'width': 1
-                }
-            },
-            {
-                selector: 'edge[label = "addressee"]',
-                style: {
-                    'line-style': 'dotted',
-                    'line-color': '#ff9800',
-                    'target-arrow-color': '#ff9800'
+                    'line-dash-pattern': [8, 4]
                 }
             }
         ],
