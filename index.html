@@ -612,11 +612,11 @@
                     lucide.createIcons(); 
                     
                     // Render Tree after UI is visible so dimensions are correct
-                    if (json.tree) {
+                    if (json.graph) {
                         // Small timeout to allow fade-in to start/layout to stabilize
                         setTimeout(() => {
                             if (typeof renderTree === 'function') {
-                                renderTree(json.tree, 'graph-container');
+                                renderTree(json.graph, 'graph-container');
                             }
                         }, 50);
                     } 

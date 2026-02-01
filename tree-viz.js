@@ -43,8 +43,67 @@ function initTreeViz() {
     }
 }
 
-// Transform PropTree JSON to Cytoscape elements
-function transformTreeToGraph(treeData) {
+// Transform PropTree JSON or GraphOutput to Cytoscape elements
+function transformTreeToGraph(data) {
+    // Check if it's the new graph format
+    if (data && data.format === 'graph') {
+        return transformGraphFormat(data);
+    }
+    
+    // Legacy tree format
+    return transformLegacyTreeFormat(data);
+}
+
+// Transform new graph format to Cytoscape elements
+function transformGraphFormat(graphData) {
+    const nodes = graphData.nodes.map(node => {
+        let rule = node.type.toUpperCase();
+        let text = '';
+        let type = node.type;
+        
+        // Extract display info from node data
+        if (node.data) {
+            if (node.data.name) text = node.data.name;
+            else if (node.data.value) text = node.data.value;
+            else if (node.data.connective) text = node.data.connective;
+            else if (node.data.quantifier) {
+                text = `${node.data.quantifier} ${node.data.variable}`;
+                rule = 'QUANT';
+            } else if (node.data.modalType) {
+                text = node.data.tag || node.data.modalType;
+                rule = 'BAI';
+            }
+            
+            if (node.data.relType) rule = node.data.relType.toUpperCase();
+            else if (node.data.termType) rule = node.data.termType.toUpperCase();
+        }
+        
+        return {
+            data: {
+                id: node.id,
+                rule: rule,
+                text: text,
+                type: type,
+                display: 1,
+                collapse: 0,
+                color: bgString2Int(rule, { s: "90%", l: "80%" })
+            }
+        };
+    });
+    
+    const edges = graphData.edges.map(edge => ({
+        data: {
+            source: edge.source,
+            target: edge.target,
+            label: edge.label
+        }
+    }));
+    
+    return { nodes, edges };
+}
+
+// Legacy tree format transformation
+function transformLegacyTreeFormat(treeData) {
     const nodes = [];
     const edges = [];
     let idCounter = 0;
@@ -158,6 +217,7 @@ function transformTreeToGraph(treeData) {
 
     return { nodes, edges };
 }
+
 
 function getWidth(node) {
     const ctx = document.createElement("canvas").getContext("2d");
