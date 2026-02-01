@@ -18,7 +18,7 @@ import JboShow
 import Logic
 import Bindful
 import Morph
-import JboTree (jboPropToTree, toJson)
+import JboTree (jboPropToGraph, toJson)
 import JboProp (propTexticules)
 
 import Control.Monad (when)
@@ -86,8 +86,8 @@ parseLineToResult s = case morph s of
 	    let jboText = evalParseStateM (JboParse.evalText text)
 		logical = evalBindful (logjboshow False jboText)
 		canonical = evalBindful (logjboshow True jboText)
-                treeJson = "[" ++ intercalate "," (map (toJson . jboPropToTree) (propTexticules jboText)) ++ "]"
-	    in Right (logical, canonical, treeJson)
+                graphJson = toJson . jboPropsToGraph $ propTexticules jboText
+	    in Right (logical, canonical, graphJson)
 
 jsonEscape :: String -> String
 jsonEscape = concatMap $ \c -> case c of
@@ -106,13 +106,13 @@ jsonOneLine opts input result =
     in case result of
         Left err ->
             "{\"input\":\"" ++ jsonEscape (trimStr input) ++
-            "\",\"logical\":null,\"canonical\":null,\"tree\":null,\"error\":\"" ++
+            "\",\"logical\":null,\"canonical\":null,\"graph\":null,\"error\":\"" ++
             jsonEscape (trimStr (enc err)) ++ "\"}"
-        Right (loj, jbo, tree) ->
+        Right (loj, jbo, graph) ->
             "{\"input\":\"" ++ jsonEscape (trimStr input) ++
             "\",\"logical\":\"" ++ jsonEscape (trimStr (enc loj)) ++
             "\",\"canonical\":\"" ++ jsonEscape (trimStr (enc jbo)) ++
-            "\",\"tree\":" ++ tree ++
+            "\",\"graph\":" ++ graph ++
             ",\"error\":null}"
 
 data OutputType = Jbo | Loj | Both

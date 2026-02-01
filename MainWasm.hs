@@ -22,7 +22,7 @@ import Logic
 import Bindful
 import Morph
 
-import JboTree (jboPropToTree, toJson)
+import JboTree (jboPropToGraph, jboPropsToGraph, toJson)
 import JboProp (propTexticules)
 import Data.List (intercalate)
 
@@ -32,7 +32,7 @@ import Foreign.C.String
 import Foreign.Marshal.Alloc (free)
 
 -- Simple parsing function that takes a string and returns JSON-like result
--- Returns: Right (logical, canonical, tree_json) or Left error_message
+-- Returns: Right (logical, canonical, graph_json) or Left error_message
 parseLineToResult :: String -> Either String (String, String, String)
 parseLineToResult s = case morph s of
     Left errpos -> Left $ errorMessage "Morphology error" errpos s
@@ -42,8 +42,8 @@ parseLineToResult s = case morph s of
             let jboText = evalParseStateM (JboParse.evalText text)
                 logical = evalBindful (logjboshow False jboText)
                 canonical = evalBindful (logjboshow True jboText)
-                treeJson = "[" ++ intercalate "," (map (toJson . jboPropToTree) (propTexticules jboText)) ++ "]"
-            in Right (logical, canonical, treeJson)
+                graphJson = toJson . jboPropsToGraph $ propTexticules jboText
+            in Right (logical, canonical, graphJson)
 
 errorMessage :: String -> Int -> String -> String
 errorMessage errstr pos s = let context = 40 in
@@ -72,13 +72,13 @@ resultToJson input result =
     case result of
         Left err ->
             "{\"input\":\"" ++ jsonEscape (trimStr input) ++
-            "\",\"logical\":null,\"canonical\":null,\"tree\":null,\"error\":\"" ++
+            "\",\"logical\":null,\"canonical\":null,\"graph\":null,\"error\":\"" ++
             jsonEscape (trimStr err) ++ "\"}"
-        Right (loj, jbo, tree) ->
+        Right (loj, jbo, graph) ->
             "{\"input\":\"" ++ jsonEscape (trimStr input) ++
             "\",\"logical\":\"" ++ jsonEscape (trimStr loj) ++
             "\",\"canonical\":\"" ++ jsonEscape (trimStr jbo) ++
-            "\",\"tree\":" ++ tree ++
+            "\",\"graph\":" ++ graph ++
             ",\"error\":null}"
 
 -- Main exported function: parse a Lojban string and return JSON

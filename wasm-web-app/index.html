@@ -36,18 +36,6 @@
     <script src="https://cdn.jsdelivr.net/npm/klayjs@0.4.1/klay.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cytoscape-klay@3.1.4/cytoscape-klay.min.js"></script>
     
-    <!-- 3D Dependencies (load early so THREE is available) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-    <script src="https://unpkg.com/3d-force-graph@1.73.0/dist/3d-force-graph.min.js"></script>
-    <script>
-        // Bridge THREE from ForceGraph3D to the global scope for other 3D plugins IMMEDIATELY
-        if (typeof ForceGraph3D !== 'undefined' && ForceGraph3D.THREE) {
-            window.THREE = ForceGraph3D.THREE;
-            console.log('THREE exposed from ForceGraph3D:', window.THREE);
-        }
-    </script>
-    <script src="https://unpkg.com/three-spritetext@1.9.1/dist/three-spritetext.min.js"></script>
-    
     <!-- Cola layout -->
     <script src="https://cdn.jsdelivr.net/npm/webcola@3.4.0/WebCola/cola.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cytoscape-cola@2.5.1/cytoscape-cola.min.js"></script>
@@ -140,6 +128,7 @@
         #velsku li.social-icon:hover a {
              color: white;
         }
+
     </style>
 </head>
 <body class="bg-[#f1f5f9] text-slate-950 min-h-screen flex flex-col">
@@ -222,6 +211,35 @@
 
             <!-- Results Section -->
             <div id="results-area" class="hidden space-y-4 fade-in">
+                <!-- Graph Visualization Card -->
+                <div class="bg-white rounded-2xl shadow-md border border-slate-300 flex flex-col group overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-200 bg-slate-100 flex justify-between items-center">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="network" class="w-4 h-4 text-indigo-500"></i>
+                            <h3 class="font-bold text-slate-700 uppercase tracking-wider text-xs">Semantic Graph</h3>
+                        </div>
+                        <div class="flex space-x-2 items-center">
+                            <select id="layout-selector" onchange="updateLayout()" class="cursor-pointer appearance-none bg-white border border-slate-300 hover:border-indigo-400 text-slate-700 text-xs font-medium rounded-lg shadow-sm py-1.5 pl-3 pr-8 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-no-repeat bg-[right_0.5rem_center] bg-[length:1.25em_1.25em] bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%2364748b%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22M6%208l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')]">
+                                <option value="dagreH">Dagre Horizontal</option>
+                                <option value="dagreV">Dagre Vertical</option>
+                                <option value="klayH">Klay Horizontal</option>
+                                <option value="klayV">Klay Vertical</option>
+                                <option value="cola">Cola</option>
+                                <option value="grid">Grid</option>
+                                <option value="concentric">Concentric</option>
+                                <option value="breadthfirst">Breadthfirst</option>
+                                <option value="cose">Cose</option>
+                            </select>
+                             <button onclick="if(cy) cy.fit()" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Fit Graph">
+                                <i data-lucide="maximize" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="graph-container" class="w-full h-[400px] bg-slate-50 relative">
+                        <!-- Graph rendered here -->
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Logical Form Card -->
                     <div class="bg-white rounded-2xl shadow-md border border-slate-300 flex flex-col group overflow-hidden">
@@ -253,38 +271,6 @@
                         <div class="relative flex-grow">
                             <pre id="canonical-output" class="p-6 text-sm font-mono leading-relaxed bg-white text-slate-800 whitespace-pre-wrap min-h-[100px] select-all"></pre>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Graph Visualization Card -->
-                <div class="bg-white rounded-2xl shadow-md border border-slate-300 flex flex-col group overflow-hidden mt-4">
-                    <div class="px-5 py-4 border-b border-slate-200 bg-slate-100 flex justify-between items-center">
-                        <div class="flex items-center space-x-2">
-                            <i data-lucide="network" class="w-4 h-4 text-indigo-500"></i>
-                            <h3 class="font-bold text-slate-700 uppercase tracking-wider text-xs">Semantic Graph</h3>
-                        </div>
-                        <div class="flex space-x-2 items-center">
-                            <select id="layout-selector" onchange="updateLayout()" class="cursor-pointer appearance-none bg-white border border-slate-300 hover:border-indigo-400 text-slate-700 text-xs font-medium rounded-lg shadow-sm py-1.5 pl-3 pr-8 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-no-repeat bg-[right_0.5rem_center] bg-[length:1.25em_1.25em] bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%2364748b%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22M6%208l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')]">
-                                <option value="dagreH">Dagre Horizontal</option>
-                                <option value="dagreV">Dagre Vertical</option>
-                                <option value="klayH">Klay Horizontal</option>
-                                <option value="klayV">Klay Vertical</option>
-                                <option value="three">3D Force</option>
-                                <option value="threeLR">3D Horizontal</option>
-                                <option value="threeTD">3D Vertical</option>
-                                <option value="cola">Cola</option>
-                                <option value="grid">Grid</option>
-                                <option value="concentric">Concentric</option>
-                                <option value="breadthfirst">Breadthfirst</option>
-                                <option value="cose">Cose</option>
-                            </select>
-                             <button onclick="if(cy) cy.fit()" class="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Fit Graph">
-                                <i data-lucide="maximize" class="w-4 h-4"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div id="graph-container" class="w-full h-[400px] bg-slate-50 relative">
-                        <!-- Graph rendered here -->
                     </div>
                 </div>
             </div>
@@ -604,6 +590,10 @@
                         showError(json.error);
                     }
                 } else {
+                    console.log('=== Parse Success ===');
+                    console.log('Full JSON result:', json);
+                    console.log('Graph data:', json.graph);
+                    
                     document.getElementById('logical-output').textContent = json.logical;
                     document.getElementById('canonical-output').textContent = json.canonical;
                     
@@ -612,13 +602,16 @@
                     lucide.createIcons(); 
                     
                     // Render Tree after UI is visible so dimensions are correct
-                    if (json.tree) {
+                    if (json.graph) {
+                        console.log('About to render graph...');
                         // Small timeout to allow fade-in to start/layout to stabilize
                         setTimeout(() => {
                             if (typeof renderTree === 'function') {
-                                renderTree(json.tree, 'graph-container');
+                                renderTree(json.graph, 'graph-container');
                             }
                         }, 50);
+                    } else {
+                        console.warn('No graph data in JSON result');
                     } 
                     
                     if (isAuto) {
