@@ -47,28 +47,40 @@ function initTreeViz() {
 function transformTreeToGraph(data) {
     console.log('=== transformTreeToGraph called ===');
     console.log('Input data:', JSON.stringify(data, null, 2));
-    console.log('Is array?', Array.isArray(data));
     
-    // Check if it's the new graph format
+    // The new unified graph format from Haskell
     if (data && data.format === 'graph') {
         console.log('✓ Detected GRAPH format');
         return transformGraphFormat(data);
     }
     
-    // Check if it's an array of graph objects
-    if (Array.isArray(data) && data.length > 0 && data[0].format === 'graph') {
-        console.log('✓ Detected ARRAY of GRAPH format');
-        // Merge all graphs
-        const allNodes = [];
-        const allEdges = [];
-        data.forEach(g => {
-            allNodes.push(...g.nodes);
-            allEdges.push(...g.edges);
-        });
-        return transformGraphFormat({ format: 'graph', nodes: allNodes, edges: allEdges });
+    // Fallback for array format (old behavior or multi-result)
+    if (Array.isArray(data) && data.length > 0) {
+        if (data[0].format === 'graph') {
+            console.log('✓ Detected ARRAY of GRAPH format - merging');
+            // Merge all graphs, deduplicating nodes by content if possible
+            const allNodes = [];
+            const allEdges = [];
+            const nodeIds = new Set();
+            
+            data.forEach(g => {
+                g.nodes.forEach(node => {
+                    if (!nodeIds.has(node.id)) {
+                        nodeIds.add(node.id);
+                        allNodes.push(node);
+                    }
+                });
+                allEdges.push(...g.edges);
+            });
+            return transformGraphFormat({ format: 'graph', nodes: allNodes, edges: allEdges });
+        }
+        
+        // Legacy tree format as array
+        console.log('→ Using legacy tree format (array)');
+        return transformLegacyTreeFormat(data);
     }
     
-    console.log('→ Using legacy tree format');
+    console.log('→ Using legacy tree format (object)');
     // Legacy tree format
     return transformLegacyTreeFormat(data);
 }
