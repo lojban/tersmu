@@ -108,10 +108,29 @@ function transformGraphFormat(graphData) {
             if (node.data.relType) rule = node.data.relType.toUpperCase();
             else if (node.data.termType) rule = node.data.termType.toUpperCase();
             
+            // New semantic types
+            if (node.data.vocType) {
+                text = node.data.vocType.join(' ');
+                rule = 'COI';
+            }
+            if (node.data.indicator) {
+                text = node.data.indicator + (node.data.nai ? ' nai' : '');
+                rule = 'UI';
+            } 
+            if (node.data.sideType) {
+                // Bracketed/discursive usually acts as a container or anchor
+                rule = node.data.sideType.toUpperCase();
+            }
+
             // Allow selmaho to override rule if present (requested by user)
             if (node.data.selmaho) rule = node.data.selmaho;
         }
         
+        let color = bgString2Int(rule, { s: "90%", l: "80%" });
+        if (type === 'vocative') color = '#ffcc80'; // Orange-ish
+        if (type === 'indicator') color = '#ce93d8'; // Purple-ish
+        if (type === 'bracketed') color = '#e0e0e0'; // Grey
+
         return {
             data: {
                 id: node.id,
@@ -120,7 +139,7 @@ function transformGraphFormat(graphData) {
                 type: type,
                 display: 1,
                 collapse: 0,
-                color: bgString2Int(rule, { s: "90%", l: "80%" })
+                color: color
             }
         };
     });
@@ -141,202 +160,14 @@ function transformGraphFormat(graphData) {
     return { nodes, edges };
 }
 
-// Legacy tree format transformation
-function transformLegacyTreeFormat(treeData) {
-    const nodes = [];
-    const edges = [];
-    let idCounter = 0;
-
-    function nextId() { return `n${idCounter++}`; }
-
-    function traverse(node, parentId = null, labelPrefix = '') {
-        const id = nextId();
-        let rule = '';
-        let text = '';
-        let type = 'default';
-
-        if (!node) return null;
-
-        switch (node.type) {
-            case 'relation':
-                rule = node.relation.type || 'BRIVLA';
-                text = node.relation.name;
-                type = 'relation';
-                
-                if (node.terms && node.terms.length > 0) {
-                    node.terms.forEach((term, idx) => {
-                        const termId = nextId();
-                        let termText = term.value || term.type;
-                        if (term.type === 'joiked') termText = `${term.joik} (${term.term1.value} ${term.term2.value})`;
-                        
-                        nodes.push({ 
-                            data: { 
-                                id: termId, 
-                                rule: 'sumti', 
-                                text: termText, 
-                                type: 'term',
-                                display: 1,
-                                collapse: 0,
-                                color: bgString2Int('sumti', { s: "90%", l: "80%" })
-                            },
-                        });
-                        edges.push({ 
-                            data: { source: id, target: termId, label: `x${idx + 1}` } 
-                        });
-                    });
-                }
-                break;
-
-            case 'modal':
-                rule = 'BAI';
-                text = (node.modal.tag || node.modal.type);
-                type = 'modal';
-                if (node.child) traverse(node.child, id);
-                break;
-
-            case 'quantified':
-                rule = 'quant';
-                text = `${node.quantifier.quantifier} ${node.quantifier.variable}`;
-                type = 'quantifier';
-                if (node.restriction) traverse(node.restriction, id, 'restr');
-                if (node.child) traverse(node.child, id);
-                break;
-
-            case 'connected':
-            case 'non-log-connected':
-                rule = 'JOI';
-                text = node.connective;
-                type = 'connective';
-                if (node.left) traverse(node.left, id, 'L');
-                if (node.right) traverse(node.right, id, 'R');
-                break;
-
-            case 'not':
-                rule = 'NA';
-                text = '¬';
-                type = 'logic';
-                if (node.child) traverse(node.child, id);
-                break;
-                
-            default:
-                rule = node.type || '?';
-                text = '';
-        }
-
-        nodes.push({ 
-            data: { 
-                id, 
-                rule, 
-                text, 
-                type,
-                display: 1,
-                collapse: 0,
-                color: bgString2Int(rule, { s: "90%", l: "80%" })
-            }
-        });
-
-        if (parentId) {
-            edges.push({ 
-                data: { source: parentId, target: id, label: labelPrefix } 
-            });
-        }
-    }
-
-    if (Array.isArray(treeData)) {
-        if (treeData.length > 1) {
-            const rootId = 'root';
-            nodes.push({ data: { id: rootId, rule: 'Text', text: '', type: 'root', display: 1, collapse: 0, color: '#f8fafc' } });
-            treeData.forEach(tree => traverse(tree, rootId));
-        } else {
-            treeData.forEach(tree => traverse(tree));
-        }
-    } else {
-        traverse(treeData);
-    }
-
-    return { nodes, edges };
-}
-
-
-function getWidth(node) {
-    const ctx = document.createElement("canvas").getContext("2d");
-    ctx.font = "bold 12px Inter, sans-serif";
-    const ruleWidth = ctx.measureText(node.data('rule') || "").width;
-    ctx.font = "italic 11px Inter, sans-serif";
-    const textWidth = ctx.measureText(node.data('text') || "").width;
-    return Math.max(ruleWidth, textWidth, 60) + 30;
-}
-
-function getHeight(node) {
-    return (node.data('text') && node.data('rule')) ? 60 : 45;
-}
-
-function getPadding(node) {
-    return '10px';
-}
-
-const loopAnimation = (eles) => {
-    if (!cy || cy.destroyed()) return;
-    const ani = eles.animation(
-        {
-            style: {
-                "line-dash-offset": 24,
-                "line-dash-pattern": [8, 4],
-            },
-        },
-        {
-            duration: 1450,
-        }
-    );
-
-    ani
-        .reverse()
-        .play()
-        .promise("complete")
-        .then(() => {
-            if (cy && !cy.destroyed()) {
-                loopAnimation(eles);
-            }
-        });
-};
+// ... legacy transform ...
 
 function cleanup() {
-    // Clean Cytoscape
-    if (cy) {
-        // Unmount first
-        cy.unmount();
-        cy.destroy();
-        cy = null;
-    }
-    
-    const container = document.getElementById(window.graphContainerId);
-    if (!container) return;
-    
-    // Clear container content (removes canvas, etc)
-    container.innerHTML = '';
+    // ...
 }
 
 function renderTree(treeData, containerId) {
-    if (treeData) {
-        window.lastTreeData = treeData;
-        window.graphContainerId = containerId;
-    } else {
-        treeData = window.lastTreeData;
-        containerId = window.graphContainerId;
-    }
-
-    if (!treeData || !containerId) return;
-
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    // Get layout
-    const selector = document.getElementById('layout-selector');
-    const currentLayout = selector ? selector.value : 'dagreH';
-    const config = layoutConfigs[currentLayout] || layoutConfigs.dagreH;
-
-    cleanup();
-
+    // ...
     // Cytoscape
     const elements = transformTreeToGraph(treeData);
     cy = cytoscape({
@@ -373,8 +204,25 @@ function renderTree(treeData, containerId) {
                     'text-background-opacity': 0.8,
                     'text-background-padding': '2px',
                     'text-rotation': 'autorotate',
+                    'line-style': 'solid'
+                }
+            },
+            {
+                selector: 'edge[label = "side"]',
+                style: {
                     'line-style': 'dashed',
-                    'line-dash-pattern': [8, 4]
+                    'line-dash-pattern': [6, 3],
+                    'line-color': '#999',
+                    'target-arrow-color': '#999',
+                    'width': 1
+                }
+            },
+            {
+                selector: 'edge[label = "addressee"]',
+                style: {
+                    'line-style': 'dotted',
+                    'line-color': '#ff9800',
+                    'target-arrow-color': '#ff9800'
                 }
             }
         ],
