@@ -107,6 +107,9 @@ function transformGraphFormat(graphData) {
             
             if (node.data.relType) rule = node.data.relType.toUpperCase();
             else if (node.data.termType) rule = node.data.termType.toUpperCase();
+            
+            // Allow selmaho to override rule if present (requested by user)
+            if (node.data.selmaho) rule = node.data.selmaho;
         }
         
         return {
