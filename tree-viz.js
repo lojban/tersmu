@@ -16,10 +16,7 @@ const layoutConfigs = {
   cose: { name: "cose", animate: true, fit: true },
   cola: { name: "cola", animate: true, fit: true, maxSimulationTime: 4000 },
   NLPTree: { renderer: "NLPTree", name: "NLPTree", config: { alignBottom: false } },
-  NLPTreeB: { renderer: "NLPTree", name: "NLPTree", config: { alignBottom: true } },
-  three: { renderer: "three", name: "three", config: { dagMode: null, dagLevelDistance: 70 } },
-  threeLR: { renderer: "three", name: "three", config: { dagMode: 'lr', dagLevelDistance: 70 } },
-  threeTD: { renderer: "three", name: "three", config: { dagMode: 'td', dagLevelDistance: 70 } }
+  NLPTreeB: { renderer: "NLPTree", name: "NLPTree", config: { alignBottom: true } }
 };
 
 function initTreeViz() {
@@ -44,10 +41,7 @@ function initTreeViz() {
 }
 
 // Transform PropTree JSON or GraphOutput to Cytoscape elements
-function transformTreeToGraph(data) {
-    console.log('=== transformTreeToGraph called ===');
-    console.log('Input data:', JSON.stringify(data, null, 2));
-    
+function transformTreeToGraph(data) {    
     // The new unified graph format from Haskell
     if (data && data.format === 'graph') {
         console.log('✓ Detected GRAPH format');
@@ -303,9 +297,6 @@ const loopAnimation = (eles) => {
         });
 };
 
-// 3D Force Graph instance
-let Graph3D = null;
-
 function cleanup() {
     // Clean Cytoscape
     if (cy) {
@@ -315,19 +306,11 @@ function cleanup() {
         cy = null;
     }
     
-    // Clean 3D
     const container = document.getElementById(window.graphContainerId);
     if (!container) return;
     
-    // Clear container content (removes canvas, 3d graph, etc)
-    // IMPORTANT: layout-selector is NOT in this container, it's in the header.
-    // So clearing this is safe.
+    // Clear container content (removes canvas, etc)
     container.innerHTML = '';
-    
-    if (Graph3D) {
-        Graph3D._destructor && Graph3D._destructor();
-        Graph3D = null;
-    }
 }
 
 function renderTree(treeData, containerId) {
@@ -351,135 +334,89 @@ function renderTree(treeData, containerId) {
 
     cleanup();
 
-    // RENDER BASED ON TYPE
-    if (config.renderer === 'three') {
-        const { nodes, edges } = transformTreeToGraph(treeData);
-        const gData = {
-            nodes: nodes.map(n => ({ ...n.data })),
-            links: edges.map(e => ({ source: e.data.source, target: e.data.target }))
-        };
-
-        const extraRenderers = window.CSS2DRenderer ? [new window.CSS2DRenderer()] : [];
-
-        Graph3D = ForceGraph3D({ extraRenderers })(container)
-            .width(container.clientWidth)
-            .height(container.clientHeight)
-            .graphData(gData)
-            .backgroundColor('#050510')
-            .showNavInfo(false)
-            .linkColor(() => 'rgba(255,255,255,0.4)')
-            .linkDirectionalParticles(2)
-            .linkDirectionalParticleWidth(1)
-            .linkDirectionalParticleSpeed(0.006)
-            .linkDirectionalArrowLength(3.5)
-            .linkDirectionalArrowRelPos(1)
-            .d3Force("collision", d3.forceCollide(node => 15))
-            .nodeThreeObject(node => {
-                const SpriteText = window.SpriteText;
-                if (!SpriteText) {
-                    console.error('SpriteText not available');
-                    return null;
+    // Cytoscape
+    const elements = transformTreeToGraph(treeData);
+    cy = cytoscape({
+        container: container,
+        elements: elements,
+        boxSelectionEnabled: false,
+        autounselectify: true,
+        style: [
+            {
+                selector: 'node',
+                style: {
+                    'label': '', // Labels are handled by nodeHtmlLabel
+                    'width': getWidth,
+                    'height': getHeight,
+                    'shape': 'round-rectangle',
+                    'background-color': 'data(color)',
+                    'border-width': '1px',
+                    'border-color': '#333637',
+                    'text-opacity': 0.8
                 }
-                const sprite = new SpriteText(node.text || node.rule);
-                sprite.color = node.color;
-                sprite.textHeight = 10;
-                sprite.backgroundColor = 'rgba(0,0,0,0.8)';
-                sprite.padding = [2, 4];
-                sprite.borderRadius = 2;
-                return sprite;
-            })
-            .nodeThreeObjectExtend(true);
-            
-        if (config.config.dagMode) {
-            Graph3D.dagMode(config.config.dagMode)
-                   .dagLevelDistance(config.config.dagLevelDistance);
-        }
-        
-    } else {
-        // Cytoscape
-        const elements = transformTreeToGraph(treeData);
-        cy = cytoscape({
-            container: container,
-            elements: elements,
-            boxSelectionEnabled: false,
-            autounselectify: true,
-            style: [
-                {
-                    selector: 'node',
-                    style: {
-                        'label': '', // Labels are handled by nodeHtmlLabel
-                        'width': getWidth,
-                        'height': getHeight,
-                        'shape': 'round-rectangle',
-                        'background-color': 'data(color)',
-                        'border-width': '1px',
-                        'border-color': '#333637',
-                        'text-opacity': 0.8
-                    }
-                },
-                {
-                    selector: 'edge',
-                    style: {
-                        'width': 2,
-                        'line-color': '#aaa', 
-                        'target-arrow-color': '#aaa',
-                        'target-arrow-shape': 'triangle',
-                        'curve-style': 'bezier',
-                        'label': 'data(label)',
-                        'font-size': '10px',
-                        'color': '#555',
-                        'text-background-color': '#f8fafc',
-                        'text-background-opacity': 0.8,
-                        'text-background-padding': '2px',
-                        'text-rotation': 'autorotate',
-                        'line-style': 'dashed',
-                        'line-dash-pattern': [8, 4]
-                    }
+            },
+            {
+                selector: 'edge',
+                style: {
+                    'width': 2,
+                    'line-color': '#aaa', 
+                    'target-arrow-color': '#aaa',
+                    'target-arrow-shape': 'triangle',
+                    'curve-style': 'bezier',
+                    'label': 'data(label)',
+                    'font-size': '10px',
+                    'color': '#555',
+                    'text-background-color': '#f8fafc',
+                    'text-background-opacity': 0.8,
+                    'text-background-padding': '2px',
+                    'text-rotation': 'autorotate',
+                    'line-style': 'dashed',
+                    'line-dash-pattern': [8, 4]
                 }
-            ],
-            layout: config,
-            minZoom: 0.1,
-            maxZoom: 3,
-            wheelSensitivity: 0.2
-        });
-
-        if (typeof cy.nodeHtmlLabel === 'function') {
-            cy.nodeHtmlLabel([{
-                query: 'node',
-                tpl: (data) => `
-                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; font-family: Inter, sans-serif; pointer-events: none;">
-                        <div style="font-size: 11px; font-weight: bold; color: rgba(0,0,0,0.7); text-transform: uppercase; margin-bottom: 2px;">${data.rule}</div>
-                        ${data.text ? `<div style="font-size: 12px; font-style: italic; color: #000; font-weight: 500;">${data.text}</div>` : ''}
-                    </div>
-                `
-            }]);
-        }
-
-        cy.on('tap', 'node', function() {
-            const successors = this.successors();
-            if (this.data('collapse')) {
-                successors.show();
-                this.data('collapse', 0);
-            } else {
-                successors.hide();
-                this.data('collapse', 1);
             }
-        });
-        
-        cy.edges().forEach(loopAnimation);
-        cy.ready(() => {
-            cy.fit(config.padding || 30); 
-            cy.center();
-        });
-        
-        // Force fit after a delay to handle container transition/animations
-        setTimeout(() => {
-            if (cy) {
-                cy.fit(config.padding || 30);
-                cy.center();
-            }
-        }, 500);
+        ],
+        layout: config,
+        minZoom: 0.1,
+        maxZoom: 3,
+        wheelSensitivity: 0.2
+    });
+
+    if (typeof cy.nodeHtmlLabel === 'function') {
+        cy.nodeHtmlLabel([{
+            query: 'node',
+            tpl: (data) => `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; font-family: Inter, sans-serif; pointer-events: none;">
+                    <div style="font-size: 11px; font-weight: bold; color: rgba(0,0,0,0.7); text-transform: uppercase; margin-bottom: 2px;">${data.rule}</div>
+                    ${data.text ? `<div style="font-size: 12px; font-style: italic; color: #000; font-weight: 500;">${data.text}</div>` : ''}
+                </div>
+            `
+        }]);
     }
+
+    cy.on('tap', 'node', function() {
+        const successors = this.successors();
+        if (this.data('collapse')) {
+            successors.show();
+            this.data('collapse', 0);
+        } else {
+            successors.hide();
+            this.data('collapse', 1);
+        }
+    });
+    
+    cy.edges().forEach(loopAnimation);
+    cy.ready(() => {
+        cy.fit(config.padding || 30); 
+        cy.center();
+    });
+    
+    // Force fit after a delay to handle container transition/animations
+    setTimeout(() => {
+        if (cy) {
+            cy.fit(config.padding || 30);
+            cy.center();
+        }
+    }, 500);
 }
 
 function updateLayout() {
