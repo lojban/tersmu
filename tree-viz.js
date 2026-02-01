@@ -45,17 +45,42 @@ function initTreeViz() {
 
 // Transform PropTree JSON or GraphOutput to Cytoscape elements
 function transformTreeToGraph(data) {
+    console.log('=== transformTreeToGraph called ===');
+    console.log('Input data:', JSON.stringify(data, null, 2));
+    console.log('Is array?', Array.isArray(data));
+    
     // Check if it's the new graph format
     if (data && data.format === 'graph') {
+        console.log('✓ Detected GRAPH format');
         return transformGraphFormat(data);
     }
     
+    // Check if it's an array of graph objects
+    if (Array.isArray(data) && data.length > 0 && data[0].format === 'graph') {
+        console.log('✓ Detected ARRAY of GRAPH format');
+        // Merge all graphs
+        const allNodes = [];
+        const allEdges = [];
+        data.forEach(g => {
+            allNodes.push(...g.nodes);
+            allEdges.push(...g.edges);
+        });
+        return transformGraphFormat({ format: 'graph', nodes: allNodes, edges: allEdges });
+    }
+    
+    console.log('→ Using legacy tree format');
     // Legacy tree format
     return transformLegacyTreeFormat(data);
 }
 
 // Transform new graph format to Cytoscape elements
 function transformGraphFormat(graphData) {
+    console.log('=== transformGraphFormat ===');
+    console.log('Nodes count:', graphData.nodes?.length);
+    console.log('Edges count:', graphData.edges?.length);
+    console.log('Sample node:', graphData.nodes?.[0]);
+    console.log('Sample edge:', graphData.edges?.[0]);
+    
     const nodes = graphData.nodes.map(node => {
         let rule = node.type.toUpperCase();
         let text = '';
@@ -98,6 +123,11 @@ function transformGraphFormat(graphData) {
             label: edge.label
         }
     }));
+    
+    console.log('Transformed nodes count:', nodes.length);
+    console.log('Transformed edges count:', edges.length);
+    console.log('Sample transformed node:', nodes[0]);
+    console.log('Sample transformed edge:', edges[0]);
     
     return { nodes, edges };
 }

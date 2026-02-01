@@ -604,6 +604,10 @@
                         showError(json.error);
                     }
                 } else {
+                    console.log('=== Parse Success ===');
+                    console.log('Full JSON result:', json);
+                    console.log('Graph data:', json.graph);
+                    
                     document.getElementById('logical-output').textContent = json.logical;
                     document.getElementById('canonical-output').textContent = json.canonical;
                     
@@ -613,12 +617,15 @@
                     
                     // Render Tree after UI is visible so dimensions are correct
                     if (json.graph) {
+                        console.log('About to render graph...');
                         // Small timeout to allow fade-in to start/layout to stabilize
                         setTimeout(() => {
                             if (typeof renderTree === 'function') {
                                 renderTree(json.graph, 'graph-container');
                             }
                         }, 50);
+                    } else {
+                        console.warn('No graph data in JSON result');
                     } 
                     
                     if (isAuto) {
