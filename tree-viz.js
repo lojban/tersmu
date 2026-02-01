@@ -160,15 +160,174 @@ function transformGraphFormat(graphData) {
     return { nodes, edges };
 }
 
-// ... legacy transform ...
+// Legacy tree format transformation
+function transformLegacyTreeFormat(treeData) {
+    const nodes = [];
+    const edges = [];
+    let idCounter = 0;
 
-function cleanup() {
-    // ...
+    function nextId() { return `n${idCounter++}`; }
+
+    function traverse(node, parentId = null, labelPrefix = '') {
+        const id = nextId();
+        let rule = '';
+        let text = '';
+        let type = 'default';
+
+        if (!node) return null;
+
+        switch (node.type) {
+            case 'relation':
+                rule = node.relation.type || 'BRIVLA';
+                text = node.relation.name;
+                type = 'relation';
+                
+                if (node.terms && node.terms.length > 0) {
+                    node.terms.forEach((term, idx) => {
+                        const termId = nextId();
+                        let termText = term.value || term.type;
+                        if (term.type === 'joiked') termText = `${term.joik} (${term.term1.value} ${term.term2.value})`;
+                        
+                        nodes.push({ 
+                            data: { 
+                                id: termId, 
+                                rule: 'sumti', 
+                                text: termText, 
+                                type: 'term',
+                                display: 1,
+                                collapse: 0,
+                                color: bgString2Int('sumti', { s: "90%", l: "80%" })
+                            },
+                        });
+                        edges.push({ 
+                            data: { source: id, target: termId, label: `x${idx + 1}` } 
+                        });
+                    });
+                }
+                break;
+
+            case 'modal':
+                rule = 'BAI';
+                text = (node.modal.tag || node.modal.type);
+                type = 'modal';
+                if (node.child) traverse(node.child, id);
+                break;
+
+            case 'quantified':
+                rule = 'quant';
+                text = `${node.quantifier.quantifier} ${node.quantifier.variable}`;
+                type = 'quantifier';
+                if (node.restriction) traverse(node.restriction, id, 'restr');
+                if (node.child) traverse(node.child, id);
+                break;
+
+            case 'connected':
+            case 'non-log-connected':
+                rule = 'JOI';
+                text = node.connective;
+                type = 'connective';
+                if (node.left) traverse(node.left, id, 'L');
+                if (node.right) traverse(node.right, id, 'R');
+                break;
+
+            case 'not':
+                rule = 'NA';
+                text = '¬';
+                type = 'logic';
+                if (node.child) traverse(node.child, id);
+                break;
+                
+            default:
+                rule = node.type || '?';
+                text = '';
+        }
+
+        nodes.push({ 
+            data: { 
+                id, 
+                rule, 
+                text, 
+                type,
+                display: 1,
+                collapse: 0,
+                color: bgString2Int(rule, { s: "90%", l: "80%" })
+            }
+        });
+
+        if (parentId) {
+            edges.push({ 
+                data: { source: parentId, target: id, label: labelPrefix } 
+            });
+        }
+    }
+
+    if (Array.isArray(treeData)) {
+        if (treeData.length > 1) {
+            const rootId = 'root';
+            nodes.push({ data: { id: rootId, rule: 'Text', text: '', type: 'root', display: 1, collapse: 0, color: '#f8fafc' } });
+            treeData.forEach(tree => traverse(tree, rootId));
+        } else {
+            treeData.forEach(tree => traverse(tree));
+        }
+    } else {
+        traverse(treeData);
+    }
+
+    return { nodes, edges };
 }
+
+
+function getWidth(node) {
+    const ctx = document.createElement("canvas").getContext("2d");
+    ctx.font = "bold 12px Inter, sans-serif";
+    const ruleWidth = ctx.measureText(node.data('rule') || "").width;
+    ctx.font = "italic 11px Inter, sans-serif";
+    const textWidth = ctx.measureText(node.data('text') || "").width;
+    return Math.max(ruleWidth, textWidth, 60) + 30;
+}
+
+function getHeight(node) {
+    return (node.data('text') && node.data('rule')) ? 60 : 45;
+}
+
+function getPadding(node) {
+    return '10px';
+}
+
+const loopAnimation = (eles) => {
+    if (!cy || cy.destroyed()) return;
+    const ani = eles.animation(
+        {
+            style: {
+                "line-dash-offset": 24,
+                "line-dash-pattern": [8, 4],
+            },
+        },
+        {
+            duration: 1450,
+        }
+    );
+
+    ani
+        .reverse()
+        .play()
+        .promise("complete")
+        .then(() => {
+            if (cy && !cy.destroyed()) {
+                loopAnimation(eles);
+            }
+        });
+};
 
 function renderTree(treeData, containerId) {
     // ...
     // Cytoscape
+    const container = document.getElementById(containerId);
+    
+    // Determine layout config
+    const currentLayout = localStorage.getItem('tersmu_layout') || 'dagreH';
+    const config = layoutConfigs[currentLayout] || layoutConfigs.dagreH;
+    
     const elements = transformTreeToGraph(treeData);
     cy = cytoscape({
         container: container,
