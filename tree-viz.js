@@ -14,9 +14,7 @@ const layoutConfigs = {
   concentric: { name: "concentric", animate: true, fit: true },
   breadthfirst: { name: "breadthfirst", circle: false, animate: true, fit: true },
   cose: { name: "cose", animate: true, fit: true },
-  cola: { name: "cola", animate: true, fit: true, maxSimulationTime: 4000 },
-  NLPTree: { renderer: "NLPTree", name: "NLPTree", config: { alignBottom: false } },
-  NLPTreeB: { renderer: "NLPTree", name: "NLPTree", config: { alignBottom: true } }
+  cola: { name: "cola", animate: true, fit: true, maxSimulationTime: 4000 }
 };
 
 function initTreeViz() {
@@ -88,7 +86,7 @@ function transformGraphFormat(graphData) {
     console.log('Sample edge:', graphData.edges?.[0]);
     
     const nodes = graphData.nodes.map(node => {
-        let rule = node.type.toUpperCase();
+        let rule = node.type;
         let text = '';
         let type = node.type;
         
@@ -105,8 +103,8 @@ function transformGraphFormat(graphData) {
                 rule = 'BAI';
             }
             
-            if (node.data.relType) rule = node.data.relType.toUpperCase();
-            else if (node.data.termType) rule = node.data.termType.toUpperCase();
+            if (node.data.relType) rule = node.data.relType;
+            else if (node.data.termType) rule = node.data.termType;
             
             // Allow selmaho to override rule if present (requested by user)
             if (node.data.selmaho) rule = node.data.selmaho;
@@ -389,7 +387,7 @@ function renderTree(treeData, containerId) {
             query: 'node',
             tpl: (data) => `
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%; font-family: Inter, sans-serif; pointer-events: none;">
-                    <div style="font-size: 11px; font-weight: bold; color: rgba(0,0,0,0.7); text-transform: uppercase; margin-bottom: 2px;">${data.rule}</div>
+                    <div style="font-size: 11px; font-weight: bold; color: rgba(0,0,0,0.7); margin-bottom: 2px;">${data.rule}</div>
                     ${data.text ? `<div style="font-size: 12px; font-style: italic; color: #000; font-weight: 500;">${data.text}</div>` : ''}
                 </div>
             `
