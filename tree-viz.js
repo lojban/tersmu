@@ -95,7 +95,12 @@ function transformGraphFormat(graphData) {
             if (node.data.name) text = node.data.name;
             else if (node.data.value) text = node.data.value;
             else if (node.data.connective) text = node.data.connective;
-            else if (node.data.quantifier) {
+            else if (node.data.sideType) {
+                // Handle side texticule nodes
+                rule = node.data.sideType;
+                text = node.data.content || '';
+                type = 'side-texticule';
+            } else if (node.data.quantifier) {
                 text = `${node.data.quantifier} ${node.data.variable}`;
                 rule = 'QUANT';
             } else if (node.data.modalType) {
