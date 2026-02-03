@@ -22,8 +22,7 @@ import Logic
 import Bindful
 import Morph
 
-import JboTree (jboPropToGraph, jboPropsToGraph, toJson)
-import JboProp (propTexticules)
+import JboTree (jboPropToGraph, jboPropsToGraph, jboTextToGraph, toJson)
 import Data.List (intercalate)
 
 import Data.Char
@@ -42,7 +41,7 @@ parseLineToResult s = case morph s of
             let jboText = evalParseStateM (JboParse.evalText text)
                 logical = evalBindful (logjboshow False jboText)
                 canonical = evalBindful (logjboshow True jboText)
-                graphJson = toJson . jboPropsToGraph $ propTexticules jboText
+                graphJson = toJson . jboTextToGraph $ jboText
             in Right (logical, canonical, graphJson)
 
 errorMessage :: String -> Int -> String -> String

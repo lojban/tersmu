@@ -31,6 +31,7 @@ data NodeData
     | NDModal { ndModalType :: String, ndModalTag :: Maybe String, ndSelmaho :: Maybe String }
     | NDConnective { ndConnective :: String, ndSelmaho :: Maybe String }
     | NDNot { ndSelmaho :: Maybe String }
+    | NDSideTexticule { ndSideType :: String, ndSideContent :: String }
     | NDEet
     | NDError { ndErrorMsg :: String }
     deriving (Show, Eq)
@@ -61,6 +62,59 @@ jboPropsToGraph ps =
     let initState = GraphState Map.empty [] [] 0
         (_, finalState) = runState (mapM_ (\p -> convertPropToGraph p Nothing) ps) initState
     in GraphOutput (reverse $ gsNodes finalState) (reverse $ gsEdges finalState)
+
+-- | Convert JboText (including side texticules) to GraphOutput
+-- Side texticules are attached to the next main proposition node they precede
+jboTextToGraph :: JboText -> GraphOutput
+jboTextToGraph texticules =
+    let initState = GraphState Map.empty [] [] 0
+        (_, finalState) = runState (processTexticules texticules []) initState
+    in GraphOutput (reverse $ gsNodes finalState) (reverse $ gsEdges finalState)
+  where
+    processTexticules :: [Texticule] -> [(SideType, Texticule)] -> GraphM ()
+    processTexticules [] pendingSides = return ()  -- Ignore orphaned side texticules
+    processTexticules (t:ts) pendingSides = do
+        case t of
+            TexticuleProp p -> do
+                -- Create the main proposition node
+                propId <- convertPropToGraph p Nothing
+                -- Attach any pending side texticules to this proposition
+                mapM_ (\(sideType, sideT) -> do
+                    sideId <- convertSideTexticuleToNode sideType sideT
+                    addEdge propId sideId "side") pendingSides
+                -- Continue with empty pending list
+                processTexticules ts []
+            TexticuleFrag f -> do
+                -- Fragments are rare, add to pending
+                processTexticules ts (pendingSides ++ [(SideBracketed, TexticuleFrag f)])
+            TexticuleSide sideType innerTexticule -> do
+                -- Add to pending side texticules
+                processTexticules ts (pendingSides ++ [(sideType, innerTexticule)])
+    
+    convertSideTexticuleToNode :: SideType -> Texticule -> GraphM String
+    convertSideTexticuleToNode sideType (TexticuleProp p) = do
+        -- Convert the proposition to a string representation for the side node
+        let sideTypeStr = case sideType of
+                SideBracketed -> "TO"
+                SideDiscursive -> "SEI"
+        let contentKey = "side:" ++ sideTypeStr ++ ":" ++ show p
+        getOrCreateNode contentKey "side-texticule" (NDSideTexticule sideTypeStr (show p))
+    convertSideTexticuleToNode sideType (TexticuleFrag f) = do
+        let sideTypeStr = case sideType of
+                SideBracketed -> "TO"
+                SideDiscursive -> "SEI"
+        convertFragToSideNode sideTypeStr f
+    convertSideTexticuleToNode sideType (TexticuleSide _ innerT) = 
+        -- Nested side texticules - unwrap
+        convertSideTexticuleToNode sideType innerT
+    
+    convertFragToSideNode :: String -> JboFragment -> GraphM String
+    convertFragToSideNode sideTypeStr (JboFragTerms ts) = do
+        let contentKey = "frag:" ++ sideTypeStr ++ ":" ++ show (length ts)
+        getOrCreateNode contentKey "side-texticule" (NDSideTexticule sideTypeStr "fragment")
+    convertFragToSideNode sideTypeStr (JboFragUnparsed _) = do
+        let contentKey = "frag:" ++ sideTypeStr ++ ":unparsed"
+        getOrCreateNode contentKey "side-texticule" (NDSideTexticule sideTypeStr "unparsed")
 
 -- | Simple string hash function (FNV-1a algorithm)
 simpleHash :: String -> Int
@@ -390,6 +444,8 @@ instance JsonSerializable NodeData where
         "{\"connective\":\"" ++ jsonEscape c ++ "\"" ++
         maybe "" (\s -> ",\"selmaho\":\"" ++ jsonEscape s ++ "\"") sel ++ "}"
     toJson (NDNot sel) = "{" ++ maybe "" (\s -> "\"selmaho\":\"" ++ jsonEscape s ++ "\"") sel ++ "}"
+    toJson (NDSideTexticule sideType content) =
+        "{\"sideType\":\"" ++ jsonEscape sideType ++ "\",\"content\":\"" ++ jsonEscape content ++ "\"}"
     toJson NDEet = "{}"
     toJson (NDError msg) = 
         "{\"message\":\"" ++ jsonEscape msg ++ "\"}"

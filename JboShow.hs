@@ -628,6 +628,13 @@ positionallyTaggedTerms xs ss = [
 instance JboShow Texticule where
     logjboshow jbo (TexticuleFrag f) = logjboshow jbo f
     logjboshow jbo (TexticuleProp p) = logjboshow jbo p
+    logjboshow jbo (TexticuleSide sideType t) = do
+        -- For side texticules, wrap with appropriate markers
+        ts <- logjboshow jbo t
+        return $ case (jbo, sideType) of
+            (True, SideBracketed) -> "to " ++ ts ++ " toi"
+            (True, SideDiscursive) -> "sei " ++ ts ++ " se'u"
+            (False, _) -> "{SIDE: " ++ ts ++ "}"
 instance JboShow JboFragment where
     logjboshow jbo (JboFragTerms ts) =
 	(if not jbo then bracket '[' . ("Fragment: "++) else id) <$>

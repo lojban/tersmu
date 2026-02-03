@@ -107,10 +107,16 @@ type JboText = [Texticule]
 data Texticule
     = TexticuleFrag JboFragment
     | TexticuleProp JboProp
+    | TexticuleSide SideType Texticule  -- Side texticule wrapper
     deriving (Eq, Show, Ord, Typeable, Data)
+
+data SideType = SideBracketed | SideDiscursive
+    deriving (Eq, Show, Ord, Typeable, Data)
+
 propTexticules :: [Texticule] -> [JboProp]
 propTexticules [] = []
 propTexticules (TexticuleProp p:ts) = p:propTexticules ts
+propTexticules (TexticuleSide _ t:ts) = propTexticules (t:ts)  -- Unwrap and continue
 propTexticules (_:ts) = propTexticules ts
 
 -- |ParsedQuote: using this newtype so we can provide dummy instances for use

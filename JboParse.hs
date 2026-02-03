@@ -26,8 +26,8 @@ import Data.List
 evalText :: Text -> ParseStateM JboText
 evalText (Text fs nai paras) = do
 	jt <- mapM evalFragOrStatement $ zip (concat paras) $ fs:repeat []
-	ps <- propTexticules <$> takeSideTexticules
-	return $ map TexticuleProp ps ++ jt
+	ps <- takeSideTexticules
+	return $ ps ++ jt
     where
 	evalFragOrStatement ((Left frag),fs) = (TexticuleFrag <$>) $
 	    doFrees fs >> parseFrag frag
@@ -44,14 +44,14 @@ evalStatement :: Statement -> ParseStateM JboProp
 evalStatement s = evalParseM (parseStatement s)
 
 data FreeReturn
-    = FRSides JboText
+    = FRSides SideType JboText
     | FRTruthQ (Maybe Int)
     | FRIgnored
 evalFree :: Free -> ParseStateM FreeReturn
 evalFree (Discursive bt) =
-    (FRSides . (\p -> [TexticuleProp p]) <$>) $ evalParseM $
+    (FRSides SideDiscursive . (\p -> [TexticuleProp p]) <$>) $ evalParseM $
 	($nullArgs) <$> partiallyRunBridiM (parseBTail bt)
-evalFree (Bracketed text) = FRSides <$> evalText text
+evalFree (Bracketed text) = FRSides SideBracketed <$> evalText text
 evalFree (TruthQ kau) = return $ FRTruthQ kau
 evalFree _ = return FRIgnored
 
@@ -63,7 +63,7 @@ doFree :: Free -> ParseStateM ()
 doFree f = do
     fr <- evalFree f
     case fr of
-	FRSides jt -> mapM_ addSideTexticule jt
+	FRSides sideType jt -> mapM_ (addSideTexticule . TexticuleSide sideType) jt
 	FRTruthQ kau -> addQuestion $ Question kau QTruth
 	FRIgnored -> return ()
 

@@ -6,3 +6,4 @@ examples/*.diff
 pappy/**/*.o
 pappy/**/*.hi
 pappy/pappy
+dist-newstyle/
