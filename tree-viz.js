@@ -365,7 +365,7 @@ function renderTree(treeData, containerId) {
                 selector: 'edge',
                 style: {
                     'width': 2,
-                    'line-color': '#aaa',
+                    'line-color': '#aaa', 
                     'target-arrow-color': '#aaa',
                     'target-arrow-shape': 'triangle',
                     'curve-style': 'bezier',
@@ -378,20 +378,6 @@ function renderTree(treeData, containerId) {
                     'text-rotation': 'autorotate',
                     'line-style': 'dashed',
                     'line-dash-pattern': [8, 4]
-                }
-            },
-            {
-                selector: 'edge[label="to"]',
-                style: {
-                    'line-color': '#2563eb',
-                    'target-arrow-color': '#2563eb'
-                }
-            },
-            {
-                selector: 'edge[label="sei"]',
-                style: {
-                    'line-color': '#16a34a',
-                    'target-arrow-color': '#16a34a'
                 }
             }
         ],
