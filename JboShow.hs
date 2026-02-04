@@ -463,6 +463,7 @@ instance JboShow JboTerm where
 	joiks <- logjboshowJoik jbo "ji" joik
 	return $ if jbo then ts1 ++ " " ++ joiks ++ " ke " ++ ts2 ++ " ke'e"
 	    else "(" ++ ts1 ++ " {" ++ joiks ++ "} " ++ ts2 ++ ")"
+    logjboshow jbo (TermWithSides o _) = logjboshow jbo o
     logjboshow jbo (QualifiedTerm qual t) = do
 	ts <- logjboshow jbo t
 	let quals = case qual of {LAhE l -> l; NAhE_BO n -> n ++ " bo"}

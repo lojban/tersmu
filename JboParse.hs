@@ -59,6 +59,21 @@ doFrees :: [Free] -> ParseStateM ()
 doFrees = mapM_ doFree
 doFreesInParseM :: [Free] -> ParseM r ()
 doFreesInParseM = liftParseStateMToParseM . doFrees
+
+-- | Frees that are SEI/ti'o (Discursive); handled as term-attached, not hoisted to next bridi.
+isDiscursiveFree :: Free -> Bool
+isDiscursiveFree Discursive{} = True
+isDiscursiveFree _ = False
+
+-- | Evaluate Discursive (SEI) frees to side texticules; used to attach to host term.
+processDiscursiveFrees :: [Free] -> ParseM r [Texticule]
+processDiscursiveFrees discursives = liftParseStateMToParseM $
+    fmap concat $ traverse (\f -> do
+        fr <- evalFree f
+        case fr of
+            FRSides SideDiscursive jt -> return [TexticuleSide SideDiscursive t | t <- jt]
+            _ -> return []) discursives
+
 doFree :: Free -> ParseStateM ()
 doFree f = do
     fr <- evalFree f
@@ -326,35 +341,42 @@ parseSumti s = do
 		    return $ JoikedTerms joik o1 o2
 	    jrels <- parseRels rels
 	    return (o,jrels)
-	(QAtom fs mq rels sa) -> (<* doFreesInParseM fs) $ do
-	    mm <- traverse parseMex mq
-	    case sa of
-	     Variable _ -> do
-		(rps,jrels) <- stripForeRestrictives <$> parseRels rels
-		o <- parseVariable sa rps mm
-		return (o,jrels)
-	     _ -> do
-		 (o,jrels) <- case sa of
-		    SumtiQ kau -> do
-			jrels <- parseRels rels
-			let (rps,jrels') = stripForeRestrictives jrels
-			o <- addSumtiQuestion kau $ andMPred rps
-			return (o,jrels')
-		    _ -> do
-			(o,ijrels) <- parseSumtiAtom sa
-			jrels <- (ijrels++) <$> parseRels rels
-			return (o,jrels)
-		 (o,jrels) <- case mm of
-		     Nothing -> return (o,jrels)
-		     Just m | m == nullMex ->
-			-- tu'o as a sumti quantifier acts like no quantifier
-			return (o,jrels)
-		     Just m -> do
-			let (rps,jrels') = stripForeRestrictives jrels
-			updateReferenced o
-			o' <- quantify m $ andMPred $ (isAmong o):rps
-			return (o',jrels')
-		 return (o,jrels)
+	(QAtom fs mq rels sa) -> do
+	    -- Run non-SEI frees (indicators, TO, etc.) before parsing; SEI stays attached to this sumti
+	    doFreesInParseM (filter (not . isDiscursiveFree) fs)
+	    (o,jrels) <- do
+	        mm <- traverse parseMex mq
+	        case sa of
+	         Variable _ -> do
+		    (rps,jrels) <- stripForeRestrictives <$> parseRels rels
+		    o <- parseVariable sa rps mm
+		    return (o,jrels)
+	         _ -> do
+		     (o,jrels) <- case sa of
+		        SumtiQ kau -> do
+			    jrels <- parseRels rels
+			    let (rps,jrels') = stripForeRestrictives jrels
+			    o <- addSumtiQuestion kau $ andMPred rps
+			    return (o,jrels')
+		        _ -> do
+			    (o,ijrels) <- parseSumtiAtom sa
+			    jrels <- (ijrels++) <$> parseRels rels
+			    return (o,jrels)
+		     (o,jrels) <- case mm of
+		         Nothing -> return (o,jrels)
+		         Just m | m == nullMex ->
+			    -- tu'o as a sumti quantifier acts like no quantifier
+			    return (o,jrels)
+		         Just m -> do
+			    let (rps,jrels') = stripForeRestrictives jrels
+			    updateReferenced o
+			    o' <- quantify m $ andMPred $ (isAmong o):rps
+			    return (o',jrels')
+		     return (o,jrels)
+	    -- Attach SEI/ti'o sides to this term (not to next bridi)
+	    seiSides <- processDiscursiveFrees (filter isDiscursiveFree fs)
+	    let o' = if null seiSides then o else TermWithSides o seiSides
+	    return (o',jrels)
 	(QSelbri q rels sb) -> do
 	    m <- parseMex q
 	    sr <- selbriToPred sb
@@ -427,14 +449,14 @@ segregateRels (r:rs) = let (rrs,irs,as) = segregateRels rs in case r of
 segregateRels [] = ([],[],[])
 
 doRel :: PreProp r => JboTerm -> JboRelClause -> ParseM r JboTerm
-doRel o (JRIncidental p) = doIncidental o p
+doRel o (JRIncidental p) = reWrapTermSides o <$> doIncidental (stripTermSides o) p
 doRel o (JRRestrictive p) = do
     -- XXX: ko'a poi broda -> zo'e noi me ko'a gi'e broda
     -- TODO: consider alternative semantics (Chierchia's iota?)
     o' <- getFreshConstant
-    o' <- doIncidentals o' $ [p,isAmong o]
+    o' <- doIncidentals o' $ [p, isAmong (stripTermSides o)]
     return o'
-doRel o (JRAssign a) = doAssign o a
+doRel o (JRAssign a) = reWrapTermSides o <$> doAssign (stripTermSides o) a
 
 parseVariable :: PreProp r => SumtiAtom -> [JboPred] -> Maybe JboMex -> ParseM r JboTerm
 parseVariable sa@(Variable n) rps mm = do

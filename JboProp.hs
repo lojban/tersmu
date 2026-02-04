@@ -42,6 +42,7 @@ data JboTerm = BoundVar Int
 	     | Unfilled
 	     | JoikedTerms Joik JboTerm JboTerm
 	     | QualifiedTerm SumtiQualifier JboTerm
+	     | TermWithSides JboTerm [Texticule]  -- SEI/term-attached sides (not hoisted to next bridi)
 	     deriving (Eq, Show, Ord, Typeable, Data)
 
 data JboRel = Tanru JboVPred JboRel
@@ -78,6 +79,16 @@ data JboNPred = JboNPred Int ([JboTerm] -> JboProp)
 type JboPred = JboTerm -> JboProp
 vPredToPred vp o = vp [o]
 predToNPred p = JboNPred 1 (\(o:_) -> p o)
+
+-- | Strip term-attached sides (SEI) for semantic operations; preserves inner term.
+stripTermSides :: JboTerm -> JboTerm
+stripTermSides (TermWithSides o _) = o
+stripTermSides o = o
+
+-- | Re-attach sides from original term to (possibly modified) inner term.
+reWrapTermSides :: JboTerm -> JboTerm -> JboTerm
+reWrapTermSides (TermWithSides _ sides) inner = TermWithSides inner sides
+reWrapTermSides _ inner = inner
 
 instance Dummyful JboTerm where dummy = Unfilled
 instance Dummyful [JboTerm] where dummy = []
@@ -173,6 +184,7 @@ freeVars p = execWriter $ collectFrees p where
 	collectFreesInTerm :: JboTerm -> Writer [JboTerm] ()
 	collectFreesInTerm free@(Var _) = tell $ [free]
 	collectFreesInTerm free@(UnboundSumbasti (MainBridiSumbasti _)) = tell $ [free]
+	collectFreesInTerm (TermWithSides o _) = collectFreesInTerm o
 	collectFreesInTerm (JoikedTerms joik t1 t2) = collectFreesInTerm t1 *> collectFreesInTerm t2
 	collectFreesInTerm (QualifiedTerm qual t) = collectFreesInTerm t
 	collectFreesInTerm (Constant _ ts) = traverse_ collectFreesInTerm ts

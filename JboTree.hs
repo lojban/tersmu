@@ -80,7 +80,7 @@ jboTextToGraph texticules =
                 propId <- convertPropToGraph p Nothing
                 -- Attach any pending side texticules to this proposition
                 mapM_ (\(sideType, sideT) -> do
-                    sideId <- convertSideTexticuleToNode sideType sideT
+                    sideId <- sideTexticuleToNode sideType sideT
                     addEdge propId sideId "side") pendingSides
                 -- Continue with empty pending list
                 processTexticules ts []
@@ -90,31 +90,6 @@ jboTextToGraph texticules =
             TexticuleSide sideType innerTexticule -> do
                 -- Add to pending side texticules
                 processTexticules ts (pendingSides ++ [(sideType, innerTexticule)])
-    
-    convertSideTexticuleToNode :: SideType -> Texticule -> GraphM String
-    convertSideTexticuleToNode sideType (TexticuleProp p) = do
-        -- Convert the proposition to a string representation for the side node
-        let sideTypeStr = case sideType of
-                SideBracketed -> "TO"
-                SideDiscursive -> "SEI"
-        let contentKey = "side:" ++ sideTypeStr ++ ":" ++ show p
-        getOrCreateNode contentKey "side-texticule" (NDSideTexticule sideTypeStr (show p))
-    convertSideTexticuleToNode sideType (TexticuleFrag f) = do
-        let sideTypeStr = case sideType of
-                SideBracketed -> "TO"
-                SideDiscursive -> "SEI"
-        convertFragToSideNode sideTypeStr f
-    convertSideTexticuleToNode sideType (TexticuleSide _ innerT) = 
-        -- Nested side texticules - unwrap
-        convertSideTexticuleToNode sideType innerT
-    
-    convertFragToSideNode :: String -> JboFragment -> GraphM String
-    convertFragToSideNode sideTypeStr (JboFragTerms ts) = do
-        let contentKey = "frag:" ++ sideTypeStr ++ ":" ++ show (length ts)
-        getOrCreateNode contentKey "side-texticule" (NDSideTexticule sideTypeStr "fragment")
-    convertFragToSideNode sideTypeStr (JboFragUnparsed _) = do
-        let contentKey = "frag:" ++ sideTypeStr ++ ":unparsed"
-        getOrCreateNode contentKey "side-texticule" (NDSideTexticule sideTypeStr "unparsed")
 
 -- | Simple string hash function (FNV-1a algorithm)
 simpleHash :: String -> Int
@@ -145,6 +120,30 @@ addEdge source target label = do
     st <- get
     let edge = GraphEdge source target label
     put $ st { gsEdges = edge : gsEdges st }
+
+-- | Convert a side texticule to a graph node (used for both text-level and term-attached sides).
+sideTexticuleToNode :: SideType -> Texticule -> GraphM String
+sideTexticuleToNode sideType (TexticuleProp p) = do
+    let sideTypeStr = case sideType of
+            SideBracketed -> "TO"
+            SideDiscursive -> "SEI"
+    let contentKey = "side:" ++ sideTypeStr ++ ":" ++ show p
+    getOrCreateNode contentKey "side-texticule" (NDSideTexticule sideTypeStr (show p))
+sideTexticuleToNode sideType (TexticuleFrag f) = do
+    let sideTypeStr = case sideType of
+            SideBracketed -> "TO"
+            SideDiscursive -> "SEI"
+    fragToSideNode sideTypeStr f
+sideTexticuleToNode sideType (TexticuleSide _ innerT) =
+    sideTexticuleToNode sideType innerT
+
+fragToSideNode :: String -> JboFragment -> GraphM String
+fragToSideNode sideTypeStr (JboFragTerms ts) = do
+    let contentKey = "frag:" ++ sideTypeStr ++ ":" ++ show (length ts)
+    getOrCreateNode contentKey "side-texticule" (NDSideTexticule sideTypeStr "fragment")
+fragToSideNode sideTypeStr (JboFragUnparsed _) = do
+    let contentKey = "frag:" ++ sideTypeStr ++ ":unparsed"
+    getOrCreateNode contentKey "side-texticule" (NDSideTexticule sideTypeStr "unparsed")
 
 -- | Convert PropTree to graph (recursive)
 convertPropToGraph :: JboProp -> Maybe String -> GraphM String
@@ -379,6 +378,15 @@ convertTermToGraph term = do
              let (val, typ, _, sel) = convertTerm term
              getOrCreateNode key "term" (NDTerm val typ sel)
 
+        TermWithSides o sides -> do
+            termId <- convertTermToGraph o
+            mapM_ (\side -> case side of
+                TexticuleSide st t -> do
+                    sideId <- sideTexticuleToNode st t
+                    addEdge termId sideId "side"
+                _ -> return ()) sides
+            return termId
+
         _ -> do
             let (val, typ, _, sel) = convertTerm term
             getOrCreateNode defaultKey "term" (NDTerm val typ sel)
@@ -409,6 +417,7 @@ convertTerm (JoikedTerms j t1 t2) =
     let jStr = show j
     in ("joiked:" ++ jStr, "joiked", "term:joiked:" ++ jStr, Just "JOI")
 convertTerm (QualifiedTerm _ t) = ("qualified", "qualified", "term:qualified", Just "LAhE")
+convertTerm (TermWithSides o _) = convertTerm o
 
 -- JSON Serialization for GraphOutput
 

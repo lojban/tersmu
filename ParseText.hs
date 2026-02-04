@@ -64,6 +64,11 @@ afterPos p s = drop (posCol p - 1) s
 -- which is a bad idea, and more to the point we're reparsing the whole text
 -- repeatedly. Chunking the text into paragraphs would be a start.
 --
+-- | SEI/ti'o (Discursive) frees must not be nudged; they stay in place and attach to the preceding term.
+isDiscursiveFree :: Free -> Bool
+isDiscursiveFree Discursive{} = True
+isDiscursiveFree _ = False
+
 nudgeFrees :: (String -> Result LojbanDerivs a) -> String -> Either Int a
 nudgeFrees parse s = fmap fst $ nudgeFrees' False parse s where
     nudgeFrees' :: Bool -> (String -> Result LojbanDerivs a) -> String -> Either Int (a,Int)
@@ -72,12 +77,14 @@ nudgeFrees parse s = fmap fst $ nudgeFrees' False parse s where
 	    Parsed a d _ -> Right (a, parsedPoint d)
 	    NoParse e ->
 		let pos = errorPoint e
-		    (head,tail) = splitAt pos str
+		    (headStr,tailStr) = splitAt pos str
 		in if inFree && pos == 0 then Left 0
-		else case nudgeFrees' True parseFree tail of
+		else case nudgeFrees' True parseFree tailStr of
 		    Left n -> Left $ pos + n
-		    Right (_,flen) ->
-			nudgeFrees' inFree parse $ nudgeFree head tail flen
+		    Right (freeVal, flen) ->
+			-- Never nudge SEI/ti'o; they are attached in-place to the preceding term
+			if isDiscursiveFree freeVal then Left pos
+			else nudgeFrees' inFree parse $ nudgeFree headStr tailStr flen
     errorPoint e = posCol (errorPos e) - 1
     parsedPoint d = posCol (dvPos d) - 1
     parseFree = lojbanfree . lojbanParse "free"
