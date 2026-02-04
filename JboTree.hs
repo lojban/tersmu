@@ -2,7 +2,9 @@
 module JboTree where
 
 import JboProp
+import JboShow (logjboshow)
 import JboSyntax
+import Bindful (evalBindful)
 import Logic hiding (Term)
 import qualified Logic (Term)
 import Data.List (intercalate)
@@ -76,13 +78,20 @@ jboTextToGraph texticules =
     processTexticules (t:ts) pendingSides = do
         case t of
             TexticuleProp p -> do
-                -- Create the main proposition node
-                propId <- convertPropToGraph p Nothing
-                -- Attach any pending side texticules to this proposition
+                -- Create the main proposition node; get last term id for attaching SEI
+                (propId, lastTermId) <- convertPropToGraphWithLastTerm p Nothing
+                -- Attach non-SEI pending sides to the proposition; SEI attaches to last term below
+                let propSides = filter (\(st, _) -> st /= SideDiscursive) pendingSides
                 mapM_ (\(sideType, sideT) -> do
                     sideId <- sideTexticuleToNode sideType sideT
-                    addEdge propId sideId "side") pendingSides
-                -- Continue with empty pending list
+                    addEdge propId sideId "side") propSides
+                -- Attach pending SEI (SideDiscursive) to the last term of the bridi, not to the prop
+                let seiSides = filter (\(st, _) -> st == SideDiscursive) pendingSides
+                case lastTermId of
+                    Just tid -> mapM_ (\(_, sideT) -> do
+                        sideId <- sideTexticuleToNode SideDiscursive sideT
+                        addEdge tid sideId "side") seiSides
+                    _ -> return ()
                 processTexticules ts []
             TexticuleFrag f -> do
                 -- Fragments are rare, add to pending
@@ -127,8 +136,10 @@ sideTexticuleToNode sideType (TexticuleProp p) = do
     let sideTypeStr = case sideType of
             SideBracketed -> "TO"
             SideDiscursive -> "SEI"
-    let contentKey = "side:" ++ sideTypeStr ++ ":" ++ show p
-    getOrCreateNode contentKey "side-texticule" (NDSideTexticule sideTypeStr (show p))
+    let content = evalBindful (logjboshow False p)
+    let contentOneLine = foldr (\c s -> if c == '\n' then ' ' : s else c : s) [] content
+    let contentKey = "side:" ++ sideTypeStr ++ ":" ++ contentOneLine
+    getOrCreateNode contentKey "side-texticule" (NDSideTexticule sideTypeStr contentOneLine)
 sideTexticuleToNode sideType (TexticuleFrag f) = do
     let sideTypeStr = case sideType of
             SideBracketed -> "TO"
@@ -145,123 +156,107 @@ fragToSideNode sideTypeStr (JboFragUnparsed _) = do
     let contentKey = "frag:" ++ sideTypeStr ++ ":unparsed"
     getOrCreateNode contentKey "side-texticule" (NDSideTexticule sideTypeStr "unparsed")
 
--- | Convert PropTree to graph (recursive)
-convertPropToGraph :: JboProp -> Maybe String -> GraphM String
-convertPropToGraph (Not p) parentId = do
+-- | Convert PropTree to graph (recursive); returns (nodeId, lastTermId for Rel).
+convertPropToGraphWithLastTerm :: JboProp -> Maybe String -> GraphM (String, Maybe String)
+convertPropToGraphWithLastTerm (Not p) parentId = do
     let contentKey = "not"
     nodeId <- getOrCreateNode contentKey "not" (NDNot (Just "NA"))
-    childId <- convertPropToGraph p (Just nodeId)
+    (childId, _) <- convertPropToGraphWithLastTerm p (Just nodeId)
     addEdge nodeId childId ""
     maybe (return ()) (\pid -> addEdge pid nodeId "") parentId
-    return nodeId
+    return (nodeId, Nothing)
 
-convertPropToGraph (Connected c p1 p2) parentId = do
+convertPropToGraphWithLastTerm (Connected c p1 p2) parentId = do
     let connStr = show c
     let contentKey = "conn:" ++ connStr
     nodeId <- getOrCreateNode contentKey "connective" (NDConnective connStr (Just "JOI"))
-    leftId <- convertPropToGraph p1 (Just nodeId)
-    rightId <- convertPropToGraph p2 (Just nodeId)
+    (leftId, _) <- convertPropToGraphWithLastTerm p1 (Just nodeId)
+    (rightId, lastT) <- convertPropToGraphWithLastTerm p2 (Just nodeId)
     addEdge nodeId leftId "L"
     addEdge nodeId rightId "R"
     maybe (return ()) (\pid -> addEdge pid nodeId "") parentId
-    return nodeId
+    return (nodeId, lastT)
 
-convertPropToGraph (NonLogConnected c p1 p2) parentId = do
+convertPropToGraphWithLastTerm (NonLogConnected c p1 p2) parentId = do
     let connStr = show c
     let contentKey = "nlconn:" ++ connStr
     nodeId <- getOrCreateNode contentKey "non-log-connective" (NDConnective connStr (Just "JOI"))
-    leftId <- convertPropToGraph p1 (Just nodeId)
-    rightId <- convertPropToGraph p2 (Just nodeId)
+    (leftId, _) <- convertPropToGraphWithLastTerm p1 (Just nodeId)
+    (rightId, lastT) <- convertPropToGraphWithLastTerm p2 (Just nodeId)
     addEdge nodeId leftId "L"
     addEdge nodeId rightId "R"
     maybe (return ()) (\pid -> addEdge pid nodeId "") parentId
-    return nodeId
+    return (nodeId, lastT)
 
-convertPropToGraph (Quantified q mr p) parentId = do
+convertPropToGraphWithLastTerm (Quantified q mr p) parentId = do
     st <- get
     let n = gsNextId st
     let varName = "x_" ++ show n
     let qStr = show q
     let contentKey = "quant:" ++ qStr ++ ":" ++ varName
     nodeId <- getOrCreateNode contentKey "quantifier" (NDQuantifier qStr varName (Just "PA"))
-    
     case mr of
         Just r -> do
-            restrId <- convertPropToGraph (r n) (Just nodeId)
+            (restrId, _) <- convertPropToGraphWithLastTerm (r n) (Just nodeId)
             addEdge nodeId restrId "restr"
         Nothing -> return ()
-    
-    bodyId <- convertPropToGraph (p n) (Just nodeId)
+    (bodyId, lastT) <- convertPropToGraphWithLastTerm (p n) (Just nodeId)
     addEdge nodeId bodyId ""
     maybe (return ()) (\pid -> addEdge pid nodeId "") parentId
-    return nodeId
+    return (nodeId, lastT)
 
-convertPropToGraph (Modal m p) parentId = do
+convertPropToGraphWithLastTerm (Modal m p) parentId = do
     (modalType, modalTag, mTermId, selmaho) <- convertModal m
     let contentKey = "modal:" ++ modalType ++ ":" ++ show modalTag
     nodeId <- getOrCreateNode contentKey "modal" (NDModal modalType modalTag selmaho)
-    
     case mTermId of
         Just termId -> addEdge nodeId termId "term"
         Nothing -> return ()
-    
-    childId <- convertPropToGraph p (Just nodeId)
+    (childId, lastT) <- convertPropToGraphWithLastTerm p (Just nodeId)
     addEdge nodeId childId ""
     maybe (return ()) (\pid -> addEdge pid nodeId "") parentId
-    return nodeId
+    return (nodeId, lastT)
 
-convertPropToGraph (Rel r ts) parentId = do
-    case r of
-        -- Special handling for abstractions - they contain nested propositions
+convertPropToGraphWithLastTerm (Rel r ts) parentId = do
+    (nodeId, lastT) <- case r of
         AbsPred abstractor (JboNPred arity pred) -> do
             let contentKey = "abs:" ++ show abstractor
             nodeId <- getOrCreateNode contentKey "abstraction" (NDRelation (show abstractor) "abstraction" (Just "NU"))
-            
-            -- Convert the abstracted proposition with dummy arguments
             let dummyArgs = replicate arity Unfilled
             let innerProp = pred dummyArgs
-            innerPropId <- convertPropToGraph innerProp (Just nodeId)
+            (innerPropId, _) <- convertPropToGraphWithLastTerm innerProp (Just nodeId)
             addEdge nodeId innerPropId "body"
-            
-            -- Convert terms (the constant that this abstraction binds to)
             termIds <- mapM convertTermToGraph ts
             sequence_ $ zipWith (\termId idx -> addEdge nodeId termId ("x" ++ show idx)) termIds [1..]
-            
             maybe (return ()) (\pid -> addEdge pid nodeId "") parentId
-            return nodeId
-            
+            return (nodeId, if null termIds then Nothing else Just (last termIds))
         AbsProp abstractor innerProp -> do
             let contentKey = "absprop:" ++ show abstractor
             nodeId <- getOrCreateNode contentKey "abstraction-prop" (NDRelation (show abstractor) "abstraction" (Just "NU"))
-            
-            -- Convert the abstracted proposition
-            innerPropId <- convertPropToGraph innerProp (Just nodeId)
+            (innerPropId, _) <- convertPropToGraphWithLastTerm innerProp (Just nodeId)
             addEdge nodeId innerPropId "body"
-            
-            -- Convert terms
             termIds <- mapM convertTermToGraph ts
             sequence_ $ zipWith (\termId idx -> addEdge nodeId termId ("x" ++ show idx)) termIds [1..]
-            
             maybe (return ()) (\pid -> addEdge pid nodeId "") parentId
-            return nodeId
-            
-        -- Regular relations
+            return (nodeId, if null termIds then Nothing else Just (last termIds))
         _ -> do
             let (relName, relType, selmaho) = convertRel r
             let contentKey = "rel:" ++ relType ++ ":" ++ relName
             nodeId <- getOrCreateNode contentKey "relation" (NDRelation relName relType selmaho)
-            
             termIds <- mapM convertTermToGraph ts
             sequence_ $ zipWith (\termId idx -> addEdge nodeId termId ("x" ++ show idx)) termIds [1..]
-            
             maybe (return ()) (\pid -> addEdge pid nodeId "") parentId
-            return nodeId
+            return (nodeId, if null termIds then Nothing else Just (last termIds))
+    return (nodeId, lastT)
 
-convertPropToGraph Eet parentId = do
+convertPropToGraphWithLastTerm Eet parentId = do
     let contentKey = "eet"
     nodeId <- getOrCreateNode contentKey "eet" NDEet
     maybe (return ()) (\pid -> addEdge pid nodeId "") parentId
-    return nodeId
+    return (nodeId, Nothing)
+
+convertPropToGraph :: JboProp -> Maybe String -> GraphM String
+convertPropToGraph p parentId = fst <$> convertPropToGraphWithLastTerm p parentId
 
 -- | Convert modal operator
 convertModal :: JboModalOp -> GraphM (String, Maybe String, Maybe String, Maybe String)
