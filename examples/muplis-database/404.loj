@@ -1,0 +1,11 @@
+> .i no'o da ga nai da zdile gi ckaji le ka li'a mi se pluka le ka zukte da
+
+non-veridical: ∀x1. ka[pluka(f0(x1),mi,\1)](f1(x1))
+non-veridical: ∀x1. ka[zukte(\1,x1)](f0(x1))
+(no'o) x1. (zdile(x1,x1) → ckaji(x1,f1(x1)))
+
+ju'a nai ro da zo'u li ma'o fypa mo'e da lo'o ka li ma'o fyno mo'e da lo'o pluka mi ce'u kei
+.i ju'a nai ro da zo'u li ma'o fyno mo'e da lo'o ka ce'u zukte da kei
+.i no'o boi da zo'u ga nai da zdile da gi da ckaji li ma'o fypa mo'e da lo'o
+
+-----

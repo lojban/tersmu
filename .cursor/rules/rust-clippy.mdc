@@ -1,0 +1,20 @@
+---
+description: Validate Rust with cargo clippy (not check/build alone)
+globs: "**/*.rs"
+alwaysApply: false
+---
+
+# Rust validation
+
+When validating, linting, or reviewing Rust changes, use **Clippy**, not only `cargo check` or `cargo build`.
+
+- Run from the crate root: `cargo clippy` (in this repo, the workspace crate is under `rust/`, so run it there or pass `--manifest-path rust/Cargo.toml`).
+- Prefer `cargo clippy -- -D warnings` when you need a strict pass with warnings denied.
+
+```bash
+cd rust && cargo clippy
+# or from repo root:
+cargo clippy --manifest-path rust/Cargo.toml
+```
+
+Do not treat `cargo build` or `cargo check` alone as sufficient validation when the task is to verify Rust code quality or catch issues Clippy would report.

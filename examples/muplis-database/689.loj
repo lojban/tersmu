@@ -1,0 +1,13 @@
+> no da snada bu'u le munje se ja'e le nu le nei na troci
+
+non-veridical: nu[¬troci(c1)](c2)
+non-veridical: nei(c1)
+non-veridical: munje(c0)
+EQ(0) x1. (bu'u)(c0). (se ja'e)(c2). snada(x1)
+
+ju'a nai cy re nu na ku cy pa troci kei
+.i ju'a nai cy pa nei
+.i ju'a nai cy no munje
+.i no da bu'u cy no se ja'e cy re zo'u da snada
+
+-----

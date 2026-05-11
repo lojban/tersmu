@@ -226,8 +226,8 @@ logjboshowConn True prefix (JboConnJoik mtag joik) = do
     mtags <- maybe "" ((" "++).(++" bo")) <$> traverse (logjboshow True) mtag
     return $ joiks ++ mtags
 
-logjboshowJoik False _ joik = return joik
-logjboshowJoik True qconn joik = return $ if joik == "??" then qconn else joik
+logjboshowJoik False _ joik = return $ if filter (/= ' ') joik == "??" then "??" else joik
+logjboshowJoik True qconn joik = return $ if filter (/= ' ') joik == "??" then qconn else joik
 
 instance JboShow JboTag where
     logjboshow jbo (ConnectedTag con tag1 tag2) = do
@@ -534,20 +534,20 @@ instance JboShow JboProp
 	      withNext SRAss $ \n ->
 		  do as <- logjboshow jbo (BoundRVar n)
 		     -- XXX: lojban output is a hack, but works
-		     logjboshow' jbo (ps ++ ["tu'o","mo","cei",as]) (p n)
+		     logjboshow' jbo (ps ++ ["mo","cei",as]) (p n)
 	  logjboshow' jbo ps (Quantified (RelQuantifier q) _ p) =
 	    withNext SRVar $ \n -> do
 		qs <- logjboshow jbo q
 		rvs <- logjboshow jbo (BoundRVar n)
 		logjboshow' jbo (ps ++
-		    [qs, if jbo then rvs else rvs ++ ". "]) (p n)
+		    [quantifierPrefix jbo q qs, if jbo then rvs else rvs ++ ". "]) (p n)
 	  logjboshow' jbo ps (Quantified q r p) =
 	      withNext SVar $ \n ->
 		  do qs <- logjboshow jbo q
 		     vs <- logjboshow jbo (BoundVar n)
 		     rss <- logjboshowRestriction jbo r
 		     logjboshow' jbo (ps ++
-			 [qs, vs] ++ rss) (p n)
+			 [quantifierPrefix jbo q qs, vs] ++ rss) (p n)
 	  logjboshow' jbo ps (Modal (WithEventAs t) p) = do
 	    ts <- logjboshow jbo t
 	    logjboshow' jbo (ps ++ if jbo then ["fi'o","du"] ++ [ts] else [ts] ++ ["=. "]) p
@@ -610,6 +610,11 @@ instance JboShow JboProp
 	  logjboshow' True [] Eet = return ["jitfa to SPOFU toi"]
 	  logjboshow' False [] Eet = return ["_|_ (BUG)"]
 
+	  quantifierPrefix True _ qs = qs
+	  quantifierPrefix False (LojQuantifier Exists) qs = qs
+	  quantifierPrefix False (LojQuantifier Forall) qs = qs
+	  quantifierPrefix False _ qs = qs ++ " "
+
 	  logjboshowRestriction jbo Nothing = return $ if jbo then [] else [". "]
 	  logjboshowRestriction jbo (Just r) = do
 	    ss <- withShuntedRelVar (\m -> logjboshow' jbo [] (r m) )
@@ -630,12 +635,11 @@ instance JboShow Texticule where
     logjboshow jbo (TexticuleFrag f) = logjboshow jbo f
     logjboshow jbo (TexticuleProp p) = logjboshow jbo p
     logjboshow jbo (TexticuleSide sideType t) = do
-        -- For side texticules, wrap with appropriate markers
         ts <- logjboshow jbo t
         return $ case (jbo, sideType) of
             (True, SideBracketed) -> "to " ++ ts ++ " toi"
             (True, SideDiscursive) -> "sei " ++ ts ++ " se'u"
-            (False, _) -> "{SIDE: " ++ ts ++ "}"
+            (False, _) -> ts
 instance JboShow JboFragment where
     logjboshow jbo (JboFragTerms ts) =
 	(if not jbo then bracket '[' . ("Fragment: "++) else id) <$>

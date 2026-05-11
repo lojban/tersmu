@@ -1,0 +1,11 @@
+> .i lei za'u da pu dunda fi mi'a so'i se citka .ei
+
+∀x1. gunma(f1(x1),f0(x1))
+non-veridical: ∀x1. ((f0(x1) ≤ x1) ∧ (za'u) mei(f0(x1)))
+∃x1. (pu)(). (so'i) x2:(citka( ,_)). dunda(f1(x1), ,mi'a,x2)
+
+ro da zo'u li ma'o fypa mo'e da lo'o gunma li ma'o fyno mo'e da lo'o
+.i ju'a nai ro da zo'u ge li ma'o fyno mo'e da lo'o me da me'u gi li ma'o fyno mo'e da lo'o za'u mei
+.i su'o da pu ku so'i boi de poi citka ke'a ku'o zo'u li ma'o fypa mo'e da lo'o dunda fi mi'a de
+
+-----

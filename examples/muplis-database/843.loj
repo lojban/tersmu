@@ -1,0 +1,11 @@
+> .i lei za'u da djica la'e do'i
+
+∀x1. gunma(f1(x1),f0(x1))
+non-veridical: ∀x1. ((f0(x1) ≤ x1) ∧ (za'u) mei(f0(x1)))
+∃x1. djica(f1(x1),{la'e}(do'i))
+
+ro da zo'u li ma'o fypa mo'e da lo'o gunma li ma'o fyno mo'e da lo'o
+.i ju'a nai ro da zo'u ge li ma'o fyno mo'e da lo'o me da me'u gi li ma'o fyno mo'e da lo'o za'u mei
+.i su'o da zo'u li ma'o fypa mo'e da lo'o djica la'e do'i lu'u
+
+-----

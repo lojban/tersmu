@@ -143,6 +143,15 @@
                     <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Lojban Semantic Parser</p>
                 </div>
             </div>
+            <!-- Implementation Switcher -->
+            <div class="flex items-center space-x-2 bg-slate-100 rounded-lg p-1">
+                <button id="tab-haskell" onclick="switchImplementation('haskell')" class="px-3 py-1.5 text-xs font-semibold rounded-md transition-all bg-white text-indigo-600 shadow-sm">
+                    Haskell
+                </button>
+                <button id="tab-rust" onclick="switchImplementation('rust')" class="px-3 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900">
+                    Rust
+                </button>
+            </div>
         </div>
     </header>
 
@@ -310,7 +319,8 @@
         </div>
     </footer>
 
-    <script src="tersmu.js"></script>
+    <script src="tersmu-haskell.js"></script>
+    <script src="tersmu-rust-wrapper.js"></script>
     <script src="tree-viz.js"></script>
     <script>
         // Init Lucide icons
@@ -318,12 +328,44 @@
         if (typeof initTreeViz === 'function') initTreeViz();
 
         let wasmInstance = null;
+        let currentImplementation = 'haskell'; // 'haskell' or 'rust'
         const STORAGE_KEY = 'tersmu-input';
+        const STORAGE_IMPL_KEY = 'tersmu-implementation';
         const TEXT_LIMIT = 2000;
-        
+
+        // Switch between implementations
+        function switchImplementation(impl) {
+            if (impl === currentImplementation) return;
+
+            currentImplementation = impl;
+            localStorage.setItem(STORAGE_IMPL_KEY, impl);
+
+            // Update tab UI
+            const haskellTab = document.getElementById('tab-haskell');
+            const rustTab = document.getElementById('tab-rust');
+
+            if (impl === 'haskell') {
+                haskellTab.classList.add('bg-white', 'text-indigo-600', 'shadow-sm');
+                haskellTab.classList.remove('text-slate-600', 'hover:text-slate-900');
+                rustTab.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm');
+                rustTab.classList.add('text-slate-600', 'hover:text-slate-900');
+            } else {
+                rustTab.classList.add('bg-white', 'text-indigo-600', 'shadow-sm');
+                rustTab.classList.remove('text-slate-600', 'hover:text-slate-900');
+                haskellTab.classList.remove('bg-white', 'text-indigo-600', 'shadow-sm');
+                haskellTab.classList.add('text-slate-600', 'hover:text-slate-900');
+            }
+
+            // Re-parse with new implementation if there's input
+            const input = document.getElementById('lojban-input').value.trim();
+            if (input && wasmInstance) {
+                handleParse();
+            }
+        }
+
         async function loadWasm() {
 
-            
+
             try {
                 let wasmMemory;
                 const getMemory = () => {
@@ -422,15 +464,16 @@
                         sched_yield: () => 0,
                     }
                 };
-                
+
                 const progressContainer = document.getElementById('wasm-download-progress');
                 const progressBar = document.getElementById('download-bar');
                 const progressText = document.getElementById('download-percentage');
                 const downloadStatus = document.getElementById('download-status-text');
 
-                const response = await fetch('tersmu.wasm');
+                // Load Haskell WASM
+                const response = await fetch('tersmu-haskell.wasm');
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                
+
                 const contentLength = response.headers.get('Content-Length');
                 const total = contentLength ? parseInt(contentLength, 10) : 9 * 1024 * 1024;
                 let loaded = 0;
@@ -443,11 +486,11 @@
                     if (done) break;
                     chunks.push(value);
                     loaded += value.length;
-                    
+
                     if (total) {
                         const percentRaw = (loaded / total) * 100;
                         const percent = Math.min(100, Math.round(percentRaw));
-                        
+
                         if (progressBar) {
                             progressBar.style.width = `${percent}%`;
                             if (percentRaw > 100) {
@@ -476,20 +519,34 @@
                     wasmBytes.set(chunk, position);
                     position += chunk.length;
                 }
-                
-                if (downloadStatus) downloadStatus.textContent = 'Initializing engine...';
+
+                if (downloadStatus) downloadStatus.textContent = 'Initializing Haskell engine...';
 
                 const result = await WebAssembly.instantiate(wasmBytes.buffer, wasiImport);
-                
+
                 wasmInstance = result.instance;
-                
+
                 if (typeof initWasm === 'function') {
                     await initWasm(wasmInstance);
                 }
-                
+
+                // Load Rust WASM
+                if (downloadStatus) downloadStatus.textContent = 'Loading Rust engine...';
+                try {
+                    await initRustWasm();
+                    console.log('Rust WASM loaded successfully');
+                } catch (error) {
+                    console.error('Failed to load Rust WASM:', error);
+                }
+
                 if (progressContainer) progressContainer.classList.add('hidden');
-                
-                // Restore content before triggering initial parse
+
+                // Restore content and implementation preference
+                const savedImpl = localStorage.getItem(STORAGE_IMPL_KEY) || 'haskell';
+                if (savedImpl !== 'haskell') {
+                    switchImplementation(savedImpl);
+                }
+
                 restoreContent();
 
                 // Trigger parse if there's initial text
@@ -501,7 +558,7 @@
                 console.error('Error loading WASM:', error);
                 const progressContainer = document.getElementById('wasm-download-progress');
                 const downloadStatus = document.getElementById('download-status-text');
-                
+
                 if (downloadStatus) {
                     downloadStatus.textContent = 'Failed to load engine.';
                     downloadStatus.classList.add('text-red-500');
@@ -553,7 +610,7 @@
             const resultsArea = document.getElementById('results-area');
             const loading = document.getElementById('parse-loading');
             const errorArea = document.getElementById('parse-error');
-            
+
             // Save to localStorage (capped at 2000 symbols)
             localStorage.setItem(STORAGE_KEY, input.substring(0, TEXT_LIMIT));
 
@@ -568,20 +625,26 @@
                 }
                 return;
             }
-            
+
             isParsing = true;
-            
+
             // UI States
             if (!isAuto) {
                 resultsArea.classList.add('hidden');
                 errorArea.classList.add('hidden');
                 loading.classList.remove('hidden');
             }
-            
+
             try {
-                const result = await tersmuParse(input);
+                let result;
+                if (currentImplementation === 'rust') {
+                    result = await tersmuParseRust(input);
+                } else {
+                    result = await tersmuParse(input);
+                }
+
                 const json = JSON.parse(result);
-                
+
                 if (json.error) {
                     if (!isAuto) {
                         showError(json.error);
@@ -590,14 +653,14 @@
                     console.log('=== Parse Success ===');
                     console.log('Full JSON result:', json);
                     console.log('Graph data:', json.graph);
-                    
+
                     document.getElementById('logical-output').textContent = json.logical;
                     document.getElementById('canonical-output').textContent = json.canonical;
-                    
+
                     resultsArea.classList.remove('hidden');
                     // Refresh Lucide icons for new content
-                    lucide.createIcons(); 
-                    
+                    lucide.createIcons();
+
                     // Render Tree after UI is visible so dimensions are correct
                     if (json.graph) {
                         console.log('About to render graph...');
@@ -609,8 +672,8 @@
                         }, 50);
                     } else {
                         console.warn('No graph data in JSON result');
-                    } 
-                    
+                    }
+
                     if (isAuto) {
                         errorArea.classList.add('hidden');
                     }

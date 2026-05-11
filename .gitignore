@@ -1,5 +1,4 @@
 result
-rust/
 archive/
 .specstory/
 examples/*.diff
@@ -7,3 +6,8 @@ pappy/**/*.o
 pappy/**/*.hi
 pappy/pappy
 dist-newstyle/
+target
+/rust/target/
+/rust/tersmu
+/rust/web-app/static/pkg/
+.playwright-mcp/

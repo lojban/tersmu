@@ -1,0 +1,11 @@
+> .i lai djo'uns. prami le pa tixnu be ro me vo'a
+
+non-veridical: ∀x1. (∀x2:((_ ≤ x1)). tixnu(f1(x1),x2) ∧ 1 mei(f1(x1)))
+gunma(c0,"djo'uns")
+prami(c0,f1(c0))
+
+ju'a nai ro da zo'u ge ro de poi ke'a me da me'u ku'o zo'u li ma'o fypa mo'e da lo'o tixnu de gi li ma'o fypa mo'e da lo'o pa mei
+.i cy no gunma la djo'uns.
+.i cy no prami li ma'o fypa mo'e cy no lo'o
+
+-----

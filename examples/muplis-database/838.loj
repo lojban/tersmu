@@ -1,0 +1,11 @@
+> .i xu lei za'u da mo'u klama
+
+∀x1. gunma(f1(x1),f0(x1))
+non-veridical: ∀x1. ((f0(x1) ≤ x1) ∧ (za'u) mei(f0(x1)))
+?. ∃x1. (mo'u)(). klama(f1(x1))
+
+ro da zo'u li ma'o fypa mo'e da lo'o gunma li ma'o fyno mo'e da lo'o
+.i ju'a nai ro da zo'u ge li ma'o fyno mo'e da lo'o me da me'u gi li ma'o fyno mo'e da lo'o za'u mei
+.i xu kau su'o da mo'u ku zo'u li ma'o fypa mo'e da lo'o klama
+
+-----

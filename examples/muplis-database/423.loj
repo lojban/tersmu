@@ -1,0 +1,7 @@
+> ko erve tu'a pa litce poi ladru .ije ganai zvati fa su'o caksova gi ko erve tu'a pare ri
+
+(EQ(1) x1:((litce(_) ∧ ladru(_))). erve(ko,{tu'a}(x1)) ∧ (∃x1:(caksova(_)). zvati(x1) → EQ(12) x1:((_ ≤ {tu'a}([UNBOUND Var]))). erve(ko,{tu'a}(x1))))
+
+ge pa da poi ge ke'a litce gi ke'a ladru ku'o zo'u ko erve tu'a da lu'u gi ga nai su'o da poi ke'a caksova ku'o zo'u da zvati gi pare da poi ke'a me tu'a lo NALSELTRO zei da ku lu'u me'u ku'o zo'u ko erve tu'a da lu'u
+
+-----

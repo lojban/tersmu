@@ -268,7 +268,8 @@ convertModal (JboTagged tag mt) = do
     -- Extract potential selmaho from tag
     let selmaho = getSelmahoFromTag tag
     
-    return ("tagged", Just $ show tag, termId, selmaho)
+    let tagText = evalBindful $ logjboshow True tag
+    return ("tagged", Just tagText, termId, selmaho)
 convertModal (WithEventAs t) = do
     termId <- convertTermToGraph t
     return ("event", Nothing, Just termId, Just "NOI")

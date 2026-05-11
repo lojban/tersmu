@@ -1,0 +1,15 @@
+> le ninmu na certu lo ka xusra lo jitfa poi simlu lo ka jetnu
+
+ka[xusra(\1,c2)](c3)
+(jitfa(c2) ∧ simlu(c2,c1))
+ka[jetnu(\1)](c1)
+non-veridical: ninmu(c0)
+¬certu(c0,c3)
+
+cy ci ka ce'u xusra cy re kei
+.i ge cy re jitfa gi cy re simlu cy pa
+.i cy pa ka ce'u jetnu kei
+.i ju'a nai cy no ninmu
+.i na ku cy no certu cy ci
+
+-----

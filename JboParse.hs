@@ -47,29 +47,14 @@ evalText (Text fs nai paras) = do
 	    doFrees fs >> parseFrag frag
 	evalFragOrStatement ((Right st),fs) = (TexticuleProp <$>) $
 	    withQuestions True $ do
-		-- Run only non-SEI frees (SEI at statement level attach to last term below)
-		doFrees (filter (not . isDiscursiveFree) fs)
-		p <- evalStatement st
-		-- Attach any Discursive (SEI) frees from statement or sentence to last term of the bridi
-		let discursives = filter isDiscursiveFree (fs ++ statementFrees st)
-		if null discursives then return p
-		else do
-		    sides <- evalParseM (processDiscursiveFrees discursives)
-		    return $ replaceLastTermInProp (\t -> TermWithSides t sides) p
+		doFrees fs
+		evalStatement st
 
 -- XXX: we don't handle fragments properly at all currently
 -- (to be done as part of any eventual question-and-answer handling)
 parseFrag :: Fragment -> ParseStateM JboFragment
 parseFrag (FragTerms ts) = evalParseM $ JboFragTerms <$> parseTerms ts
 parseFrag f = return $ JboFragUnparsed f
-
--- | Collect all Free lists from a statement (for attaching Discursive to last term).
-statementFrees :: Statement -> [Free]
-statementFrees (Statement fs _ s) = fs ++ statement1Frees s
-statement1Frees :: Statement1 -> [Free]
-statement1Frees (StatementSentence fs _) = fs
-statement1Frees (ConnectedStatement _ s1 s2) = statement1Frees s1 ++ statement1Frees s2
-statement1Frees (StatementParas _ _) = []
 
 evalStatement :: Statement -> ParseStateM JboProp
 evalStatement s = evalParseM (parseStatement s)
@@ -118,8 +103,7 @@ parseStatements ss = bigAnd <$> mapM parseStatement ss
 
 parseStatement :: Statement -> JboPropM JboProp
 parseStatement (Statement fs pts s) = do
-    -- Discursive (SEI) frees are not run here; they are attached to the last term in evalText
-    doFreesInParseM (filter (not . isDiscursiveFree) fs)
+    doFreesInParseM fs
     parsePrenexTerms pts
     parseStatement1 s
 
@@ -135,8 +119,7 @@ parseStatement1 (StatementParas mtag ts) = do
 	parseTexticule (Left frag) = liftParseStateMToParseM $ Left <$> parseFrag frag
 	parseTexticule (Right st) = Right <$> parseStatement st
 parseStatement1 (StatementSentence fs s) = do
-    -- Discursive (SEI) frees are attached to last term in evalText, not added to sideTexticules
-    doFreesInParseM (filter (not . isDiscursiveFree) fs)
+    doFreesInParseM fs
     b <- partiallyRunBridiM $ parseSentence s
     modifyBribastiBindings $ setShunting (TUGOhA "go'i") b
     return $ b nullArgs
@@ -217,7 +200,7 @@ parseSelbri3 (ConnectedSB fore con sb sb') = do
     p' <- selbriToVPred $ sb3tosb sb'
     return $ jboRelToBridi $ TanruConnective con' p p'
 parseSelbri3 (ScalarNegatedSB nahe sb) =
-    mapRelsInBridi (ScalarNegatedRel nahe) <$> parseSelbri3 sb
+    mapRelsInBridi (ScalarNegatedRel nahe) <$> parsedSelbriToNewSelbri (parseSelbri3 sb)
 parseSelbri3 (TanruUnit fs tu2 las) =
     advanceArgPosToSelbri >> parseTU tu2 <* parseTerms las <* doFreesInParseM fs
     {- Alternative: give tanru units their own scope, with linkargs deleting

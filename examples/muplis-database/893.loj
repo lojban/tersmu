@@ -1,0 +1,17 @@
+> .i ma'i le pa moi cu ckape .i ma'i le ro moi cu cinri i ma'i le re da sarcu
+
+non-veridical: ∀x1. ((f2(x1) ≤ x1) ∧ 2 mei(f2(x1)))
+non-veridical: (ro) moi(c1)
+non-veridical: 1 moi(c0)
+(ma'i)(c0). ckape()
+(ma'i)(c1). cinri()
+∃x1. (ma'i)(f2(x1)). sarcu()
+
+ju'a nai ro da zo'u ge li ma'o fyre mo'e da lo'o me da me'u gi li ma'o fyre mo'e da lo'o re mei
+.i ju'a nai cy pa ro moi
+.i ju'a nai cy no pa moi
+.i ma'i cy no zo'u ckape
+.i ma'i cy pa zo'u cinri
+.i su'o da ma'i li ma'o fyre mo'e da lo'o zo'u sarcu
+
+-----

@@ -1,0 +1,11 @@
+# GitHub Pages Configuration for tersmu
+
+# This file is automatically created by the CI/CD pipeline
+# It ensures proper MIME types and prevents Jekyll processing
+
+# Prevent Jekyll from processing files starting with underscore
+include:
+  - _*
+
+# Ensure WASM files are served with correct MIME type
+# (GitHub Pages should handle this automatically, but we include it for clarity)

@@ -1,0 +1,11 @@
+> i ai mi te vecnu ti voi plise e y tu voi perli
+
+(non-veridical: perli(c1) ∧ (c1 ≤ tu))
+(non-veridical: plise(c0) ∧ (c0 ≤ ti))
+(vecnu( ,c0,mi) ∧ vecnu( ,c1,mi))
+
+ge ju'a nai cy pa perli gi cy pa me tu me'u
+.i ge ju'a nai cy no plise gi cy no me ti me'u
+.i ge vecnu cy no mi gi vecnu cy pa mi
+
+-----

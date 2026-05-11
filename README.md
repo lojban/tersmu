@@ -1,282 +1,192 @@
-# tersmu
+# tersmu - Lojban Semantic Parser
 
-**tersmu** is a semantic parser for [Lojban](https://www.lojban.org). It translates Lojban text into predicate logic.
+A powerful semantic parser for Lojban that converts Lojban text into logical forms and canonical representations.
 
-> **Disclaimer:** This is an unofficial project. While it aims to follow baseline prescription where feasible, the semantics it assigns to Lojban may in some cases be non-standard or incorrect.
+## 🌐 Try it Online
 
----
+**Live Demo:** [https://lojban.github.io/tersmu/](https://lojban.github.io/tersmu/) *(or your GitHub Pages URL)*
 
-## Production Build (Docker)
+The web application runs entirely in your browser using WebAssembly, with two implementations to choose from:
+- **Haskell**: Original implementation
+- **Rust**: High-performance port
 
-To build a slim, production-ready image and run the HTTP REST API:
+## Features
+
+- **Semantic Parsing**: Converts Lojban text to logical forms
+- **Canonical Form**: Generates normalized Lojban output
+- **Graph Visualization**: Interactive semantic graph rendering
+- **Dual Implementation**: Switch between Haskell and Rust parsers
+- **Browser-Based**: No server required, runs via WebAssembly
+
+## Quick Start
+
+### Web Application
+
+Visit the [live demo](https://lojban.github.io/tersmu/) or run locally:
 
 ```bash
-# Build the production image
-docker build -t tersmu .
-
-# Run the API
-docker run --rm -p 8080:8080 tersmu
+cd wasm-web-app
+python3 -m http.server 8000
+# Open http://localhost:8000
 ```
 
-The API will be available at `http://localhost:8080`. See [HTTP REST API](#http-rest-api) for usage.
-
-### Run the CLI parser
-
-You can also run the command-line parser using the same production image:
+### Command Line (Rust)
 
 ```bash
-# Parse a file
-docker run --rm -it --entrypoint tersmu tersmu examples/1.jbo
-
-# Parse from stdin (paste Lojban, then Ctrl-D)
-docker run --rm -it --entrypoint tersmu tersmu
+cd rust
+cargo build --release
+./target/release/tersmu "mi klama le zarci"
 ```
 
----
+### Command Line (Haskell)
 
-## Development (Hot Reloading)
+```bash
+cabal build
+cabal run tersmu -- "mi klama le zarci"
+```
 
-For local development, you can use `docker-compose` with a container that watches your source files and automatically reloads the server using `ghcid`.
+## Building
 
 ### Prerequisites
 
-The parser files must be generated before the application can run. Since the necessary tools (Python, Make) are installed within the Docker image, you should run the generation commands using `docker compose`:
+**For Haskell:**
+- GHC 9.x
+- Cabal 3.x
+- Docker (for WASM builds)
 
-```bash
-# Start the container
-docker compose -f docker-compose.dev.yml up -d
+**For Rust:**
+- Rust 1.70+
+- wasm-bindgen-cli (for WASM builds)
 
-# Generate pappy files and Haskell modules inside the container
-docker compose -f docker-compose.dev.yml exec tersmu python3 scripts/gen_pappy.py Lojban.pest Lojban.pappy.rhs -o Lojban.pappy
-docker compose -f docker-compose.dev.yml exec tersmu python3 scripts/gen_pappy.py Morphology.pest Morphology.pappy.rhs -o Morphology.pappy
-docker compose -f docker-compose.dev.yml exec tersmu make pappy/pappy/pappy
-docker compose -f docker-compose.dev.yml exec tersmu make Pappy/Parse.hs Lojban.hs Morphology.hs
-```
+### Build WASM Applications
 
-### Start the development environment
-
-If you haven't already:
-
-```bash
-docker compose -f docker-compose.dev.yml up --build
-```
-
-- **Hot Reloading:** Your local directory is mounted into the container. Any changes to `.hs` files will trigger an automatic incremental rebuild and restart of `tersmu-server` via `ghcid`.
-- **Persistent Cache:** Cabal dependencies and build artifacts are stored in Docker volumes (`cabal_store`, `cabal_dist`) to keep rebuilds fast.
-- **Port:** The dev server listens on port `8080`.
-
-### Workflow
-
-1. Edit your `.hs` files locally
-2. Save the file
-3. `ghcid` inside the container automatically detects changes, recompiles, and restarts the server
-4. Test your changes at `http://localhost:8080`
-
-### Rebuilding generated files
-
-If you modify the `.pest` or `.pappy.rhs` grammar files, you need to regenerate the parser files. You can do this inside the running container:
-
-```bash
-docker compose -f docker-compose.dev.yml exec tersmu python3 scripts/gen_pappy.py Lojban.pest Lojban.pappy.rhs -o Lojban.pappy
-docker compose -f docker-compose.dev.yml exec tersmu make Lojban.hs
-```
-
-`ghcid` will notice the changed `.hs` files and reload automatically.
-
----
-
-## HTTP REST API
-
-The server exposes a small REST API on port **8080**.
-
-| Method | Path     | Description                    |
-|--------|----------|--------------------------------|
-| `GET`  | `/`      | API description                |
-| `GET`  | `/health`| Health check                   |
-| `POST` | `/`      | Parse Lojban text (request body) |
-| `POST` | `/parse` | Parse Lojban text (request body) |
-
-### Parse Lojban
-
-Send the Lojban text as the request body (plain text, UTF-8). One line per sentence; blank lines are allowed.
-
-**Response:** The API returns **JSON** (`Content-Type: application/json`). All string values are trimmed of leading/trailing spaces and newlines.
-
-**Single line:** One JSON object with keys:
-- `input` — the trimmed input line
-- `logical` — logical form (bracket notation), or `null` on error
-- `canonical` — canonicalized Lojban form, or `null` on error
-- `tree` — structured AST (JSON array), or `null` on error
-- `error` — `null` on success, or the error message (morphology/parse) on failure
-
-**Multiple lines:** One JSON object with key `results` — an array of objects, each with the same keys as above.
-
-**Example (curl):**
-
-```bash
-# Single line
-curl -s -X POST -H "Content-Type: text/plain; charset=utf-8" \
-  -d "mi klama le zarci" \
-  http://localhost:8080/parse
-
-# From file
-curl -s -X POST -H "Content-Type: text/plain; charset=utf-8" \
-  --data-binary @examples/1.jbo \
-  http://localhost:8080/parse
-```
-
-**Example response (success):**
-
-```json
-{
-  "input": "mi klama le zarci",
-  "logical": "non-veridical: zarci(c0)\nklama(mi,c0)",
-  "canonical": "ju'a nai cy no zarci\n.i mi klama cy no",
-  "tree": [
-    {
-      "type": "modal",
-      "modal": { "type": "veridical", "tag": "non-veridical", "term": null },
-      "child": {
-        "type": "relation",
-        "relation": { "name": "zarci", "type": "brivla" },
-        "terms": [{ "type": "constant", "value": "c0" }]
-      }
-    },
-    {
-      "type": "relation",
-      "relation": { "name": "klama", "type": "brivla" },
-      "terms": [
-        { "type": "named", "value": "mi" },
-        { "type": "constant", "value": "c0" }
-      ]
-    }
-  ],
-  "error": null
-}
-```
-
-**Example response (parse error):**
-
-```json
-{
-  "input": "mi klama",
-  "logical": null,
-  "canonical": null,
-  "tree": null,
-  "error": "Parse error:\n\t{...}\n\t ^"
-}
-```
-
-### Health check
-
-```bash
-curl -s http://localhost:8080/health
-# ok
-```
-
-### Testing the API with the example suite
-
-With the container running (`docker run -d -p 8080:8080 --name tersmu-api tersmu`):
-
-```bash
-./test_api_examples.sh
-```
-
-Optional: use a different API base URL:
-
-```bash
-TERSMU_API_URL=http://your-host:8080 ./test_api_examples.sh
-```
-
----
-
-## Command-line usage (tersmu)
-
-When run locally (see [Installation](#installation)) or via `docker run ... --entrypoint tersmu tersmu`:
-
-```bash
-tersmu [OPTIONS] [FILE]
-```
-
-- **No FILE:** read from stdin (interactive; one paragraph per input).
-- **FILE:** read from file. Use `-L` / `--lines` to treat each line as a separate Lojban text.
-
-**Options:**
-
-| Option        | Long         | Description |
-|---------------|--------------|-------------|
-| `-l`          | `--loj`      | Output logical form only |
-| `-j`          | `--jbo`      | Output forethoughtful Lojban form only |
-| `-L`          | `--lines`    | One line = one Lojban text |
-| `-p`          | `--paragraphs` | One blank-line-separated block = one text |
-| `-u`          | `--utf8`     | Output UTF-8 (default: ASCII) |
-| `-h`          | `--help`     | Show help |
-| `-v`          | `--version`  | Show version |
-|             | `--json`     | Output one JSON object per line (NDJSON) with input, logical, canonical, tree, error |
-
-**Examples:**
-
-```bash
-# Parse a file (one line per sentence)
-tersmu -L examples/1.jbo
-
-# Parse stdin
-echo "mi klama le zarci" | tersmu -L
-```
-
-## Documentation
-
-| Path | Description |
-|------|-------------|
-| [docs/overview.md](docs/overview.md) | Architecture and code overview |
-| [docs/BUGS.md](docs/BUGS.md) | Known limitations |
-| [docs/TODO.md](docs/TODO.md) | Planned work |
-| [docs/CHANGELOG.md](docs/CHANGELOG.md) | Version history |
-| [docs/design-notes.md](docs/design-notes.md) | Design notes |
-| [docs/notes/](docs/notes/) | Topic notes (bridi-operators, drt, illocution, questions, etc.) |
-
----
-
-## WebAssembly Build
-
-tersmu can be compiled to WebAssembly for use in web browsers.
-
-### Building the WASM version
-
-The easiest way to build the WASM module is using the provided script, which uses a specialized Docker environment (`Dockerfile.wasm`) to handle the cross-compilation toolchain:
-
+**Haskell WASM:**
 ```bash
 ./build_wasm.sh
 ```
 
-This script:
-1. Builds the `tersmu-wasm-builder` Docker image.
-2. Extracts the compiled `tersmu.wasm` from the container.
-3. Places it in the `wasm-web-app/` directory alongside the HTML/JS frontend.
+**Rust WASM:**
+```bash
+cd rust
+cargo build --release --target wasm32-unknown-unknown --lib
+wasm-bindgen \
+  --target web \
+  --out-dir ../wasm-web-app \
+  --out-name tersmu-rust \
+  target/wasm32-unknown-unknown/release/tersmu.wasm
+```
 
-### Running the WASM web app
+## CI/CD Pipeline
 
-Once built, you can serve the web app locally:
+The project uses GitHub Actions to automatically build and deploy both implementations to GitHub Pages.
+
+**Workflow:** `.github/workflows/deploy-wasm.yml`
+
+**On every push to `master`:**
+1. Builds Haskell WASM (~9MB)
+2. Builds Rust WASM (~200KB)
+3. Packages web application
+4. Deploys to GitHub Pages
+
+See [CI/CD Documentation](.github/CI-CD.md) for details.
+
+## Project Structure
+
+```
+tersmu/
+├── .github/
+│   ├── workflows/
+│   │   └── deploy-wasm.yml      # CI/CD pipeline
+│   └── CI-CD.md                 # Pipeline documentation
+├── rust/                        # Rust implementation
+│   ├── src/
+│   │   ├── lib.rs
+│   │   ├── wasm.rs             # WASM bindings
+│   │   └── ...
+│   └── Cargo.toml
+├── wasm-web-app/               # Web application
+│   ├── index.html              # Main UI with tab switcher
+│   ├── tersmu.js               # Haskell WASM wrapper
+│   ├── tersmu-rust-wrapper.js  # Rust WASM wrapper
+│   ├── tree-viz.js             # Graph visualization
+│   ├── DEPLOYMENT.md           # Deployment guide
+│   └── .nojekyll               # GitHub Pages config
+├── Dockerfile.wasm             # Haskell WASM build
+├── build_wasm.sh               # Haskell build script
+└── tersmu.cabal                # Haskell project file
+```
+
+## Development
+
+### Running Tests
+
+**Rust:**
+```bash
+cd rust
+cargo test
+```
+
+**Haskell:**
+```bash
+cabal test
+```
+
+### Local Development Server
 
 ```bash
 cd wasm-web-app
 python3 -m http.server 8000
 ```
 
-Then open http://localhost:8000 in your browser.
+## Implementation Comparison
 
-See [wasm-web-app/README.md](wasm-web-app/README.md) for more details.
+| Feature | Haskell | Rust |
+|---------|---------|------|
+| WASM Size | ~9 MB | ~200 KB |
+| Load Time | 3-5 sec | <1 sec |
+| Build Time | 15-20 min | 2-3 min |
+| Parse Speed | Fast | Fast |
+| Maturity | Original | Port |
 
----
+Both implementations produce identical output.
 
-## Hacking
+## Contributing
 
-- **Parser sources:** The canonical grammar is in **Pest** format (`.pest` + `.pappy.rhs`) for portability to Rust. The Makefile generates `Lojban.pappy` and `Morphology.pappy` from `Lojban.pest`/`Lojban.pappy.rhs` and `Morphology.pest`/`Morphology.pappy.rhs` via `scripts/gen_pappy.py`, then a patched [Pappy](http://mbays.freeshell.org/pappy) generates `Lojban.hs` and `Morphology.hs`. To refresh `.pest` and `.pappy.rhs` from edited `.pappy` files, run `python3 scripts/pappy_to_pest.py Lojban.pappy` (and similarly for Morphology). See the [Makefile](Makefile) for targets and dependencies.
-- **Architecture:** See [docs/overview.md](docs/overview.md).
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests
+5. Submit a pull request
 
----
+The CI/CD pipeline will automatically build and test your changes.
 
-## License and thanks
+## Documentation
 
-- **License:** GPL-3. See [COPYING](COPYING).
-- **Thanks:** John Clifford, selpa'i, Alex Burka, tsani, and especially Jorge Llambías (see [docs/THANKS.md](docs/THANKS.md)).
+- [CI/CD Pipeline](.github/CI-CD.md) - Automated build and deployment
+- [Deployment Guide](wasm-web-app/DEPLOYMENT.md) - GitHub Pages setup
+- [Rust Implementation](rust/README.md) - Rust-specific documentation
+
+## Browser Compatibility
+
+- Chrome/Edge 57+
+- Firefox 52+
+- Safari 11+
+
+Requires WebAssembly support.
+
+## License
+
+GPL-3.0
+
+## Links
+
+- [Lojban.org](https://lojban.org) - Official Lojban website
+- [Lojban Wiki](https://mw.lojban.org) - Community wiki
+- [Discord](https://discord.gg/4KhzRzpmVr) - Live chat
+
+## Acknowledgments
+
+Built with:
+- [GHC WebAssembly Backend](https://gitlab.haskell.org/ghc/ghc-wasm-meta)
+- [wasm-bindgen](https://rustwasm.github.io/wasm-bindgen/)
+- [Cytoscape.js](https://js.cytoscape.org/) - Graph visualization

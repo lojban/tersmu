@@ -1,0 +1,17 @@
+> .i lei tapla poi farlu fi le drudi pu co'a porpi loi so'i ve'i spisa
+
+gunma(c4,c3)
+((ve'i)(). spisa(c3) ∧ (so'i) mei(c3))
+gunma(c2,c1)
+non-veridical: (tapla(c1) ∧ (pu)(). (co'a)(). farlu(c1, ,c0))
+non-veridical: drudi(c0)
+porpi(c2,c4)
+
+cy vo gunma cy ci
+.i ge ve'i ku zo'u cy ci spisa gi cy ci so'i mei
+.i cy re gunma cy pa
+.i ju'a nai ge cy pa tapla gi pu ku co'a ku zo'u cy pa farlu fi cy no
+.i ju'a nai cy no drudi
+.i cy re porpi cy vo
+
+-----

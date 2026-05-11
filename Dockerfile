@@ -10,13 +10,11 @@
 
 FROM haskell:9.8 AS builder
 
-## Additional tools needed at build time:
-##  - python3: to generate .pappy from canonical .pest + .pappy.rhs
+## Additional tools needed at build time
 RUN apt-get update && apt-get install -y --no-install-recommends \
     darcs \
     gcc \
     make \
-    python3 \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -31,10 +29,6 @@ RUN cabal update \
 
 ## Now copy the rest of the working tree (this layer changes frequently).
 COPY . .
-
-## Generate .pappy from canonical Pest grammar (.pest + .pappy.rhs) before Pappy/Haskell build
-RUN python3 scripts/gen_pappy.py Lojban.pest Lojban.pappy.rhs -o Lojban.pappy \
- && python3 scripts/gen_pappy.py Morphology.pest Morphology.pappy.rhs -o Morphology.pappy
 
 ## Fetch/build the patched Pappy tool, then generate the Haskell modules
 ## required by cabal (Lojban.hs, Morphology.hs, Pappy/Parse.hs).

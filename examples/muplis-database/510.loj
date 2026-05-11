@@ -1,0 +1,7 @@
+> pa krokodilo pu citka pa gerku
+
+EQ(1) x1:(krokodilo(_)). (pu)(). EQ(1) x2:(gerku(_)). citka(x1,x2)
+
+pa da poi ke'a krokodilo ku'o pu ku pa de poi ke'a gerku ku'o zo'u da citka de
+
+-----

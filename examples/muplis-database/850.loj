@@ -1,0 +1,11 @@
+> .i lei za'u da pu na ku tavla
+
+∀x1. gunma(f1(x1),f0(x1))
+non-veridical: ∀x1. ((f0(x1) ≤ x1) ∧ (za'u) mei(f0(x1)))
+∃x1. (pu)(). ¬tavla(f1(x1))
+
+ro da zo'u li ma'o fypa mo'e da lo'o gunma li ma'o fyno mo'e da lo'o
+.i ju'a nai ro da zo'u ge li ma'o fyno mo'e da lo'o me da me'u gi li ma'o fyno mo'e da lo'o za'u mei
+.i su'o da pu ku zo'u na ku li ma'o fypa mo'e da lo'o tavla
+
+-----

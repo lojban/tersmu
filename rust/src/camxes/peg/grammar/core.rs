@@ -1,0 +1,316 @@
+use super::constants::*;
+use super::errors::GrammarError;
+use super::types::{MemoMap, Peg};
+use crate::camxes::peg::parsing::ParseResult;
+use crate::camxes::peg::rule::Rule;
+use crate::camxes::peg::transformer::Transformer;
+use serde_json; // Import serde_json
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::sync::Arc;
+
+type GrammarResult<T> = Result<T, GrammarError>;
+
+impl Peg {
+    pub fn new(start: &str, grammar: &str) -> GrammarResult<Self> {
+        let parser = Self::bootstrap();
+        // Spans in the CST are indices into this same slice; must match `Transformer::source`.
+        let grammar = grammar.trim();
+        match parser.parse(grammar) {
+            ParseResult(_, _, _, ref payload) => match payload.as_ref() {
+                Ok(tokens) => Transformer {
+                    source: grammar,
+                }
+                .build(start, tokens.clone())
+                .map_err(GrammarError::from),
+                Err(e) => Err(GrammarError::from(e.clone())),
+            },
+        }
+    }
+
+    pub fn parse(&self, input: &str) -> ParseResult {
+        // Clear the memoization cache before starting a new parse
+        self.memo.borrow_mut().clear();
+        // Reset furthest-position tracker for this parse (Pappy joinErrors behavior)
+        crate::camxes::peg::parsing::reset_furthest_pos();
+        if let Some(marker_pos) = input.strip_suffix(" %%%END%%%").map(|s| s.len()) {
+            crate::camxes::peg::parsing::set_error_cutoff_pos(marker_pos);
+        }
+        Rule::NonTerminal(self.start.clone()).parse(self, input, 0, 0)
+    }
+
+    /// Parses the input and returns the result as a JSON string.
+    /// Handles both successful parses and errors, serializing them appropriately.
+    pub fn parse_to_json(&self, input: &str) -> Result<String, serde_json::Error> {
+        let parse_result = self.parse(input);
+        serde_json::to_string_pretty(&parse_result) // Use pretty print for readability
+    }
+
+
+    fn bootstrap() -> Self {
+        let mut grammar_builder = RuleBuilder::new();
+        define_operators(&mut grammar_builder);
+        define_character_rules(&mut grammar_builder);
+        define_nonterminal_rules(&mut grammar_builder);
+        define_grammar_rules(&mut grammar_builder);
+
+        Self {
+            start: TEXT.to_string(),
+            rules: Arc::new(grammar_builder.rules),
+            memo: RefCell::new(MemoMap::default()),
+        }
+    }
+}
+
+struct RuleBuilder {
+    rules: HashMap<String, Rule>,
+}
+
+impl RuleBuilder {
+    fn new() -> Self {
+        Self {
+            rules: HashMap::new(),
+        }
+    }
+
+    fn add_rule(&mut self, name: &str, expr: Rule) -> Rule {
+        self.rules.insert(name.to_string(), expr.clone());
+        Rule::NonTerminal(name.to_string())
+    }
+
+    fn seq(&self, exprs: Vec<Rule>) -> Rule {
+        Rule::Sequence(exprs)
+    }
+
+    fn choice(&self, exprs: Vec<Rule>) -> Rule {
+        if exprs.len() == 1 {
+            exprs[0].clone()
+        } else {
+            Rule::Choice(exprs)
+        }
+    }
+
+    fn zero_or_more(&self, expr: Rule) -> Rule {
+        Rule::ZeroOrMore(expr.boxed())
+    }
+
+    fn one_or_more(&self, expr: Rule) -> Rule {
+        Rule::OneOrMore(expr.boxed())
+    }
+
+    fn optional(&self, expr: Rule) -> Rule {
+        Rule::Optional(expr.boxed())
+    }
+
+    fn not(&self, expr: Rule) -> Rule {
+        Rule::Not(expr.boxed())
+    }
+
+    fn build_quoted_literal(&self, quote: &str, spacing: &Rule) -> Rule {
+        self.seq(vec![
+            Rule::Literal(quote.to_string()),
+            self.zero_or_more(self.seq(vec![
+                self.not(Rule::Literal(quote.to_string())),
+                Rule::NonTerminal(CHAR.to_string()),
+            ])),
+            Rule::Literal(quote.to_string()),
+            spacing.clone(),
+        ])
+    }
+}
+
+fn define_operators(gb: &mut RuleBuilder) {
+    let spacing = gb.add_rule(
+        SPACING,
+        gb.zero_or_more(gb.choice(vec![
+            Rule::Literal(" ".to_string()),
+            Rule::Literal("\n".to_string()),
+            Rule::Literal("\r\n".to_string()),
+        ])),
+    );
+
+    let operators = [
+        (ARROW, "<-"),
+        (SLASH, "/"),
+        (AND, "&"),
+        (NOT, "!"),
+        (QUESTION, "?"),
+        (STAR, "*"),
+        (PLUS, "+"),
+        (LPAR, "("),
+        (RPAR, ")"),
+        (DOT, "."),
+    ];
+
+    for (name, symbol) in operators {
+        gb.add_rule(
+            name,
+            gb.seq(vec![Rule::Literal(symbol.to_string()), spacing.clone()]),
+        );
+    }
+
+    gb.add_rule(EOF, gb.not(Rule::Any));
+}
+
+fn define_character_rules(gb: &mut RuleBuilder) {
+    let hex_digit = || {
+        Rule::create_character_class(&[
+            "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "A",
+            "B", "C", "D", "E", "F",
+        ])
+    };
+    let char_rule = gb.choice(vec![
+        // \uXXXX — four hex digits (Unicode escape, same intent as Rust string escapes).
+        gb.seq(vec![
+            Rule::Literal("\\u".to_string()),
+            hex_digit(),
+            hex_digit(),
+            hex_digit(),
+            hex_digit(),
+        ]),
+        gb.seq(vec![
+            Rule::Literal("\\".to_string()),
+            Rule::create_character_class(&["n", "r", "t", "'", "\"", "[", "]", "\\"]),
+        ]),
+        gb.seq(vec![
+            Rule::Literal("\\".to_string()),
+            gb.one_or_more(Rule::Range("0".to_string(), "9".to_string())),
+            Rule::Literal(";".to_string()),
+        ]),
+        gb.seq(vec![gb.not(Rule::Literal("\\".to_string())), Rule::Any]),
+    ]);
+    gb.add_rule(CHAR, char_rule);
+
+    let range = gb.add_rule(
+        RANGE,
+        gb.seq(vec![
+            Rule::NonTerminal(CHAR.to_string()),
+            Rule::Literal("-".to_string()),
+            Rule::NonTerminal(CHAR.to_string()),
+        ]),
+    );
+
+    gb.add_rule(
+        CLASS_MEMBER,
+        gb.choice(vec![range.clone(), Rule::NonTerminal(CHAR.to_string())]),
+    );
+}
+
+fn define_nonterminal_rules(gb: &mut RuleBuilder) {
+    let spacing = Rule::NonTerminal(SPACING.to_string());
+    let identifier = define_identifier_rule(gb, &spacing);
+    let literal = define_literal_rule(gb, &spacing);
+    let class = define_class_rule(gb);
+
+    let primary = gb.add_rule(
+        PRIMARY,
+        gb.choice(vec![
+            gb.seq(vec![
+                identifier.clone(),
+                gb.not(Rule::NonTerminal(ARROW.to_string())),
+            ]),
+            gb.seq(vec![
+                Rule::NonTerminal(LPAR.to_string()),
+                Rule::NonTerminal(EXPR.to_string()),
+                Rule::NonTerminal(RPAR.to_string()),
+            ]),
+            literal.clone(),
+            class.clone(),
+            Rule::NonTerminal(DOT.to_string()),
+        ]),
+    );
+
+    let suffix = gb.add_rule(
+        SUFFIX,
+        gb.optional(gb.choice(vec![
+            Rule::NonTerminal(QUESTION.to_string()),
+            Rule::NonTerminal(STAR.to_string()),
+            Rule::NonTerminal(PLUS.to_string()),
+        ])),
+    );
+
+    let prefix = gb.add_rule(
+        PREFIX,
+        gb.optional(gb.choice(vec![
+            Rule::NonTerminal(AND.to_string()),
+            Rule::NonTerminal(NOT.to_string()),
+        ])),
+    );
+
+    let sequence = gb.add_rule(
+        SEQUENCE,
+        gb.zero_or_more(gb.seq(vec![prefix.clone(), primary.clone(), suffix.clone()])),
+    );
+
+    gb.add_rule(
+        EXPR,
+        gb.seq(vec![
+            sequence.clone(),
+            gb.zero_or_more(gb.seq(vec![Rule::NonTerminal(SLASH.to_string()), sequence.clone()])),
+        ]),
+    );
+}
+
+fn define_grammar_rules(gb: &mut RuleBuilder) {
+    let spacing = Rule::NonTerminal(SPACING.to_string());
+    let definition = gb.add_rule(
+        DEF,
+        gb.seq(vec![
+            Rule::NonTerminal(IDENT.to_string()),
+            Rule::NonTerminal(ARROW.to_string()),
+            Rule::NonTerminal(EXPR.to_string()),
+        ]),
+    );
+
+    gb.add_rule(
+        TEXT,
+        gb.seq(vec![
+            spacing.clone(),
+            gb.zero_or_more(definition.clone()),
+            Rule::NonTerminal(EOF.to_string()),
+        ]),
+    );
+}
+
+fn define_identifier_rule(gb: &mut RuleBuilder, spacing: &Rule) -> Rule {
+    gb.add_rule(
+        IDENT,
+        gb.seq(vec![
+            gb.choice(vec![
+                Rule::Range("a".to_string(), "z".to_string()),
+                Rule::Range("A".to_string(), "Z".to_string()),
+                Rule::Literal("_".to_string()),
+            ]),
+            gb.zero_or_more(gb.choice(vec![
+                Rule::Range("a".to_string(), "z".to_string()),
+                Rule::Range("A".to_string(), "Z".to_string()),
+                Rule::Literal("_".to_string()),
+                Rule::Range("0".to_string(), "9".to_string()),
+            ])),
+            spacing.clone(),
+        ]),
+    )
+}
+
+fn define_literal_rule(gb: &mut RuleBuilder, spacing: &Rule) -> Rule {
+    let single_quoted = gb.build_quoted_literal("'", spacing);
+    let double_quoted = gb.build_quoted_literal("\"", spacing);
+
+    gb.add_rule(LITERAL, gb.choice(vec![single_quoted, double_quoted]))
+}
+
+fn define_class_rule(gb: &mut RuleBuilder) -> Rule {
+    let spacing = Rule::NonTerminal(SPACING.to_string());
+    gb.add_rule(
+        CLASS,
+        gb.seq(vec![
+            Rule::Literal("[".to_string()),
+            gb.zero_or_more(gb.seq(vec![
+                gb.not(Rule::Literal("]".to_string())),
+                Rule::NonTerminal(CLASS_MEMBER.to_string()),
+            ])),
+            Rule::Literal("]".to_string()),
+            spacing.clone(),
+        ]),
+    )
+}

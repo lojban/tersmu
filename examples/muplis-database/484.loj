@@ -1,0 +1,13 @@
+> le pa gerku pu mo'u citka le pa cutci ku ne mi
+
+srana(c1,mi)
+non-veridical: (cutci(c1) ∧ 1 mei(c1))
+non-veridical: (gerku(c0) ∧ 1 mei(c0))
+(pu)(). (mo'u)(). citka(c0,c1)
+
+cy pa srana mi
+.i ju'a nai ge cy pa cutci gi cy pa pa mei
+.i ju'a nai ge cy no gerku gi cy no pa mei
+.i pu ku mo'u ku zo'u cy no citka cy pa
+
+-----

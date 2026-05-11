@@ -1,0 +1,13 @@
+> .i ko na co'u morji le du'u sarcu fa le nu do benji le za'u xatra vau goi ko'a .i je ko zukte ko'a
+
+non-veridical: du'u[sarcu(c1)](c2)
+non-veridical: nu[benji(do,c0)](c1)
+non-veridical: (xatra(c0) ∧ (za'u) mei(c0))
+(¬(co'u)(). morji(ko,c2) ∧ zukte(ko,c1))
+
+ju'a nai cy re du'u cy pa sarcu kei
+.i ju'a nai cy pa nu do benji cy no kei
+.i ju'a nai ge cy no xatra gi cy no za'u mei
+.i ge na ku co'u ku zo'u ko morji cy re gi ko zukte cy pa
+
+-----

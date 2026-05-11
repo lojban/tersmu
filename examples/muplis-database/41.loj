@@ -1,0 +1,11 @@
+> .ai mi bevri le do dakli le do kumfa
+
+non-veridical: (kumfa(c1) ∧ srana(c1,do))
+non-veridical: (dakli(c0) ∧ srana(c0,do))
+bevri(mi,c0,c1)
+
+ju'a nai ge cy pa kumfa gi cy pa srana do
+.i ju'a nai ge cy no dakli gi cy no srana do
+.i mi bevri cy no cy pa
+
+-----

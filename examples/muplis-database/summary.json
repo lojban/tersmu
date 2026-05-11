@@ -1,0 +1,551 @@
+{
+  "tsvPath": "/home/user/lojban/korpora2/korpora/muplis-database.tsv",
+  "wasmPath": "/home/user/lojban/tersmu/wasm-web-app/tersmu.wasm",
+  "export": "parseLojban",
+  "totalRows": 1053,
+  "written": 945,
+  "skipped": 108,
+  "outDir": "/home/user/lojban/tersmu/examples/muplis-database",
+  "skippedRows": [
+    {
+      "row": 2,
+      "sentence": "lu klama fi vo'e je'i na'e bo vo'e li'u lu y vo'e li'u",
+      "reason": "Parse error:\n\t{lu klama fi vo'e je'i na'e bo vo'e li'u lu y vo'e li'u}\n\t                  ^"
+    },
+    {
+      "row": 6,
+      "sentence": "a'a nai",
+      "reason": "empty output"
+    },
+    {
+      "row": 16,
+      "sentence": "a'i cu'i",
+      "reason": "empty output"
+    },
+    {
+      "row": 21,
+      "sentence": "uo ru'e a'i sai ro'o bu'o nai a'i ru'e sai ro'e bu'o nai",
+      "reason": "empty output"
+    },
+    {
+      "row": 33,
+      "sentence": ".a'onai",
+      "reason": "empty output"
+    },
+    {
+      "row": 34,
+      "sentence": ".a'onaicai",
+      "reason": "empty output"
+    },
+    {
+      "row": 35,
+      "sentence": ".a'onaicai",
+      "reason": "empty output"
+    },
+    {
+      "row": 40,
+      "sentence": ".a'ucai",
+      "reason": "empty output"
+    },
+    {
+      "row": 105,
+      "sentence": ".e'e nai",
+      "reason": "empty output"
+    },
+    {
+      "row": 107,
+      "sentence": "e'ei se'a",
+      "reason": "Parse error:\n\t{e'ei se'a}\n\t ^"
+    },
+    {
+      "row": 109,
+      "sentence": "e'i cu'i dai",
+      "reason": "empty output"
+    },
+    {
+      "row": 117,
+      "sentence": "e'o cai",
+      "reason": "empty output"
+    },
+    {
+      "row": 134,
+      "sentence": ".ei mi cliva .i co'o",
+      "reason": "Parse error:\n\t{ei mi cliva i co'o}\n\t                    ^"
+    },
+    {
+      "row": 135,
+      "sentence": ".ei mi cliva .i co'o",
+      "reason": "Parse error:\n\t{ei mi cliva i co'o}\n\t                    ^"
+    },
+    {
+      "row": 154,
+      "sentence": ".i le cmlau lekmi'i na jinsa",
+      "reason": "Morphology error:\n\t{.i le cmlau lekmi'i na jinsa}\n\t       ^"
+    },
+    {
+      "row": 175,
+      "sentence": ".i ti makfa pelji .i je ro da poi jai se djica do zo'u le go'i ka'e co'a dunli da",
+      "reason": "Parse error:\n\t{fa pelji i je ro da poi jai se djica do zo'u le go'i ka'e co'a dunli da}\n\t                                         ^"
+    },
+    {
+      "row": 193,
+      "sentence": "be'u cu'i i pei",
+      "reason": "Parse error:\n\t{be'u cu'i i pei}\n\t                 ^"
+    },
+    {
+      "row": 203,
+      "sentence": "uu oi pei",
+      "reason": "empty output"
+    },
+    {
+      "row": 204,
+      "sentence": ".i le sperybau zo'u se ke catni zanru bangu bu'u la orpno gunma vau uo sai",
+      "reason": "Parse error:\n\t{atni zanru bangu bu'u la orpno gunma vau uo sai}\n\t                                         ^"
+    },
+    {
+      "row": 206,
+      "sentence": ".ai mi ca le te temci be nau'u bei le djedi be li mu mo'u gunka",
+      "reason": "Parse error:\n\t{ai mi ca le te temci be nau'u bei le djedi be li mu mo'u gunka}\n\t                         ^"
+    },
+    {
+      "row": 257,
+      "sentence": "co'o",
+      "reason": "empty output"
+    },
+    {
+      "row": 258,
+      "sentence": "co'o",
+      "reason": "empty output"
+    },
+    {
+      "row": 259,
+      "sentence": "co'o",
+      "reason": "empty output"
+    },
+    {
+      "row": 260,
+      "sentence": "co'o la .bab. .e la .noras.",
+      "reason": "empty output"
+    },
+    {
+      "row": 261,
+      "sentence": "co'oi .djordj. do mo",
+      "reason": "Parse error:\n\t{co'oi djordj do mo}\n\t ^"
+    },
+    {
+      "row": 264,
+      "sentence": "coi",
+      "reason": "empty output"
+    },
+    {
+      "row": 265,
+      "sentence": "coi ga'icu'i",
+      "reason": "empty output"
+    },
+    {
+      "row": 270,
+      "sentence": "coi .i pei",
+      "reason": "Parse error:\n\t{coi i pei}\n\t           ^"
+    },
+    {
+      "row": 271,
+      "sentence": "coi .i pei",
+      "reason": "Parse error:\n\t{coi i pei}\n\t           ^"
+    },
+    {
+      "row": 272,
+      "sentence": "coi .i pei",
+      "reason": "Parse error:\n\t{coi i pei}\n\t           ^"
+    },
+    {
+      "row": 273,
+      "sentence": "sei mi do i'u rinsa",
+      "reason": "empty output"
+    },
+    {
+      "row": 274,
+      "sentence": "coi .i'u",
+      "reason": "empty output"
+    },
+    {
+      "row": 275,
+      "sentence": "coi .tam.",
+      "reason": "empty output"
+    },
+    {
+      "row": 277,
+      "sentence": "coi mi'e maik",
+      "reason": "empty output"
+    },
+    {
+      "row": 278,
+      "sentence": "coi mi'e nansis",
+      "reason": "empty output"
+    },
+    {
+      "row": 279,
+      "sentence": "coi mi'e sepides",
+      "reason": "empty output"
+    },
+    {
+      "row": 280,
+      "sentence": "coi munje",
+      "reason": "empty output"
+    },
+    {
+      "row": 281,
+      "sentence": "coi ro do",
+      "reason": "empty output"
+    },
+    {
+      "row": 282,
+      "sentence": "coi ro do ga'i cu'i",
+      "reason": "empty output"
+    },
+    {
+      "row": 283,
+      "sentence": "coi se terdi",
+      "reason": "empty output"
+    },
+    {
+      "row": 284,
+      "sentence": "coi slabu pendo",
+      "reason": "empty output"
+    },
+    {
+      "row": 285,
+      "sentence": "coi tam",
+      "reason": "empty output"
+    },
+    {
+      "row": 286,
+      "sentence": "coi tam.",
+      "reason": "empty output"
+    },
+    {
+      "row": 287,
+      "sentence": "coi le mlatu do mo i xu do ca' ozutse bu'u le dinju i re da mlatu",
+      "reason": "Morphology error:\n\t{coi le mlatu do mo i xu do ca' ozutse bu'u le dinju i re da mlatu}\n\t                            ^"
+    },
+    {
+      "row": 291,
+      "sentence": ".i mi'ai se nabmi su'o da",
+      "reason": "Parse error:\n\t{i mi'ai se nabmi su'o da}\n\t   ^"
+    },
+    {
+      "row": 304,
+      "sentence": "do pujenai morji",
+      "reason": "Parse error:\n\t{do pu je nai morji}\n\t              ^"
+    },
+    {
+      "row": 343,
+      "sentence": "do cnino xu nai",
+      "reason": "Parse error:\n\t{do cnino xu nai}\n\t             ^"
+    },
+    {
+      "row": 402,
+      "sentence": "ju'i la djan.",
+      "reason": "empty output"
+    },
+    {
+      "row": 403,
+      "sentence": "doi sam. do'u .e'unai",
+      "reason": "empty output"
+    },
+    {
+      "row": 408,
+      "sentence": ".i .ei mi'ai pensi lei za'u pendo",
+      "reason": "Parse error:\n\t{i ei mi'ai pensi lei za'u pendo}\n\t      ^"
+    },
+    {
+      "row": 435,
+      "sentence": ".i .ei mi'ai cikre",
+      "reason": "Parse error:\n\t{i ei mi'ai cikre}\n\t      ^"
+    },
+    {
+      "row": 436,
+      "sentence": ".i .ei mi'ai sutra lo ka zukte",
+      "reason": "Parse error:\n\t{i ei mi'ai sutra lo ka zukte}\n\t      ^"
+    },
+    {
+      "row": 437,
+      "sentence": ".i ba'a na ba ku fasnu",
+      "reason": "Parse error:\n\t{i ba'a na ba ku fasnu}\n\t              ^"
+    },
+    {
+      "row": 439,
+      "sentence": ".i .ei mi'ai citka",
+      "reason": "Parse error:\n\t{i ei mi'ai citka}\n\t      ^"
+    },
+    {
+      "row": 464,
+      "sentence": "je'u",
+      "reason": "empty output"
+    },
+    {
+      "row": 468,
+      "sentence": ".i ju'o sai pei la .tom. ba djica le nu ri kansa mi'ai",
+      "reason": "Parse error:\n\t{ sai pei la tom ba djica le nu ri kansa mi'ai}\n\t                                         ^"
+    },
+    {
+      "row": 516,
+      "sentence": "la .tomas. cu prami la .anas. i ku'i je la .anas. na prami la .tomas.",
+      "reason": "Parse error:\n\t{la tomas cu prami la anas i ku'i je la anas na prami la tomas}\n\t                                  ^"
+    },
+    {
+      "row": 529,
+      "sentence": "la .tom. pu gasnu le zunti be le nu mi'ai casnu",
+      "reason": "Parse error:\n\t{la tom pu gasnu le zunti be le nu mi'ai casnu}\n\t                                   ^"
+    },
+    {
+      "row": 530,
+      "sentence": "la'oi Jiro djica le nu ri pinxe la'oi Coke",
+      "reason": "Parse error:\n\t{la'oi ji ro djica le nu ri pinxe la'oi co ke}\n\t ^"
+    },
+    {
+      "row": 579,
+      "sentence": "i le mamta be do cu tai plana i da'i se ri'a bo ri jai gau spofau fai le cripu pe la .london.",
+      "reason": "Parse error:\n\t{mamta be do cu tai plana i da'i se ri'a bo ri jai gau spofau fai le cripu pe la }\n\t                                         ^"
+    },
+    {
+      "row": 607,
+      "sentence": ".i mi ce do prami zu'ai",
+      "reason": "Parse error:\n\t{i mi ce do prami zu'ai}\n\t                  ^"
+    },
+    {
+      "row": 735,
+      "sentence": "mi'ai pu snada lo ka limna mo'i pa'o le rirxe",
+      "reason": "Parse error:\n\t{mi'ai pu snada lo ka limna mo'i pa'o le rirxe}\n\t ^"
+    },
+    {
+      "row": 736,
+      "sentence": "mi'ai xabju ti",
+      "reason": "Parse error:\n\t{mi'ai xabju ti}\n\t ^"
+    },
+    {
+      "row": 737,
+      "sentence": "mi'e la .tom.",
+      "reason": "empty output"
+    },
+    {
+      "row": 739,
+      "sentence": "mi'e mi",
+      "reason": "empty output"
+    },
+    {
+      "row": 740,
+      "sentence": "mi'e nai .tom.",
+      "reason": "empty output"
+    },
+    {
+      "row": 741,
+      "sentence": "mi'e .suzyn.grin.",
+      "reason": "empty output"
+    },
+    {
+      "row": 742,
+      "sentence": "mi'e .tom.",
+      "reason": "empty output"
+    },
+    {
+      "row": 743,
+      "sentence": "mi'e .tom.",
+      "reason": "empty output"
+    },
+    {
+      "row": 744,
+      "sentence": "mi'e .tom.",
+      "reason": "empty output"
+    },
+    {
+      "row": 745,
+      "sentence": "mi'e .djak.",
+      "reason": "empty output"
+    },
+    {
+      "row": 746,
+      "sentence": "mi'ai ba jinga",
+      "reason": "Parse error:\n\t{mi'ai ba jinga}\n\t ^"
+    },
+    {
+      "row": 747,
+      "sentence": "mi'ai ba dansu",
+      "reason": "Parse error:\n\t{mi'ai ba dansu}\n\t ^"
+    },
+    {
+      "row": 749,
+      "sentence": "mi'ai klama le zarci",
+      "reason": "Parse error:\n\t{mi'ai klama le zarci}\n\t ^"
+    },
+    {
+      "row": 750,
+      "sentence": "ko'oi mi'ai mo'u gunka",
+      "reason": "Parse error:\n\t{ko'oi mi'ai mo'u gunka}\n\t ^"
+    },
+    {
+      "row": 751,
+      "sentence": "mi'ai zukte fi lo nu mi'a klama ma",
+      "reason": "Parse error:\n\t{mi'ai zukte fi lo nu mi'a klama ma}\n\t ^"
+    },
+    {
+      "row": 752,
+      "sentence": "mi'ai ca zvati ma",
+      "reason": "Parse error:\n\t{mi'ai ca zvati ma}\n\t ^"
+    },
+    {
+      "row": 753,
+      "sentence": "mi'ai nitcu lo nu mi'ai citka da",
+      "reason": "Parse error:\n\t{mi'ai nitcu lo nu mi'ai citka da}\n\t ^"
+    },
+    {
+      "row": 755,
+      "sentence": "xu mi'ai simxu lo ka pendo",
+      "reason": "Parse error:\n\t{xu mi'ai simxu lo ka pendo}\n\t    ^"
+    },
+    {
+      "row": 757,
+      "sentence": "mi'ai troci",
+      "reason": "Parse error:\n\t{mi'ai troci}\n\t ^"
+    },
+    {
+      "row": 758,
+      "sentence": "mi'ai zvati ti",
+      "reason": "Parse error:\n\t{mi'ai zvati ti}\n\t ^"
+    },
+    {
+      "row": 759,
+      "sentence": "mi'ai zvati le ricfoi",
+      "reason": "Parse error:\n\t{mi'ai zvati le ricfoi}\n\t ^"
+    },
+    {
+      "row": 760,
+      "sentence": "mi'ai zvati ma",
+      "reason": "Parse error:\n\t{mi'ai zvati ma}\n\t ^"
+    },
+    {
+      "row": 800,
+      "sentence": ".i mi'ai ci'erkei ma au dai",
+      "reason": "Parse error:\n\t{i mi'ai ci'erkei ma au dai}\n\t   ^"
+    },
+    {
+      "row": 803,
+      "sentence": ".i xu nai jetnu",
+      "reason": "Parse error:\n\t{i xu nai jetnu}\n\t      ^"
+    },
+    {
+      "row": 843,
+      "sentence": "be'u",
+      "reason": "empty output"
+    },
+    {
+      "row": 846,
+      "sentence": ".i ti'e sirji la .tokios. la .osakan. fa le mitre be li ji'i 10 ki'o",
+      "reason": "Parse error:\n\t{okios la osakan fa le mitre be li ji'i 1 0 ki'o}\n\t                                         ^"
+    },
+    {
+      "row": 848,
+      "sentence": ".i ti'e le patfu be re ca zati lo drata gugde",
+      "reason": "Parse error:\n\t{i ti'e le patfu be re ca za ti lo drata gugde}\n\t                             ^"
+    },
+    {
+      "row": 868,
+      "sentence": "G",
+      "reason": "empty output"
+    },
+    {
+      "row": 869,
+      "sentence": "G",
+      "reason": "empty output"
+    },
+    {
+      "row": 898,
+      "sentence": ".i xunai do terpa",
+      "reason": "Parse error:\n\t{i xu nai do terpa}\n\t      ^"
+    },
+    {
+      "row": 905,
+      "sentence": ".i xu le patfu be re poi nanmu cu certu le ka mikce",
+      "reason": "Parse error:\n\t{i xu le patfu be re poi nanmu cu certu le ka mikce}\n\t                     ^"
+    },
+    {
+      "row": 930,
+      "sentence": "xu ti du le cukta poi du pu zu skicu",
+      "reason": "Parse error:\n\t{xu ti du le cukta poi du pu zu skicu}\n\t                                ^"
+    },
+    {
+      "row": 933,
+      "sentence": ".i xu nai do carmi nelci lo'e mlatu",
+      "reason": "Parse error:\n\t{i xu nai do carmi nelci lo'e mlatu}\n\t      ^"
+    },
+    {
+      "row": 943,
+      "sentence": ".i mi'ai ca'o tavla fi le mintu fo le sa'u ckaji be le ka lo valsi be fi ce'u cu drata",
+      "reason": "Parse error:\n\t{i mi'ai ca'o tavla fi le mintu fo le sa'u ckaji be le ka lo valsi be fi ce'u cu }\n\t   ^"
+    },
+    {
+      "row": 945,
+      "sentence": ".i lei za'u da ba na ku curmi le nu mi'ai klama lo nenri be le purdi",
+      "reason": "Parse error:\n\t{i lei za'u da ba na ku curmi le nu mi'ai klama lo nenri be le purdi}\n\t                                    ^"
+    },
+    {
+      "row": 949,
+      "sentence": ".i lei za'u da pu co'a ku morsi ca le nu ro me vo'a citno",
+      "reason": "Parse error:\n\t{co'a ku morsi ca le nu ro me vo'a citno}\n\t                                         ^"
+    },
+    {
+      "row": 968,
+      "sentence": "fi'i le co'a pilno be la tato'ebas.",
+      "reason": "empty output"
+    },
+    {
+      "row": 982,
+      "sentence": "le noi se kerfa lo clani sloska ku'o kriceto be la'o ly. Teddy Bear .ly. dalpe'o be ra pu se cmene zoi gy.Jabberwocky.gy.",
+      "reason": "Morphology error:\n\t{o clani sloska ku'o kriceto be la'o ly. Teddy Bear .ly. dalpe'o be ra pu se cmen}\n\t                                         ^"
+    },
+    {
+      "row": 990,
+      "sentence": ".i zo'oi Steve merko cmene",
+      "reason": "Parse error:\n\t{i zo'oi steve merko cmene}\n\t   ^"
+    },
+    {
+      "row": 991,
+      "sentence": ".i zo'oi Tatoeba se smuni zo mu'a gi'e valsi fi le ponbau",
+      "reason": "Morphology error:\n\t{.i zo'oi Tatoeba se smuni zo mu'a gi'e valsi fi le ponbau}\n\t          ^"
+    },
+    {
+      "row": 992,
+      "sentence": "zo'o nai",
+      "reason": "empty output"
+    },
+    {
+      "row": 996,
+      "sentence": "fanva zoi py.Tatoeba.py. le lojbo le ponjo zo mu'a",
+      "reason": "Morphology error:\n\t{fanva zoi py.Tatoeba.py. le lojbo le ponjo zo mu'a}\n\t              ^"
+    },
+    {
+      "row": 1018,
+      "sentence": "la'e do'i satci fi lo ka poi'i mi'ai djica le nu ri cilre ke'a",
+      "reason": "Parse error:\n\t{la'e do'i satci fi lo ka poi'i mi'ai djica le nu ri cilre ke'a}\n\t                                ^"
+    },
+    {
+      "row": 1039,
+      "sentence": "fi'i le vitke be le zdani be mi'a",
+      "reason": "empty output"
+    },
+    {
+      "row": 1045,
+      "sentence": ".ei mi'ai denpa ze'a le djedi be li dau",
+      "reason": "Parse error:\n\t{ei mi'ai denpa ze'a le djedi be li dau}\n\t    ^"
+    },
+    {
+      "row": 1046,
+      "sentence": "i fu'au nai ti voi dacti na mutce da'i lo ka plixau",
+      "reason": "Parse error:\n\t{i fu'au nai ti voi dacti na mutce da'i lo ka plixau}\n\t   ^"
+    },
+    {
+      "row": 1051,
+      "sentence": "i ti voi foldi cu mitre te'ai re li pa no no",
+      "reason": "Parse error:\n\t{i ti voi foldi cu mitre te'ai re li pa no no}\n\t                         ^"
+    }
+  ]
+}

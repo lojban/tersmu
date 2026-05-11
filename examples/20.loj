@@ -1,0 +1,19 @@
+> cadga fa lo nu ro lo prenu goi ko'a cu troci lo nu ko'a tarti lo ka ce'u xendo je cnikansa ro lo jmive kei ta'i lo racli
+
+nu[FA x1:((_ =< c0)). troci(x1,c4)](c5)
+nu[(ta'i)(c3). tarti(c0,c2)](c4)
+racli(c3)
+ka[FA x1:((_ =< c1)). <xendo(_)>{je}<cnikansa(_)>(\1,x1)](c2)
+jmive(c1)
+prenu(c0)
+cadga(c5)
+
+cy mu nu ro da poi ke'a me cy no me'u ku'o zo'u da troci cy vo kei
+.i cy vo nu ta'i cy ci zo'u cy no tarti cy re kei
+.i cy ci racli
+.i cy re ka ro da poi ke'a me cy pa me'u ku'o zo'u ce'u ke xendo ke'e je ke cnikansa ke'e da kei
+.i cy pa jmive
+.i cy no prenu
+.i cy mu cadga
+
+-----

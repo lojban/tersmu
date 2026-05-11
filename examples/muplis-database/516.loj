@@ -1,0 +1,15 @@
+> lo'e remna cu frica lo'e danlu lo ka kakne lo ka pensi gi'e tavla
+
+ka[kakne(\1,c2)](c3)
+ka[(pensi(\1) ∧ tavla(\1))](c2)
+danlu(c1)
+remna(c0)
+frica(c0,c1,c3)
+
+cy ci ka ce'u kakne cy re kei
+.i cy re ka ge ce'u pensi gi ce'u tavla kei
+.i cy pa danlu
+.i cy no remna
+.i cy no frica cy pa cy ci
+
+-----

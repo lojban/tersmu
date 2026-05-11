@@ -2,7 +2,6 @@ FROM haskell:9.8
 
 # Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 \
     make \
     gcc \
     libc6-dev \

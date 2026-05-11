@@ -1,0 +1,15 @@
+> i lo ka lu'a ce'u su'o roi ro detydei cu pinxe lo tcati vau fi mi'a ritli lo ka simxu lo ka tavla
+
+ka[simxu(\1,c2)](c3)
+ka[tavla(\1)](c2)
+ka[∀x1:(detydei(_)). ((su'o) roi)(x1). pinxe({lu'a}(\1),c0)](c1)
+tcati(c0)
+ritli(c1, ,mi'a,c3)
+
+cy ci ka ce'u simxu cy re kei
+.i cy re ka ce'u tavla kei
+.i cy pa ka ro da poi ke'a detydei ku'o su'o roi da zo'u lu'a ce'u lu'u pinxe cy no kei
+.i cy no tcati
+.i cy pa ritli fi mi'a cy ci
+
+-----

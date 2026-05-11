@@ -1,0 +1,13 @@
+> .i le pa ctuca .e le za'u tadni ca zvati le muzga
+
+non-veridical: muzga(c2)
+non-veridical: (tadni(c1) ∧ (za'u) mei(c1))
+non-veridical: (ctuca(c0) ∧ 1 mei(c0))
+((ca)(). zvati(c0,c2) ∧ (ca)(). zvati(c1,c2))
+
+ju'a nai cy re muzga
+.i ju'a nai ge cy pa tadni gi cy pa za'u mei
+.i ju'a nai ge cy no ctuca gi cy no pa mei
+.i ge ca ku zo'u cy no zvati cy re gi ca ku zo'u cy pa zvati cy re
+
+-----

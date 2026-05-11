@@ -1,0 +1,17 @@
+> .i ma'i le ci moi ba ku le za'u da ga nai du'e va'e le ka citno kei gi'e ricfu gi snada le ka rivbi kei gi'e troci le ka citka do
+
+non-veridical: ka[citka(\1,do)](c4)
+non-veridical: ka[rivbi(\1)](c3)
+non-veridical: ka[citno(\1)](c2)
+non-veridical: ∀x1. ((f1(x1) ≤ x1) ∧ (za'u) mei(f1(x1)))
+non-veridical: 3 moi(c0)
+(ma'i)(c0). (ba)(). ∃x1. (((du'e) va'e(f1(x1),c2) ∧ ricfu(f1(x1))) → (snada(f1(x1),c3) ∧ troci(f1(x1),c4)))
+
+ju'a nai cy vo ka ce'u citka do kei
+.i ju'a nai cy ci ka ce'u rivbi kei
+.i ju'a nai cy re ka ce'u citno kei
+.i ju'a nai ro da zo'u ge li ma'o fypa mo'e da lo'o me da me'u gi li ma'o fypa mo'e da lo'o za'u mei
+.i ju'a nai cy no ci moi
+.i ma'i cy no ba ku su'o da zo'u ga nai ge li ma'o fypa mo'e da lo'o du'e va'e cy re gi li ma'o fypa mo'e da lo'o ricfu gi ge li ma'o fypa mo'e da lo'o snada cy ci gi li ma'o fypa mo'e da lo'o troci cy vo
+
+-----

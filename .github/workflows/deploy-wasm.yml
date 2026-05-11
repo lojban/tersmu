@@ -1,0 +1,151 @@
+name: Build and Deploy WASM App
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-haskell-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Haskell WASM
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.wasm
+          tags: tersmu-wasm-haskell:latest
+          push: false
+          load: true
+          cache-from: type=gha,scope=haskell
+          cache-to: type=gha,mode=max,scope=haskell
+
+      - name: Extract Haskell WASM
+        run: |
+          mkdir -p wasm-output
+          CONTAINER_ID=$(docker create tersmu-wasm-haskell:latest)
+          docker cp ${CONTAINER_ID}:/output/tersmu.wasm wasm-output/tersmu-haskell.wasm || \
+            docker cp ${CONTAINER_ID}:/app/tersmu.wasm wasm-output/tersmu-haskell.wasm
+          docker rm ${CONTAINER_ID}
+          ls -lh wasm-output/
+
+      - name: Upload Haskell WASM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: haskell-wasm
+          path: wasm-output/tersmu-haskell.wasm
+          retention-days: 1
+
+  build-rust-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-bindgen-cli
+        run: cargo install wasm-bindgen-cli
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            rust/target/
+          key: ${{ runner.os }}-cargo-wasm-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-wasm-
+
+      - name: Build Rust WASM
+        working-directory: rust
+        run: |
+          cargo build --release --target wasm32-unknown-unknown --lib
+          wasm-bindgen \
+            --target web \
+            --out-dir ../wasm-output \
+            --out-name tersmu-rust \
+            target/wasm32-unknown-unknown/release/tersmu.wasm
+
+      - name: Verify Rust WASM output
+        run: |
+          ls -lh wasm-output/
+          test -f wasm-output/tersmu-rust.js
+          test -f wasm-output/tersmu-rust_bg.wasm
+
+      - name: Upload Rust WASM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-wasm
+          path: |
+            wasm-output/tersmu-rust.js
+            wasm-output/tersmu-rust_bg.wasm
+          retention-days: 1
+
+  deploy:
+    needs: [build-haskell-wasm, build-rust-wasm]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Haskell WASM
+        uses: actions/download-artifact@v4
+        with:
+          name: haskell-wasm
+          path: deploy/
+
+      - name: Download Rust WASM
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-wasm
+          path: deploy/
+
+      - name: Copy web app files
+        run: |
+          cp wasm-web-app/index.html deploy/
+          cp wasm-web-app/tersmu.js deploy/tersmu-haskell.js
+          cp wasm-web-app/tersmu-rust-wrapper.js deploy/
+          cp wasm-web-app/tree-viz.js deploy/
+          cp wasm-web-app/favicon.svg deploy/ 2>/dev/null || true
+          echo "" > deploy/.nojekyll
+          ls -lh deploy/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: deploy/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/deploy-pages@v4

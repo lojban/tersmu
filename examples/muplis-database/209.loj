@@ -1,0 +1,11 @@
+> ca le prulamdei mi te vecnu tu'a le pa cukta
+
+non-veridical: (cukta(c1) ∧ 1 mei(c1))
+non-veridical: prulamdei(c0)
+(ca)(c0). vecnu( ,{tu'a}(c1),mi)
+
+ju'a nai ge cy pa cukta gi cy pa pa mei
+.i ju'a nai cy no prulamdei
+.i ca cy no zo'u vecnu tu'a cy pa lu'u mi
+
+-----

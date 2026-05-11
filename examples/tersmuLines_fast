@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+cd "$(dirname "$0")"
+# Fast version using -L flag to keep process alive
+: "${TERSMU:=../tersmu -L}"
+
+# Read all input, add "> " prefix to each line, then pipe through tersmu -L
+while read line; do
+    echo "> $line"
+    echo
+    echo "$line"
+done | $TERSMU 2>&1 | awk '
+BEGIN { in_output = 0; line_count = 0 }
+/^> / { 
+    if (in_output) print "-----"
+    print
+    in_output = 0
+    line_count++
+    next
+}
+/^$/ && !in_output {
+    print
+    in_output = 1
+    next
+}
+in_output {
+    print
+}
+END {
+    if (in_output) print "-----"
+}
+'

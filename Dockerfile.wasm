@@ -42,7 +42,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     xz-utils \
     build-essential \
-    python3 \
     make \
     git \
     darcs \
@@ -73,13 +72,8 @@ COPY tersmu.cabal ./
 # Copy source files needed for building
 COPY *.hs ./
 COPY pappy/ ./pappy/
-COPY scripts/ ./scripts/
-COPY Lojban.pest Lojban.pappy.rhs Morphology.pest Morphology.pappy.rhs ./
+COPY Lojban.pappy Morphology.pappy ./
 COPY Makefile ./
-
-# Generate .pappy files from canonical Pest grammar
-RUN python3 scripts/gen_pappy.py Lojban.pest Lojban.pappy.rhs -o Lojban.pappy && \
-    python3 scripts/gen_pappy.py Morphology.pest Morphology.pappy.rhs -o Morphology.pappy
 
 # Build pappy (needed for generating Haskell modules)
 RUN make pappy/pappy/pappy && \

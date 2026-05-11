@@ -1,0 +1,39 @@
+[package]
+name = "tersmu"
+version = "0.2.3"
+edition = "2021"
+description = "Semantic Lojban parser (Rust port of tersmu)"
+license = "GPL-3.0"
+
+[[bin]]
+name = "tersmu"
+path = "src/main.rs"
+
+[[bin]]
+name = "pappyc"
+path = "src/bin/pappyc.rs"
+
+[dependencies]
+log = "0.4.27"
+once_cell = "1.21"
+rustc-hash = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+wasm-bindgen = "0.2"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1"
+
+[dev-dependencies]
+criterion = "0.5"
+env_logger = "0.11.8"
+
+[lib]
+name = "tersmu"
+path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
+
+[[bench]]
+name = "camxes_parser"
+path = "benches/camxes_parser.rs"
+harness = false

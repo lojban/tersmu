@@ -1,0 +1,7 @@
+> ganai broda gi brode .ijo seni'i bo ganai na brode gi na broda
+
+∃x1. ((se ni'i)(x1). (broda() → brode()) ↔ x1=. (¬brode() → ¬broda()))
+
+su'o da zo'u go se ni'i da zo'u ga nai broda gi brode gi fi'o du da zo'u ga nai na ku brode gi na ku broda
+
+-----

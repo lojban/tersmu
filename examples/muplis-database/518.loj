@@ -1,0 +1,33 @@
+> i puki le tsani cu ckaji lo ka so'i da tarci bu'u ce'u noi carmi i tai bo lo'e prenu fau le nu ri catlu le tsani vau na ku ka'e ku na ku co'a retsku fi le nei fe le se du'u xu kau lo'e prenu poi gasnu lo fanza e lo se kanpe be fi li so'u cu ka'e xabju lo cnita be le tai tsani
+
+non-veridical: du'u[?. (ka'e)(). xabju(c8,c10)]( ,c11)
+cnita(c10,c9)
+non-veridical: (tai)(). tsani(c9)
+(prenu(c8) ∧ (gasnu(c8,c6) ∧ gasnu(c8,c7)))
+kanpe( ,c7,(so'u))
+fanza(c6)
+non-veridical: nei(c5)
+non-veridical: nu[catlu(c2,c3)](c4)
+non-veridical: tsani(c3)
+prenu(c2)
+ka[(so'i) x1. (bu'u)(\1). tarci(x1)](c1)
+∀x1. carmi(x1)
+non-veridical: tsani(c0)
+∃x1. ((tai)(x1). (pu ki)(c0). ckaji( ,c1) ∧ x1=. (fau)(c4). ¬(ka'e)(). ¬(co'a)(). retsku(c2,c11,c5))
+
+ju'a nai du'u xu kau ka'e ku zo'u cy bi xabju cy pano kei cy papa
+.i cy pano cnita cy so
+.i ju'a nai tai ku zo'u cy so tsani
+.i ge cy bi prenu gi ge cy bi gasnu cy xa gi cy bi gasnu cy ze
+.i kanpe cy ze li so'u boi lo'o
+.i cy xa fanza
+.i ju'a nai cy mu nei
+.i ju'a nai cy vo nu cy re catlu cy ci kei
+.i ju'a nai cy ci tsani
+.i cy re prenu
+.i cy pa ka so'i boi da bu'u ce'u zo'u da tarci kei
+.i ro da zo'u da carmi
+.i ju'a nai cy no tsani
+.i su'o da zo'u ge tai da pu ki cy no zo'u ckaji cy pa gi fi'o du da fau cy vo zo'u na ku ka'e ku zo'u na ku co'a ku zo'u cy re retsku cy papa cy mu
+
+-----

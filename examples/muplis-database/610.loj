@@ -1,0 +1,19 @@
+> puku ca le pamoi mi na ku birti tu'a le se platu be le za'u mei i ku'i le ni ri krici cu jai rinka lo nu mi co'a birti
+
+nu[(co'a)(). birti(mi)](c4)
+non-veridical: ni[krici((za'u),\1)](c3)
+non-veridical: platu(c1,c2)
+non-veridical: (za'u) mei(c1)
+non-veridical: 1 moi(c0)
+(pu)(). (ca)(c0). ¬birti(mi,{tu'a}(c2))
+rinka({tu'a}(c3),c4)
+
+cy vo nu co'a ku zo'u mi birti kei
+.i ju'a nai cy ci ni li za'u boi lo'o krici ce'u kei
+.i ju'a nai cy pa platu cy re
+.i ju'a nai cy pa za'u mei
+.i ju'a nai cy no pa moi
+.i pu ku ca cy no zo'u na ku mi birti tu'a cy re lu'u
+.i tu'a cy ci lu'u rinka cy vo
+
+-----

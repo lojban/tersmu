@@ -1,0 +1,11 @@
+> .i fe ma zvati fa le pe mi za'u pixra
+
+(srana(c1,mi) ∧ (c1 ≤ c0))
+non-veridical: (pixra(c0) ∧ (za'u) mei(c0))
+? x1. zvati(c1,x1)
+
+ge cy pa srana mi gi cy pa me cy no me'u
+.i ju'a nai ge cy no pixra gi cy no za'u mei
+.i ma goi ko'a zo'u cy pa zvati ko'a
+
+-----

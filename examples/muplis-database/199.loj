@@ -1,0 +1,15 @@
+> bu'u le nerklastu be lo'e ponjo zdani lo'e vitke cu ei ba'a co'u dasni le vo'a cutci
+
+non-veridical: ∀x1. (cutci(f3(x1)) ∧ srana(f3(x1),x1))
+vitke(c2)
+non-veridical: nerklastu(c1,c0)
+<ponjo(_)><zdani>(c0)
+(bu'u)(c1). (co'u)(). dasni(c2,f3(c2))
+
+ju'a nai ro da zo'u ge li ma'o fyci mo'e da lo'o cutci gi li ma'o fyci mo'e da lo'o srana da
+.i cy re vitke
+.i ju'a nai cy pa nerklastu cy no
+.i cy no ke ponjo zdani ke'e
+.i bu'u cy pa co'u ku zo'u cy re dasni li ma'o fyci mo'e cy re lo'o
+
+-----

@@ -1,0 +1,15 @@
+> .i lei za'u da pu na ku tinbe le ckaji be le ka vo'a pu nupre
+
+non-veridical: ∀x1. ckaji(f3(x1),f2(x1))
+non-veridical: ∀x1. ka[(pu)(). nupre(x1,\1)](f2(x1))
+∀x1. gunma(f1(x1),f0(x1))
+non-veridical: ∀x1. ((f0(x1) ≤ x1) ∧ (za'u) mei(f0(x1)))
+∃x1. (pu)(). ¬tinbe(f1(x1),f3(f1(x1)))
+
+ju'a nai ro da zo'u li ma'o fyci mo'e da lo'o ckaji li ma'o fyre mo'e da lo'o
+.i ju'a nai ro da zo'u li ma'o fyre mo'e da lo'o ka pu ku zo'u da nupre ce'u kei
+.i ro da zo'u li ma'o fypa mo'e da lo'o gunma li ma'o fyno mo'e da lo'o
+.i ju'a nai ro da zo'u ge li ma'o fyno mo'e da lo'o me da me'u gi li ma'o fyno mo'e da lo'o za'u mei
+.i su'o da pu ku zo'u na ku li ma'o fypa mo'e da lo'o tinbe li ma'o fyci mo'e li ma'o fypa mo'e da lo'o lo'o
+
+-----

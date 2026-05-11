@@ -1,0 +1,17 @@
+> mi xabju lo jibni be le xamsi .i ja'e bo cafne fa lo nu mi klama le korbi be le xamsi
+
+nu[klama(mi,c3)](c4)
+non-veridical: korbi(c3,c2)
+non-veridical: xamsi(c2)
+jibni(c1,c0)
+non-veridical: xamsi(c0)
+∃x1. ((ja'e)(x1). xabju(mi,c1) ∧ x1=. cafne(c4))
+
+cy vo nu mi klama cy ci kei
+.i ju'a nai cy ci korbi cy re
+.i ju'a nai cy re xamsi
+.i cy pa jibni cy no
+.i ju'a nai cy no xamsi
+.i su'o da zo'u ge ja'e da zo'u mi xabju cy pa gi fi'o du da zo'u cy vo cafne
+
+-----

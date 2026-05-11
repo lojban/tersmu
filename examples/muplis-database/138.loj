@@ -1,0 +1,11 @@
+> .i le bolci pu janli pa kanla be le bi'u nai fetsi
+
+non-veridical: fetsi(c1)
+non-veridical: bolci(c0)
+(pu)(). EQ(1) x1:(kanla(_,c1)). janli(c0,x1)
+
+ju'a nai cy pa fetsi
+.i ju'a nai cy no bolci
+.i pu ku pa da poi ke'a kanla cy pa ku'o zo'u cy no janli da
+
+-----
