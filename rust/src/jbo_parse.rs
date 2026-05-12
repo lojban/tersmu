@@ -3,8 +3,6 @@
 //! Ported from: JboParse.hs
 //!
 //! This is a complete port of JboParse.hs that handles:
-
-#![allow(clippy::arc_with_non_send_sync)]
 //! - Modal operators (PU, ZI, VA, etc.)
 //! - Tags and FA terms
 //! - Connectives (logical and non-logical)
@@ -71,17 +69,17 @@ pub enum JboRelClause {
 
 // Ported from: JboParse.hs :: replaceLastTermInProp
 /// Replace the last term of the main (leftmost) Rel in a proposition
-pub fn replace_last_term_in_prop<F>(f: std::rc::Rc<F>, prop: JboProp) -> JboProp
+pub fn replace_last_term_in_prop<F>(f: std::sync::Arc<F>, prop: JboProp) -> JboProp
 where
-    F: Fn(JboTerm) -> JboTerm + 'static,
+    F: Fn(JboTerm) -> JboTerm + Send + Sync + 'static,
 {
     replace_last_term_in_prop_with_status(f, prop).0
 }
 
 // Ported from: JboParse.hs :: replaceLastTermInProp (internal helper with status tracking)
-fn replace_last_term_in_prop_with_status<F>(f: std::rc::Rc<F>, prop: JboProp) -> (JboProp, bool)
+fn replace_last_term_in_prop_with_status<F>(f: std::sync::Arc<F>, prop: JboProp) -> (JboProp, bool)
 where
-    F: Fn(JboTerm) -> JboTerm + 'static,
+    F: Fn(JboTerm) -> JboTerm + Send + Sync + 'static,
 {
     match prop {
         Prop::Eet => (Prop::Eet, false),
@@ -104,24 +102,24 @@ where
             (Prop::Modal(o, Box::new(p)), changed)
         }
         Prop::Quantified(q, restriction, body) => {
-            let changed = std::rc::Rc::new(std::cell::Cell::new(false));
+            let changed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
             let restriction = restriction.map(|restriction| {
                 let f = f.clone();
                 let changed = changed.clone();
-                std::rc::Rc::new(move |v| {
+                std::sync::Arc::new(move |v| {
                     let (prop, did_change) = replace_last_term_in_prop_with_status(f.clone(), restriction(v));
-                    changed.set(changed.get() || did_change);
+                    changed.fetch_or(did_change, std::sync::atomic::Ordering::Relaxed);
                     prop
-                }) as std::rc::Rc<dyn Fn(i32) -> JboProp>
+                }) as std::sync::Arc<dyn Fn(i32) -> JboProp + Send + Sync>
             });
             let body = {
                 let f = f.clone();
                 let changed = changed.clone();
-                std::rc::Rc::new(move |v| {
+                std::sync::Arc::new(move |v| {
                     let (prop, did_change) = replace_last_term_in_prop_with_status(f.clone(), body(v));
-                    changed.set(changed.get() || did_change);
+                    changed.fetch_or(did_change, std::sync::atomic::Ordering::Relaxed);
                     prop
-                }) as std::rc::Rc<dyn Fn(i32) -> JboProp>
+                }) as std::sync::Arc<dyn Fn(i32) -> JboProp + Send + Sync>
             };
             let prop = Prop::Quantified(q, restriction, body);
             if let Prop::Quantified(_, restriction, body) = &prop {
@@ -130,7 +128,7 @@ where
                 }
                 body(1);
             };
-            (prop, changed.get())
+            (prop, changed.load(std::sync::atomic::Ordering::Relaxed))
         }
         Prop::Rel(r, mut ts) => {
             if !ts.is_empty() {
@@ -290,9 +288,9 @@ pub fn parse_connective(conn: &Connective) -> Connective {
 /// Map a function over all relations in a bridi
 pub fn map_rels_in_bridi<F>(f: F, bridi: crate::parse_m::Bridi) -> crate::parse_m::Bridi
 where
-    F: Fn(JboRel) -> JboRel + 'static,
+    F: Fn(JboRel) -> JboRel + Send + Sync + 'static,
 {
-    let f = std::rc::Rc::new(f);
+    let f = std::sync::Arc::new(f);
     Box::new(move |args: &crate::parse_m::Args| {
         let prop = bridi(args);
         let f = f.clone();
@@ -462,7 +460,7 @@ fn eval_statement_full(state: &mut ParseState, stmt: &Statement) -> Option<Seman
             prop
         } else {
             let sides_for_term = sides.clone();
-            let f = std::rc::Rc::new(move |term| JboTerm::TermWithSides(Box::new(term), sides_for_term.clone()));
+            let f = std::sync::Arc::new(move |term| JboTerm::TermWithSides(Box::new(term), sides_for_term.clone()));
             let (prop, changed) = replace_last_term_in_prop_with_status(f, prop);
             if !changed {
                 for side in sides {
@@ -1892,9 +1890,9 @@ fn apply_tanru_rel_to_prop(seltau_rel: JboRel, prop: JboProp) -> JboProp {
             let seltau_for_body = seltau_rel.clone();
             let new_pred = pred_opt.map(move |pred| {
                 let seltau_rel = seltau_for_restriction.clone();
-                std::rc::Rc::new(move |v| apply_tanru_rel_to_prop(seltau_rel.clone(), pred(v))) as std::rc::Rc<dyn Fn(i32) -> JboProp>
+                std::sync::Arc::new(move |v| apply_tanru_rel_to_prop(seltau_rel.clone(), pred(v))) as std::sync::Arc<dyn Fn(i32) -> JboProp + Send + Sync>
             });
-            Prop::Quantified(q, new_pred, std::rc::Rc::new(move |v| apply_tanru_rel_to_prop(seltau_for_body.clone(), body_fn(v))))
+            Prop::Quantified(q, new_pred, std::sync::Arc::new(move |v| apply_tanru_rel_to_prop(seltau_for_body.clone(), body_fn(v))))
         }
         Prop::Eet => Prop::Eet,
     }
@@ -1903,7 +1901,7 @@ fn apply_tanru_rel_to_prop(seltau_rel: JboRel, prop: JboProp) -> JboProp {
 // Ported from: JboParse.hs :: mapRelsInProp
 fn map_rels_in_prop<F>(f: F, prop: JboProp) -> JboProp
 where
-    F: Fn(JboRel) -> JboRel + Clone + 'static,
+    F: Fn(JboRel) -> JboRel + Clone + Send + Sync + 'static,
 {
     match prop {
         Prop::Rel(rel, terms) => Prop::Rel(f(rel), terms),
@@ -1924,9 +1922,9 @@ where
             let f_for_body = f.clone();
             let new_pred = pred_opt.map(move |pred| {
                 let f = f_for_restriction.clone();
-                std::rc::Rc::new(move |v| map_rels_in_prop(f.clone(), pred(v))) as std::rc::Rc<dyn Fn(i32) -> JboProp>
+                std::sync::Arc::new(move |v| map_rels_in_prop(f.clone(), pred(v))) as std::sync::Arc<dyn Fn(i32) -> JboProp + Send + Sync>
             });
-            Prop::Quantified(q, new_pred, std::rc::Rc::new(move |v| map_rels_in_prop(f_for_body.clone(), body_fn(v))))
+            Prop::Quantified(q, new_pred, std::sync::Arc::new(move |v| map_rels_in_prop(f_for_body.clone(), body_fn(v))))
         }
         Prop::Eet => Prop::Eet,
     }
@@ -2515,7 +2513,7 @@ fn quantify(
     let fresh = state.get_fresh_var(domain);
 
     let restriction = r.map(|pred| {
-        std::rc::Rc::new(move |v: i32| pred(&JboTerm::BoundVar(v))) as std::rc::Rc<dyn Fn(i32) -> crate::parse_m::JboProp>
+        std::sync::Arc::new(move |v: i32| pred(&JboTerm::BoundVar(v))) as std::sync::Arc<dyn Fn(i32) -> crate::parse_m::JboProp + Send + Sync>
     });
 
     match m {
@@ -3688,7 +3686,7 @@ fn swap_arg_positions_in_prop(n: i32, prop: crate::parse_m::JboProp) -> crate::p
         Prop::Modal(m, p) => Prop::Modal(m, Box::new(swap_arg_positions_in_prop(n, *p))),
         Prop::Quantified(q, r, f) => {
             // Apply permutation through quantifier
-            Prop::Quantified(q, r, std::rc::Rc::new(move |v| swap_arg_positions_in_prop(n, f(v))))
+            Prop::Quantified(q, r, std::sync::Arc::new(move |v| swap_arg_positions_in_prop(n, f(v))))
         }
         other => other, // Eet, Oot unchanged
     }

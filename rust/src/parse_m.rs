@@ -3,8 +3,6 @@
 //! Ported from: ParseM.hs
 //!
 //! This module provides the monadic context for parsing and semantic analysis.
-
-#![allow(clippy::arc_with_non_send_sync)]
 //! It manages:
 //! - Fresh variable/constant generation
 //! - Variable binding context
@@ -19,13 +17,12 @@ use crate::jbo_syntax::{SumtiAtom, SumtiQualifier, TanruUnit, Lerfu, Selbri};
 use crate::logic::Prop;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
-use std::rc::Rc;
 
 pub type JboProp = Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, JboQuantifier>;
 
 // Ported from: ParseM.hs :: type Bridi = Args -> JboProp
 /// A bridi is a function from arguments to a proposition
-pub type Bridi = Box<dyn Fn(&Args) -> JboProp>;
+pub type Bridi = Box<dyn Fn(&Args) -> JboProp + Send + Sync>;
 
 // Ported from: ParseM.hs :: ParseState
 /// ParseState holds all the state which doesn't respect the tree structure
@@ -75,20 +72,20 @@ impl std::fmt::Debug for ParseState {
 #[derive(Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum PropTransform {
-    Quantify(JboTerm, JboQuantifier, Option<Rc<dyn Fn(i32) -> JboProp>>),
+    Quantify(JboTerm, JboQuantifier, Option<Arc<dyn Fn(i32) -> JboProp + Send + Sync>>),
     ConnectQuantify {
         conn: crate::jbo_syntax::LogJboConnective,
         fresh: JboTerm,
         left_quant: JboQuantifier,
         right_quant: JboQuantifier,
-        restriction: Option<Rc<dyn Fn(i32) -> JboProp>>,
+        restriction: Option<Arc<dyn Fn(i32) -> JboProp + Send + Sync>>,
     },
     ConnectQuantifyTagged {
         conn: crate::jbo_syntax::LogJboConnective,
         fresh: JboTerm,
         left_quant: JboQuantifier,
         right_quant: JboQuantifier,
-        restriction: Option<Rc<dyn Fn(i32) -> JboProp>>,
+        restriction: Option<Arc<dyn Fn(i32) -> JboProp + Send + Sync>>,
         event_fresh: Option<JboTerm>,
         left_modal: Option<JboModalOp>,
         right_modal: Option<JboModalOp>,
@@ -344,7 +341,7 @@ pub struct Sumbasti {
 }
 
 pub type SumbastiBindings = HashMap<Sumbasti, JboTerm>;
-pub type StoredBridi = Arc<dyn Fn(&Args) -> JboProp>;
+pub type StoredBridi = Arc<dyn Fn(&Args) -> JboProp + Send + Sync>;
 pub type BribastiBindings = HashMap<TanruUnit, StoredBridi>;
 
 // Ported from: ParseM.hs :: Question
@@ -795,12 +792,12 @@ pub fn do_q_info<P: PreProp>(qinfo: QInfo, p: P) -> P {
             p.lift_to_prop(Box::new(move |prop: JboProp| {
                 let qv_inner = qv_clone.clone();
                 let restriction = dom.clone().map(|pred| {
-                    Rc::new(move |v: i32| pred(&JboTerm::BoundVar(v))) as Rc<dyn Fn(i32) -> JboProp>
+                    Arc::new(move |v: i32| pred(&JboTerm::BoundVar(v))) as Arc<dyn Fn(i32) -> JboProp + Send + Sync>
                 });
                 Prop::Quantified(
                     JboQuantifier::QuestionQuantifier,
                     restriction,
-                    Rc::new(move |v: i32| sub_term(&qv_inner, &JboTerm::BoundVar(v), &prop)),
+                    Arc::new(move |v: i32| sub_term(&qv_inner, &JboTerm::BoundVar(v), &prop)),
                 )
             }))
         }
@@ -811,7 +808,7 @@ pub fn do_q_info<P: PreProp>(qinfo: QInfo, p: P) -> P {
                 Prop::Quantified(
                     JboQuantifier::RelQuantifier(Box::new(JboQuantifier::QuestionQuantifier)),
                     None,
-                    Rc::new(move |v: i32| sub_rel(&qv_inner, &JboRel::BoundRVar(v), &prop)),
+                    Arc::new(move |v: i32| sub_rel(&qv_inner, &JboRel::BoundRVar(v), &prop)),
                 )
             }))
         }
@@ -925,31 +922,31 @@ pub fn set_shunting<K: Eq + Clone + Hash, V: Clone, F: Fn(usize) -> K>(
 // ============================================================================
 
 pub trait PreProp: Clone {
-    fn lift_to_prop(self, f: Box<dyn Fn(JboProp) -> JboProp>) -> Self;
-    fn lift_to_prop2(self, other: Self, f: Box<dyn Fn(JboProp, JboProp) -> JboProp>) -> Self;
+    fn lift_to_prop(self, f: Box<dyn Fn(JboProp) -> JboProp + Send + Sync>) -> Self;
+    fn lift_to_prop2(self, other: Self, f: Box<dyn Fn(JboProp, JboProp) -> JboProp + Send + Sync>) -> Self;
     fn dummy_pre_prop() -> Self;
 }
 
 impl PreProp for JboProp {
-    fn lift_to_prop(self, f: Box<dyn Fn(JboProp) -> JboProp>) -> Self {
+    fn lift_to_prop(self, f: Box<dyn Fn(JboProp) -> JboProp + Send + Sync>) -> Self {
         f(self)
     }
-    
-    fn lift_to_prop2(self, other: Self, f: Box<dyn Fn(JboProp, JboProp) -> JboProp>) -> Self {
+
+    fn lift_to_prop2(self, other: Self, f: Box<dyn Fn(JboProp, JboProp) -> JboProp + Send + Sync>) -> Self {
         f(self, other)
     }
-    
+
     fn dummy_pre_prop() -> Self {
         Prop::Eet
     }
 }
 
 impl PreProp for JboPred {
-    fn lift_to_prop(self, f: Box<dyn Fn(JboProp) -> JboProp>) -> Self {
+    fn lift_to_prop(self, f: Box<dyn Fn(JboProp) -> JboProp + Send + Sync>) -> Self {
         Arc::new(move |o: &JboTerm| f(self(o)))
     }
 
-    fn lift_to_prop2(self, other: Self, f: Box<dyn Fn(JboProp, JboProp) -> JboProp>) -> Self {
+    fn lift_to_prop2(self, other: Self, f: Box<dyn Fn(JboProp, JboProp) -> JboProp + Send + Sync>) -> Self {
         Arc::new(move |o: &JboTerm| f(self(o), other(o)))
     }
 
@@ -959,7 +956,7 @@ impl PreProp for JboPred {
 }
 
 impl PreProp for JboNPred {
-    fn lift_to_prop(self, f: Box<dyn Fn(JboProp) -> JboProp>) -> Self {
+    fn lift_to_prop(self, f: Box<dyn Fn(JboProp) -> JboProp + Send + Sync>) -> Self {
         let pred = self.pred;
         JboNPred {
             arity: self.arity,
@@ -967,7 +964,7 @@ impl PreProp for JboNPred {
         }
     }
 
-    fn lift_to_prop2(self, other: Self, f: Box<dyn Fn(JboProp, JboProp) -> JboProp>) -> Self {
+    fn lift_to_prop2(self, other: Self, f: Box<dyn Fn(JboProp, JboProp) -> JboProp + Send + Sync>) -> Self {
         if self.arity != other.arity {
             panic!("mismatched JboNPred arities in lift_to_prop2");
         }
@@ -999,7 +996,7 @@ fn sub_rel(old: &JboRel, new: &JboRel, prop: &JboProp) -> JboProp {
     crate::jbo_prop::sub_rel(old, new, prop.clone())
 }
 
-fn jbo_pred_to_loj_pred(pred: &JboPred) -> Rc<dyn Fn(i32) -> JboProp + '_> {
+fn jbo_pred_to_loj_pred(pred: &JboPred) -> Arc<dyn Fn(i32) -> JboProp + Send + Sync> {
     crate::jbo_prop::jbo_pred_to_loj_pred(pred)
 }
 
@@ -1318,9 +1315,9 @@ fn quantify_out_free(pred: JboPred, free: JboTerm, domain: VariableDomain) -> Jb
         Prop::Quantified(
             JboQuantifier::LojQuantifier(crate::logic::LojQuantifier::Forall),
             restriction.map(|r| {
-                Rc::new(move |v: i32| r(&JboTerm::BoundVar(v))) as Rc<dyn Fn(i32) -> JboProp>
+                Arc::new(move |v: i32| r(&JboTerm::BoundVar(v))) as Arc<dyn Fn(i32) -> JboProp + Send + Sync>
             }),
-            Rc::new(move |v: i32| crate::jbo_prop::sub_term(&free_for_body, &JboTerm::BoundVar(v), body.clone())),
+            Arc::new(move |v: i32| crate::jbo_prop::sub_term(&free_for_body, &JboTerm::BoundVar(v), body.clone())),
         )
     })
 }
@@ -1396,7 +1393,7 @@ fn fill_args_in_prop(prop: JboProp, args: &Args) -> JboProp {
         Prop::Modal(m, p) => Prop::Modal(m, Box::new(fill_args_in_prop(*p, args))),
         Prop::Quantified(q, pred, body) => {
             let args = args.clone();
-            Prop::Quantified(q, pred, Rc::new(move |v| fill_args_in_prop(body(v), &args)))
+            Prop::Quantified(q, pred, Arc::new(move |v| fill_args_in_prop(body(v), &args)))
         }
         Prop::Eet => Prop::Eet,
     }
@@ -1408,12 +1405,12 @@ fn apply_transform(transform: PropTransform, prop: JboProp) -> JboProp {
         PropTransform::Quantify(fresh_var, quantifier, restriction) => {
             if let JboTerm::Var(n) = fresh_var {
                 let pred = restriction.map(|f| {
-                    Rc::new(move |v: i32| f(v)) as Rc<dyn Fn(i32) -> JboProp>
+                    Arc::new(move |v: i32| f(v)) as Arc<dyn Fn(i32) -> JboProp + Send + Sync>
                 });
                 Prop::Quantified(
                     quantifier,
                     pred,
-                    Rc::new(move |v: i32| crate::jbo_prop::sub_term(&JboTerm::Var(n), &JboTerm::BoundVar(v), prop.clone()))
+                    Arc::new(move |v: i32| crate::jbo_prop::sub_term(&JboTerm::Var(n), &JboTerm::BoundVar(v), prop.clone()))
                 )
             } else {
                 prop
@@ -1426,12 +1423,12 @@ fn apply_transform(transform: PropTransform, prop: JboProp) -> JboProp {
             let left = Prop::Quantified(
                 left_quant,
                 left_restriction,
-                Rc::new(move |v: i32| crate::jbo_prop::sub_term(&left_fresh, &JboTerm::BoundVar(v), left_prop.clone())),
+                Arc::new(move |v: i32| crate::jbo_prop::sub_term(&left_fresh, &JboTerm::BoundVar(v), left_prop.clone())),
             );
             let right = Prop::Quantified(
                 right_quant,
                 restriction,
-                Rc::new(move |v: i32| crate::jbo_prop::sub_term(&fresh, &JboTerm::BoundVar(v), prop.clone())),
+                Arc::new(move |v: i32| crate::jbo_prop::sub_term(&fresh, &JboTerm::BoundVar(v), prop.clone())),
             );
             crate::jbo_prop::conn_to_fol(&conn, left, right)
         }
@@ -1442,7 +1439,7 @@ fn apply_transform(transform: PropTransform, prop: JboProp) -> JboProp {
             let left = Prop::Quantified(
                 left_quant,
                 left_restriction,
-                Rc::new(move |v: i32| crate::jbo_prop::sub_term(&left_fresh, &JboTerm::BoundVar(v), left_prop.clone())),
+                Arc::new(move |v: i32| crate::jbo_prop::sub_term(&left_fresh, &JboTerm::BoundVar(v), left_prop.clone())),
             );
             let left = if let Some(modal) = left_modal {
                 Prop::Modal(modal, Box::new(left))
@@ -1452,7 +1449,7 @@ fn apply_transform(transform: PropTransform, prop: JboProp) -> JboProp {
             let right = Prop::Quantified(
                 right_quant,
                 restriction,
-                Rc::new(move |v: i32| crate::jbo_prop::sub_term(&fresh, &JboTerm::BoundVar(v), prop.clone())),
+                Arc::new(move |v: i32| crate::jbo_prop::sub_term(&fresh, &JboTerm::BoundVar(v), prop.clone())),
             );
             let right = if let Some(modal) = right_modal {
                 Prop::Modal(modal, Box::new(right))
@@ -1464,7 +1461,7 @@ fn apply_transform(transform: PropTransform, prop: JboProp) -> JboProp {
                 Prop::Quantified(
                     JboQuantifier::LojQuantifier(crate::logic::LojQuantifier::Exists),
                     None,
-                    Rc::new(move |v: i32| crate::jbo_prop::sub_term(&JboTerm::Var(n), &JboTerm::BoundVar(v), connected.clone()))
+                    Arc::new(move |v: i32| crate::jbo_prop::sub_term(&JboTerm::Var(n), &JboTerm::BoundVar(v), connected.clone()))
                 )
             } else {
                 connected
@@ -1474,7 +1471,7 @@ fn apply_transform(transform: PropTransform, prop: JboProp) -> JboProp {
             Prop::Quantified(
                 quantifier,
                 None,
-                Rc::new(move |v: i32| crate::jbo_prop::sub_rel(&fresh_rel, &JboRel::BoundRVar(v), prop.clone()))
+                Arc::new(move |v: i32| crate::jbo_prop::sub_rel(&fresh_rel, &JboRel::BoundRVar(v), prop.clone()))
             )
         }
         PropTransform::SubstituteTerm(old_term, new_term) => crate::jbo_prop::sub_term(&old_term, &new_term, prop),

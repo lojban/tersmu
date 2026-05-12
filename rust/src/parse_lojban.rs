@@ -20,7 +20,7 @@ use crate::camxes::peg::grammar::Peg;
 use crate::camxes::peg::parsing::Span;
 use crate::camxes::peg::semantic::SemanticNode;
 use crate::camxes::peg::{downcast_ref, parse_with_semantics, single_root, span_slice, ReducerTable};
-use std::cell::OnceCell;
+use std::sync::OnceLock;
 
 type Jeksbs = (crate::jbo_syntax::Connective, crate::jbo_syntax::Selbri3);
 
@@ -33,17 +33,16 @@ enum Selbri4Item {
 
 type Dtu = crate::jbo_syntax::DecoratedAbsTagUnit<crate::jbo_syntax::Selbri, crate::jbo_syntax::Sumti>;
 
-thread_local! {
-    static TEXT_PEG: OnceCell<Peg> = const { OnceCell::new() };
-    static FREE_PEG: OnceCell<Peg> = const { OnceCell::new() };
-    static JOIK_EK_PEG: OnceCell<Peg> = const { OnceCell::new() };
-    static LA_CLAUSE_PEG: OnceCell<Peg> = const { OnceCell::new() };
-    static MAI_CLAUSE_PEG: OnceCell<Peg> = const { OnceCell::new() };
-    static ZOI_CLAUSE_PEG: OnceCell<Peg> = const { OnceCell::new() };
-    static SEI_CLAUSE_PEG: OnceCell<Peg> = const { OnceCell::new() };
-    static INDICATORS_PEG: OnceCell<Peg> = const { OnceCell::new() };
-    static SI_CLAUSE_PEG: OnceCell<Peg> = const { OnceCell::new() };
-}
+static TEXT_PEG: OnceLock<Peg> = OnceLock::new();
+static FREE_PEG: OnceLock<Peg> = OnceLock::new();
+static JOIK_EK_PEG: OnceLock<Peg> = OnceLock::new();
+static LA_CLAUSE_PEG: OnceLock<Peg> = OnceLock::new();
+static MAI_CLAUSE_PEG: OnceLock<Peg> = OnceLock::new();
+static ZOI_CLAUSE_PEG: OnceLock<Peg> = OnceLock::new();
+static SEI_CLAUSE_PEG: OnceLock<Peg> = OnceLock::new();
+static INDICATORS_PEG: OnceLock<Peg> = OnceLock::new();
+static SI_CLAUSE_PEG: OnceLock<Peg> = OnceLock::new();
+static REDUCER_TABLE: OnceLock<ReducerTable> = OnceLock::new();
 
 // Rust integration: Builds a camxes PEG parser for a Lojban.pappy grammar rule
 // Replaces Haskell's Pappy-generated parser infrastructure
@@ -52,112 +51,63 @@ fn build_peg(start: &str) -> Result<Peg, usize> {
     Peg::new(start, grammar).map_err(|_| 0usize)
 }
 
-// Rust integration: Thread-local PEG cache for "text" rule
+// Rust integration: Global PEG cache for "text" rule
 fn with_text_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
-    TEXT_PEG.with(|cell| {
-        if cell.get().is_none() {
-            let peg = build_peg("text")?;
-            let _ = cell.set(peg);
-        }
-        let peg = cell.get().ok_or(0usize)?;
-        f(peg)
-    })
+    let peg = TEXT_PEG.get_or_init(|| build_peg("text").expect("text PEG build failed"));
+    f(peg)
 }
 
-// Rust integration: Thread-local PEG cache for "free" rule
+// Rust integration: Global PEG cache for "free" rule
 fn with_free_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
-    FREE_PEG.with(|cell| {
-        if cell.get().is_none() {
-            let peg = build_peg("free")?;
-            let _ = cell.set(peg);
-        }
-        let peg = cell.get().ok_or(0usize)?;
-        f(peg)
-    })
+    let peg = FREE_PEG.get_or_init(|| build_peg("free").expect("free PEG build failed"));
+    f(peg)
 }
 
-// Rust integration: Thread-local PEG cache for "joik_ek" rule
+// Rust integration: Global PEG cache for "joik_ek" rule
 fn with_joik_ek_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
-    JOIK_EK_PEG.with(|cell| {
-        if cell.get().is_none() {
-            let peg = build_peg("joik_ek")?;
-            let _ = cell.set(peg);
-        }
-        let peg = cell.get().ok_or(0usize)?;
-        f(peg)
-    })
+    let peg = JOIK_EK_PEG.get_or_init(|| build_peg("joik_ek").expect("joik_ek PEG build failed"));
+    f(peg)
 }
 
-// Rust integration: Thread-local PEG cache for "LA_clause" rule
+// Rust integration: Global PEG cache for "LA_clause" rule
 fn with_la_clause_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
-    LA_CLAUSE_PEG.with(|cell| {
-        if cell.get().is_none() {
-            let peg = build_peg("LA_clause")?;
-            let _ = cell.set(peg);
-        }
-        let peg = cell.get().ok_or(0usize)?;
-        f(peg)
-    })
+    let peg = LA_CLAUSE_PEG.get_or_init(|| build_peg("LA_clause").expect("LA_clause PEG build failed"));
+    f(peg)
 }
 
-// Rust integration: Thread-local PEG cache for "MAI_clause" rule
+// Rust integration: Global PEG cache for "MAI_clause" rule
 fn with_mai_clause_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
-    MAI_CLAUSE_PEG.with(|cell| {
-        if cell.get().is_none() {
-            let peg = build_peg("MAI_clause")?;
-            let _ = cell.set(peg);
-        }
-        let peg = cell.get().ok_or(0usize)?;
-        f(peg)
-    })
+    let peg = MAI_CLAUSE_PEG.get_or_init(|| build_peg("MAI_clause").expect("MAI_clause PEG build failed"));
+    f(peg)
 }
 
-// Rust integration: Thread-local PEG cache for "ZOI_clause" rule
+// Rust integration: Global PEG cache for "ZOI_clause" rule
 fn with_zoi_clause_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
-    ZOI_CLAUSE_PEG.with(|cell| {
-        if cell.get().is_none() {
-            let peg = build_peg("ZOI_clause")?;
-            let _ = cell.set(peg);
-        }
-        let peg = cell.get().ok_or(0usize)?;
-        f(peg)
-    })
+    let peg = ZOI_CLAUSE_PEG.get_or_init(|| build_peg("ZOI_clause").expect("ZOI_clause PEG build failed"));
+    f(peg)
 }
 
-// Rust integration: Thread-local PEG cache for "SEI_clause" rule
+// Rust integration: Global PEG cache for "SEI_clause" rule
 fn with_sei_clause_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
-    SEI_CLAUSE_PEG.with(|cell| {
-        if cell.get().is_none() {
-            let peg = build_peg("SEI_clause")?;
-            let _ = cell.set(peg);
-        }
-        let peg = cell.get().ok_or(0usize)?;
-        f(peg)
-    })
+    let peg = SEI_CLAUSE_PEG.get_or_init(|| build_peg("SEI_clause").expect("SEI_clause PEG build failed"));
+    f(peg)
 }
 
-// Rust integration: Thread-local PEG cache for "indicators" rule
+// Rust integration: Global PEG cache for "indicators" rule
 fn with_indicators_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
-    INDICATORS_PEG.with(|cell| {
-        if cell.get().is_none() {
-            let peg = build_peg("indicators")?;
-            let _ = cell.set(peg);
-        }
-        let peg = cell.get().ok_or(0usize)?;
-        f(peg)
-    })
+    let peg = INDICATORS_PEG.get_or_init(|| build_peg("indicators").expect("indicators PEG build failed"));
+    f(peg)
 }
 
-// Rust integration: Thread-local PEG cache for "SI_clause" rule
+// Rust integration: Global PEG cache for "SI_clause" rule
 fn with_si_clause_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
-    SI_CLAUSE_PEG.with(|cell| {
-        if cell.get().is_none() {
-            let peg = build_peg("si_clause")?;
-            let _ = cell.set(peg);
-        }
-        let peg = cell.get().ok_or(0usize)?;
-        f(peg)
-    })
+    let peg = SI_CLAUSE_PEG.get_or_init(|| build_peg("si_clause").expect("si_clause PEG build failed"));
+    f(peg)
+}
+
+// Rust integration: Global reducer table cache
+fn reducer_table() -> &'static ReducerTable {
+    REDUCER_TABLE.get_or_init(build_reducers)
 }
 
 /// Build semantic reducers to extract `JboSyntax.hs` values from the camxes-rs parse tree.
@@ -5518,7 +5468,7 @@ pub fn parse_text(input: &str) -> Result<Text, usize> {
         .trim_end_matches("%%%END%%%");
     let with_end = format!("{} %%%END%%%", clean_input);
 
-    let reducers = build_reducers();
+    let reducers = reducer_table();
 
     with_text_peg(|text_peg| {
         with_free_peg(|free_peg| {
@@ -5528,7 +5478,7 @@ pub fn parse_text(input: &str) -> Result<Text, usize> {
             parse_full_or_free_error(text_peg, free_peg, &nudged)?;
 
             // Parse with semantic actions
-            let forest = parse_with_semantics(text_peg, &nudged, &reducers)
+            let forest = parse_with_semantics(text_peg, &nudged, reducers)
                 .map_err(|e| e.position)?;
 
             // Extract the root Text node

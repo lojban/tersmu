@@ -1,6 +1,5 @@
 use crate::camxes::peg::parsing::ParseResult;
 use crate::camxes::peg::rule::Rule;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
@@ -12,7 +11,6 @@ pub type MemoMap = rustc_hash::FxHashMap<(String, usize), ParseResult>;
 pub struct Peg {
     pub rules: Arc<HashMap<String, Rule>>,
     pub start: String,
-    pub memo: RefCell<MemoMap>,
 }
 
 impl Display for Peg {

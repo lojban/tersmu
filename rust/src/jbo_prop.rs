@@ -1,7 +1,5 @@
 //! Evaluation-layer types from [JboProp.hs](../JboProp.hs). Filled in as [crate::eval](super::eval) grows.
 
-#![allow(clippy::arc_with_non_send_sync)]
-
 pub use crate::jbo_syntax::Fragment;
 pub use crate::logic::Prop;
 use std::sync::Arc;
@@ -368,7 +366,7 @@ pub enum SideType {
 // ============================================================================
 
 /// JboVPred: Variadic predicate (takes list of terms)
-pub type JboVPred = Arc<dyn Fn(&[JboTerm]) -> JboProp>;
+pub type JboVPred = Arc<dyn Fn(&[JboTerm]) -> JboProp + Send + Sync>;
 
 /// JboNPred: N-ary predicate with fixed arity
 #[derive(Clone)]
@@ -377,10 +375,10 @@ pub struct JboNPred {
     pub pred: JboNPredFn,
 }
 
-type JboNPredFn = Arc<dyn Fn(&[JboTerm]) -> JboProp>;
+type JboNPredFn = Arc<dyn Fn(&[JboTerm]) -> JboProp + Send + Sync>;
 
 /// JboPred: Unary predicate
-pub type JboPred = Arc<dyn Fn(&JboTerm) -> JboProp>;
+pub type JboPred = Arc<dyn Fn(&JboTerm) -> JboProp + Send + Sync>;
 
 // Ported from: JboProp.hs :: vPredToPred
 /// Convert variadic predicate to unary predicate
@@ -405,8 +403,9 @@ pub fn pred_to_n_pred(pred: JboPred) -> JboNPred {
 
 // Ported from: JboProp.hs :: jboPredToLojPred
 /// Convert JboPred to Logic Pred
-pub fn jbo_pred_to_loj_pred(pred: &JboPred) -> std::rc::Rc<dyn Fn(i32) -> JboProp + '_> {
-    std::rc::Rc::new(move |v: i32| pred(&JboTerm::BoundVar(v)))
+pub fn jbo_pred_to_loj_pred(pred: &JboPred) -> std::sync::Arc<dyn Fn(i32) -> JboProp + Send + Sync> {
+    let pred = pred.clone();
+    std::sync::Arc::new(move |v: i32| pred(&JboTerm::BoundVar(v)))
 }
 
 // ============================================================================
@@ -687,9 +686,9 @@ pub fn sub_term(old_term: &JboTerm, new_term: &JboTerm, prop: JboProp) -> JboPro
             let new_r = r.map(move |pred| {
                 let old_term = old_term_clone.clone();
                 let new_term = new_term_clone.clone();
-                std::rc::Rc::new(move |v| sub_term(&old_term, &new_term, pred(v))) as std::rc::Rc<dyn Fn(i32) -> JboProp>
+                std::sync::Arc::new(move |v| sub_term(&old_term, &new_term, pred(v))) as std::sync::Arc<dyn Fn(i32) -> JboProp + Send + Sync>
             });
-            Prop::Quantified(q, new_r, std::rc::Rc::new(move |v| sub_term(&old_term_for_body, &new_term_for_body, f(v))))
+            Prop::Quantified(q, new_r, std::sync::Arc::new(move |v| sub_term(&old_term_for_body, &new_term_for_body, f(v))))
         }
         Prop::Eet => Prop::Eet,
     }
@@ -914,9 +913,9 @@ pub fn sub_rel(old_rel: &JboRel, new_rel: &JboRel, prop: JboProp) -> JboProp {
             let new_r = r.map(move |pred| {
                 let old_rel = old_rel_for_restriction.clone();
                 let new_rel = new_rel_for_restriction.clone();
-                std::rc::Rc::new(move |v| sub_rel(&old_rel, &new_rel, pred(v))) as std::rc::Rc<dyn Fn(i32) -> JboProp>
+                std::sync::Arc::new(move |v| sub_rel(&old_rel, &new_rel, pred(v))) as std::sync::Arc<dyn Fn(i32) -> JboProp + Send + Sync>
             });
-            Prop::Quantified(q, new_r, std::rc::Rc::new(move |v| sub_rel(&old_rel_for_body, &new_rel_for_body, f(v))))
+            Prop::Quantified(q, new_r, std::sync::Arc::new(move |v| sub_rel(&old_rel_for_body, &new_rel_for_body, f(v))))
         }
         Prop::Eet => Prop::Eet,
     }

@@ -1,4 +1,4 @@
-//! `tersmu` library: Pappy runtime ([`pappy`]), optional Rust Pappy compiler ([`pappyc`]), and Lojban pipeline.
+//! `tersmu` library: Lojban semantic parser with integrated camxes PEG parser.
 
 #![allow(dead_code)]
 #![allow(unused_imports)]
@@ -18,8 +18,6 @@ pub mod parse_lojban;
 pub mod parse_m;
 pub mod parse_m_helpers;
 pub mod bindful;
-pub mod pappy;
-pub mod pappyc;
 pub mod run;
 pub mod util;
 

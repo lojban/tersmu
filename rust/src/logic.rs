@@ -1,7 +1,7 @@
 //! Proposition type from [Logic.hs](../Logic.hs). Quantified formulas use higher-order abstract
 //! syntax in Haskell; `Quantified` is added when [JboParse.hs](../JboParse.hs) is ported.
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Connective {
@@ -55,7 +55,7 @@ pub enum Prop<R, T, C, O, Q> {
     Eet,
 }
 
-type PropFn<R, T, C, O, Q> = Rc<dyn Fn(i32) -> Prop<R, T, C, O, Q>>;
+type PropFn<R, T, C, O, Q> = Arc<dyn Fn(i32) -> Prop<R, T, C, O, Q> + Send + Sync>;
 
 impl<R: Clone, T: Clone, C: Clone, O: Clone, Q: Clone> Clone for Prop<R, T, C, O, Q> {
     fn clone(&self) -> Self {
@@ -140,9 +140,9 @@ where
     T2: Clone + 'static,
     O2: Clone + 'static,
     Q2: Clone + 'static,
-    A: Fn(&R1, &[T1]) -> Prop<R2, T2, C, O2, Q2> + Clone + 'static,
-    OP: Fn(&O1) -> O2 + Clone + 'static,
-    QP: Fn(&Q1) -> Q2 + Clone + 'static,
+    A: Fn(&R1, &[T1]) -> Prop<R2, T2, C, O2, Q2> + Clone + Send + Sync + 'static,
+    OP: Fn(&O1) -> O2 + Clone + Send + Sync + 'static,
+    QP: Fn(&Q1) -> Q2 + Clone + Send + Sync + 'static,
 {
     match prop {
         Prop::Rel(r, ts) => terp_atomic(r, ts),
@@ -166,13 +166,13 @@ where
                 let terp_atomic = terp_atomic.clone();
                 let terp_op = terp_op.clone();
                 let terp_q = terp_q.clone();
-                Rc::new(move |v| terp_prop(terp_atomic.clone(), terp_op.clone(), terp_q.clone(), &r(v))) as Rc<dyn Fn(i32) -> Prop<R2, T2, C, O2, Q2>>
+                Arc::new(move |v| terp_prop(terp_atomic.clone(), terp_op.clone(), terp_q.clone(), &r(v))) as Arc<dyn Fn(i32) -> Prop<R2, T2, C, O2, Q2> + Send + Sync>
             });
             let body = body.clone();
             Prop::Quantified(
                 terp_q(q),
                 mapped_restriction,
-                Rc::new(move |v| terp_prop(terp_atomic.clone(), terp_op.clone(), terp_q.clone(), &body(v))),
+                Arc::new(move |v| terp_prop(terp_atomic.clone(), terp_op.clone(), terp_q.clone(), &body(v))),
             )
         }
         Prop::Eet => Prop::Eet,

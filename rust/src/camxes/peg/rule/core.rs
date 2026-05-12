@@ -1,5 +1,5 @@
 use super::types::Rule;
-use crate::camxes::peg::grammar::Peg;
+use crate::camxes::peg::grammar::{MemoMap, Peg};
 use crate::camxes::peg::parsing::{get_furthest_error_pos, get_furthest_pos, limit_error_pos, set_furthest_error_pos, set_furthest_pos, update_furthest_error_pos, update_furthest_pos, ErrorKind, ParseError, ParseNode, ParseResult, Span};
 use log::{debug, log_enabled, Level};
 use std::sync::Arc;
@@ -10,7 +10,7 @@ fn join_error_pos(pos1: usize, pos2: usize) -> usize {
 }
 
 impl Rule {
-    pub fn parse(&self, peg: &Peg, input: &str, position: usize, depth: usize) -> ParseResult {
+    pub fn parse(&self, peg: &Peg, input: &str, position: usize, depth: usize, memo: &mut MemoMap) -> ParseResult {
         match self {
             Rule::Empty => ParseResult(1, position, position, Arc::new(Ok(vec![]))),
 
@@ -80,7 +80,7 @@ impl Rule {
             Rule::NonTerminal(name) => {
                 let key = (name.clone(), position);
 
-                if let Some(cached_result) = peg.memo.borrow().get(&key) {
+                if let Some(cached_result) = memo.get(&key) {
                     if log_enabled!(Level::Debug) {
                         debug!(
                             "{}cache hit {name} @ {position} -> {}",
@@ -105,12 +105,12 @@ impl Rule {
                             cause: None,
                         };
                         let res = ParseResult(1, position, position, Arc::new(Err(err)));
-                        peg.memo.borrow_mut().insert(key, res.clone());
+                        memo.insert(key, res.clone());
                         return res;
                     }
                 };
 
-                let result = match rule.parse(peg, input, position, depth + 1) {
+                let result = match rule.parse(peg, input, position, depth + 1, memo) {
                     ParseResult(cost, new_pos, err_pos, ref payload) => match payload.as_ref() {
                         Ok(matches) => ParseResult(
                             cost,
@@ -146,14 +146,14 @@ impl Rule {
                         result.1
                     );
                 }
-                peg.memo.borrow_mut().insert(key, result.clone());
+                memo.insert(key, result.clone());
                 result
             }
 
             Rule::Choice(choices) => {
                 let mut furthest_err = position;
                 for choice in choices {
-                    let res = choice.parse(peg, input, position, depth);
+                    let res = choice.parse(peg, input, position, depth, memo);
                     furthest_err = join_error_pos(furthest_err, res.2);
                     if res.3.is_ok() {
                         // Success: return with merged error position
@@ -180,7 +180,7 @@ impl Rule {
                 let mut furthest_err = position;
 
                 for expr in sequence {
-                    let res = expr.parse(peg, input, pos, depth);
+                    let res = expr.parse(peg, input, pos, depth, memo);
                     furthest_err = join_error_pos(furthest_err, res.2);
                     match res.3.as_ref() {
                         Ok(m) => {
@@ -201,7 +201,7 @@ impl Rule {
                 let mut furthest_err = position;
 
                 loop {
-                    let res = expr.parse(peg, input, pos, depth);
+                    let res = expr.parse(peg, input, pos, depth, memo);
                     furthest_err = join_error_pos(furthest_err, res.2);
                     match res.3.as_ref() {
                         Ok(m) => {
@@ -222,10 +222,10 @@ impl Rule {
                 Rule::Group(expr.clone()),
                 Rule::ZeroOrMore(expr.clone()),
             ])
-            .parse(peg, input, position, depth),
+            .parse(peg, input, position, depth, memo),
 
             Rule::Optional(expr) => {
-                let res = expr.parse(peg, input, position, depth);
+                let res = expr.parse(peg, input, position, depth, memo);
                 if res.3.is_ok() {
                     ParseResult(1, res.1, res.2, res.3)
                 } else {
@@ -240,7 +240,7 @@ impl Rule {
                 // Save and restore both FURTHEST_POS and the error_position.
                 let saved_furthest = get_furthest_pos();
                 let saved_furthest_error = get_furthest_error_pos();
-                let res = expr.parse(peg, input, position, depth);
+                let res = expr.parse(peg, input, position, depth, memo);
                 set_furthest_pos(saved_furthest);
                 set_furthest_error_pos(saved_furthest_error);
                 // Use saved_furthest as error_pos (don't propagate inner error_pos)
@@ -258,7 +258,7 @@ impl Rule {
                 // Save and restore both FURTHEST_POS and the error_position.
                 let saved_furthest = get_furthest_pos();
                 let saved_furthest_error = get_furthest_error_pos();
-                let res = expr.parse(peg, input, position, depth);
+                let res = expr.parse(peg, input, position, depth, memo);
                 set_furthest_pos(saved_furthest);
                 set_furthest_error_pos(saved_furthest_error);
                 // Use saved_furthest as error_pos (don't propagate inner error_pos)
@@ -284,7 +284,7 @@ impl Rule {
                 }
             }
 
-            Rule::Group(expr) => expr.parse(peg, input, position, depth),
+            Rule::Group(expr) => expr.parse(peg, input, position, depth, memo),
 
             Rule::Range(start, end) => {
                 if position < input.len() {

@@ -5,7 +5,6 @@ use crate::camxes::peg::parsing::ParseResult;
 use crate::camxes::peg::rule::Rule;
 use crate::camxes::peg::transformer::Transformer;
 use serde_json; // Import serde_json
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -29,14 +28,19 @@ impl Peg {
     }
 
     pub fn parse(&self, input: &str) -> ParseResult {
+        let mut memo = MemoMap::default();
+        self.parse_with_memo(input, &mut memo)
+    }
+
+    pub fn parse_with_memo(&self, input: &str, memo: &mut MemoMap) -> ParseResult {
         // Clear the memoization cache before starting a new parse
-        self.memo.borrow_mut().clear();
+        memo.clear();
         // Reset furthest-position tracker for this parse (Pappy joinErrors behavior)
         crate::camxes::peg::parsing::reset_furthest_pos();
         if let Some(marker_pos) = input.strip_suffix(" %%%END%%%").map(|s| s.len()) {
             crate::camxes::peg::parsing::set_error_cutoff_pos(marker_pos);
         }
-        Rule::NonTerminal(self.start.clone()).parse(self, input, 0, 0)
+        Rule::NonTerminal(self.start.clone()).parse(self, input, 0, 0, memo)
     }
 
     /// Parses the input and returns the result as a JSON string.
@@ -57,7 +61,6 @@ impl Peg {
         Self {
             start: TEXT.to_string(),
             rules: Arc::new(grammar_builder.rules),
-            memo: RefCell::new(MemoMap::default()),
         }
     }
 }

@@ -1,8 +1,8 @@
 //! Benchmarks: grammar startup and parse for the embedded Lojban PEG.
 
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use tersmu::camxes::peg::grammar::Peg;
 use tersmu::camxes::LOJBAN_GRAMMAR;
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 fn bench_grammar_startup(c: &mut Criterion) {
     c.bench_function("peg_new_lojban_grammar", |b| {
@@ -27,5 +27,25 @@ fn bench_parse(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_grammar_startup, bench_parse);
+fn bench_full_pipeline(c: &mut Criterion) {
+    c.bench_function("parse_text_short", |b| {
+        b.iter(|| black_box(tersmu::parse_lojban::parse_text(black_box("mi prami do"))))
+    });
+
+    c.bench_function("parse_text_medium", |b| {
+        let input = "mi prami do .i do prami mi ".repeat(20);
+        b.iter(|| black_box(tersmu::parse_lojban::parse_text(black_box(input.as_str()))))
+    });
+
+    c.bench_function("full_pipeline_short", |b| {
+        b.iter(|| {
+            let input = black_box("mi prami do");
+            let morphed = tersmu::morphology::morph(input).unwrap();
+            let parsed = tersmu::parse_lojban::parse_text(&morphed).unwrap();
+            black_box(tersmu::eval_show::eval_text_to_outputs_with_options(&parsed, true))
+        })
+    });
+}
+
+criterion_group!(benches, bench_grammar_startup, bench_parse, bench_full_pipeline);
 criterion_main!(benches);
