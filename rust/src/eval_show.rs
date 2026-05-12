@@ -10,7 +10,7 @@ use crate::jbo_prop::{JboFragment, JboMex, JboModalOp, JboOperator, JboProp, Jbo
 use crate::jbo_syntax::{Lerfu, SumtiAtom, Text};
 use crate::logic::Prop;
 
-// Ports `JboShow.hs :: jbonum` inverse display for parsed PA digits in syntax MEX.
+// Rust-only: Inverse of jbonum for parsing PA digits back to numeric strings
 fn format_pa_digit(pa: &str) -> &str {
     match pa {
         "no" => "0",
@@ -27,11 +27,12 @@ fn format_pa_digit(pa: &str) -> &str {
     }
 }
 
-// Ports `JboShow.hs :: LogShow LerfuString` for logical output.
+// Ported from: JboShow.hs :: instance JboShow LerfuString (logshow method)
 fn format_lerfu_string(ls: &[Lerfu]) -> String {
     ls.iter().map(format_lerfu).collect::<String>()
 }
 
+// Ported from: JboShow.hs :: instance JboShow Lerfu (logshow method)
 fn format_lerfu(l: &Lerfu) -> String {
     match l {
         Lerfu::LerfuChar(c) => c.to_string(),
@@ -41,6 +42,7 @@ fn format_lerfu(l: &Lerfu) -> String {
     }
 }
 
+// Rust-only: Debug helper for Lerfu, not present in Haskell
 fn format_lerfu_debug(l: &Lerfu) -> String {
     match l {
         Lerfu::LerfuChar(c) => format!("LerfuChar '{}'", c),
@@ -52,7 +54,7 @@ fn format_lerfu_debug(l: &Lerfu) -> String {
     }
 }
 
-// Ports `JboShow.hs :: JboShow Lerfu` for canonical Lojban output.
+// Ported from: JboShow.hs :: instance JboShow Lerfu (jboshow method)
 fn format_lerfu_jbo(l: &Lerfu) -> String {
     match l {
         Lerfu::LerfuChar(c) if matches!(c, 'a' | 'e' | 'i' | 'o' | 'u') => format!("{}bu", c),
@@ -68,6 +70,7 @@ fn format_lerfu_jbo(l: &Lerfu) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: vowelnum
 fn vowelnum(n: i32) -> String {
     match n {
         1 => "a".to_string(),
@@ -79,11 +82,13 @@ fn vowelnum(n: i32) -> String {
     }
 }
 
+// Wrapper for jbo_show::jbonum
 fn jbonum(n: i32) -> String {
     crate::jbo_show::jbonum(n)
 }
 
-// Ports `JboShow.hs :: LogShow SumtiAtom`.
+// Ported from: JboShow.hs :: instance JboShow ShowBindable (jboshow method)
+// Covers SAss (ko'a/ko'e/..., fo'a/fo'e/...) and MainBridiSumbasti (vo'a/vo'e/...)
 fn format_sumti_atom(atom: &SumtiAtom) -> String {
     let jbo = match atom {
         SumtiAtom::Assignable(n) if *n <= 5 => format!("ko'{}", vowelnum(*n)),
@@ -100,7 +105,7 @@ fn format_sumti_atom(atom: &SumtiAtom) -> String {
     format!("{{{}}}", jbo)
 }
 
-// Mirrors derived `Show` output for `JboSyntax.hs :: Operator` in syntax-level MEX display.
+// Rust-only: Debug helper for syntax-level Operator, not present in Haskell
 fn format_syntax_operator(op: &crate::jbo_syntax::Operator) -> String {
     match op {
         crate::jbo_syntax::Operator::OpVUhU(s) => format!("OpVUhU \"{}\"", s),
@@ -108,6 +113,7 @@ fn format_syntax_operator(op: &crate::jbo_syntax::Operator) -> String {
     }
 }
 
+// Rust-only: Debug helper for syntax-level Mex, not present in Haskell
 fn format_syntax_mex(mex: &crate::jbo_syntax::Mex) -> String {
     match mex {
         crate::jbo_syntax::Mex::Operation(op, args) => {
@@ -143,7 +149,7 @@ fn format_syntax_mex(mex: &crate::jbo_syntax::Mex) -> String {
     }
 }
 
-// Ports `JboShow.hs :: LogShow JboMex`.
+// Ported from: JboShow.hs :: instance JboShow JboMex (logshow method)
 fn format_mex(mex: &JboMex) -> String {
     match mex {
         JboMex::MexNumeralString(ns) => format!("({})", ns
@@ -183,6 +189,7 @@ fn format_mex(mex: &JboMex) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboMex (logshow method for numeric cases)
 fn format_mex_number_for_rel(mex: &JboMex) -> String {
     match mex {
         JboMex::MexNumeralString(ns) => format!("({})", ns
@@ -199,7 +206,7 @@ fn format_mex_number_for_rel(mex: &JboMex) -> String {
     }
 }
 
-// Ports `JboShow.hs :: LogShow JboQuantifier`.
+// Ported from: JboShow.hs :: instance JboShow JboQuantifier (logshow method)
 fn format_quantifier(q: &JboQuantifier) -> String {
     match q {
         JboQuantifier::QuestionQuantifier => "?".to_string(),
@@ -209,6 +216,7 @@ fn format_quantifier(q: &JboQuantifier) -> String {
     }
 }
 
+// Rust-only: Helper for formatting quantified variable prefixes in logical output
 fn format_quantified_prefix(q: &JboQuantifier, name: &str) -> String {
     match q {
         JboQuantifier::LojQuantifier(crate::logic::LojQuantifier::Exists)
@@ -219,7 +227,7 @@ fn format_quantified_prefix(q: &JboQuantifier, name: &str) -> String {
     }
 }
 
-// Ports `JboShow.hs :: LogShow Texticule`.
+// Ported from: JboShow.hs :: instance JboShow Texticule (logshow method)
 fn format_texticule(texticule: &Texticule) -> String {
     match texticule {
         Texticule::TexticuleFrag(fragment) => match fragment {
@@ -231,7 +239,8 @@ fn format_texticule(texticule: &Texticule) -> String {
     }
 }
 
-// Ports `JboShow.hs :: LogShow [Texticule]`, including term-attached side texticules from `JboParse.hs`.
+// Ported from: JboShow.hs :: instance JboShow [Texticule] (logshow method)
+// Includes term-attached side texticules from JboParse.hs
 fn format_text(text: &[Texticule]) -> String {
     let mut lines = text.iter().map(format_texticule).collect::<Vec<_>>();
     let mut side_lines = Vec::new();
@@ -255,7 +264,7 @@ fn format_text(text: &[Texticule]) -> String {
     lines.join("\n")
 }
 
-// Ports `JboShow.hs :: LogShow JboTerm`.
+// Ported from: JboShow.hs :: instance JboShow JboTerm (logshow method)
 fn format_term(term: &JboTerm) -> String {
     match term {
         JboTerm::NonAnaph(s) => s.clone(),
@@ -292,7 +301,7 @@ fn format_term(term: &JboTerm) -> String {
     }
 }
 
-// Ports `JboShow.hs` connective rendering for logical output.
+// Ported from: JboShow.hs :: instance JboShow Connective (logshow method for LogJboConnective)
 fn format_log_connective(prefix: &str, con: &crate::jbo_syntax::LogJboConnective) -> String {
     let mut parts = Vec::new();
     if !con.b1 {
@@ -309,6 +318,7 @@ fn format_log_connective(prefix: &str, con: &crate::jbo_syntax::LogJboConnective
     parts.join(" ")
 }
 
+// Ported from: JboShow.hs :: instance JboShow Connective (logshow method)
 fn format_connective(prefix: &str, con: &crate::jbo_syntax::Connective) -> String {
     let (mut lojban, mtag) = match con {
         crate::jbo_syntax::Connective::JboConnLog(mtag, lcon) => (format_log_connective(prefix, lcon), mtag.as_deref()),
@@ -329,6 +339,7 @@ fn format_connective(prefix: &str, con: &crate::jbo_syntax::Connective) -> Strin
     format!("{{{}}}", lojban)
 }
 
+// Ported from: JboShow.hs :: instance JboShow Tag (jboshow method for syntax-level Tag)
 fn format_tag_syntax(tag: &crate::jbo_syntax::Tag) -> String {
     match tag {
         crate::jbo_syntax::Tag::DecoratedTagUnits(dtus) => dtus
@@ -355,6 +366,7 @@ fn format_tag_syntax(tag: &crate::jbo_syntax::Tag) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboOperator (logshow method)
 fn format_operator(op: &JboOperator) -> String {
     match op {
         JboOperator::ConnectedOperator(_, con, o1, o2) => format!(
@@ -372,6 +384,7 @@ fn format_operator(op: &JboOperator) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow Connective (logshow method for proposition connectives)
 fn format_prop_log_connective(prefix: &str, con: &crate::jbo_syntax::LogJboConnective) -> String {
     format!(
         "{}{}{}",
@@ -381,6 +394,7 @@ fn format_prop_log_connective(prefix: &str, con: &crate::jbo_syntax::LogJboConne
     )
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboConnective (logshow method for semantic connectives)
 fn format_prop_connective(prefix: &str, con: &crate::jbo_prop::JboConnective, logical: bool) -> String {
     let shown = match con {
         crate::jbo_prop::JboConnective::JboConnLog(mtag, lcon) => {
@@ -413,7 +427,7 @@ fn format_prop_connective(prefix: &str, con: &crate::jbo_prop::JboConnective, lo
     if logical { format!("{{{}}}", shown) } else { shown }
 }
 
-// Ports `JboShow.hs :: LogShow JboTag` after semantic conversion in `JboParse.hs :: parseTag`.
+// Ported from: JboShow.hs :: instance JboShow JboTag (logshow/jboshow method with mode parameter)
 fn format_tag_with_mode(tag: &crate::jbo_prop::JboTag, logical: bool) -> String {
     match tag {
         crate::jbo_prop::JboTag::DecoratedTagUnits(dtus) => dtus
@@ -464,11 +478,12 @@ fn format_tag_with_mode(tag: &crate::jbo_prop::JboTag, logical: bool) -> String 
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboTag (logshow method)
 fn format_tag(tag: &crate::jbo_prop::JboTag) -> String {
     format_tag_with_mode(tag, true)
 }
 
-// Ports `JboShow.hs :: LogShow JboRel` modal-rel cases.
+// Ported from: JboShow.hs :: instance JboShow JboModalOp (logshow method for modal relations)
 fn format_modal_rel(modal: &JboModalOp, rel: &JboRel) -> String {
     match modal {
         JboModalOp::Tagged(tag, term) => {
@@ -479,7 +494,7 @@ fn format_modal_rel(modal: &JboModalOp, rel: &JboRel) -> String {
     }
 }
 
-// Ports bound-variable rendering inside `JboShow.hs :: logjboshow' Prop` quantifier restrictions.
+// Ported from: JboShow.hs :: logjboshow' Prop (quantifier restriction term rendering)
 fn format_restriction_term(term: &JboTerm, var: i32) -> String {
     match term {
         JboTerm::TermWithSides(inner, _) => format_restriction_term(inner, var),
@@ -505,7 +520,7 @@ fn format_restriction_term(term: &JboTerm, var: i32) -> String {
     }
 }
 
-// Ports `JboShow.hs :: LogShow JboVPred` lambda-variable display.
+// Ported from: JboShow.hs :: instance JboShow JboTerm (logshow method for lambda terms)
 fn format_lambda_term(term: &JboTerm) -> String {
     match term {
         JboTerm::BoundVar(n) if *n < 0 => format!("\\{}", n.abs()),
@@ -513,6 +528,7 @@ fn format_lambda_term(term: &JboTerm) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboRel (logshow method for lambda relations)
 fn format_lambda_rel(rel: &JboRel) -> String {
     match rel {
         JboRel::AppliedRel(r, terms) => {
@@ -522,6 +538,7 @@ fn format_lambda_rel(rel: &JboRel) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboTerm (logshow method for lambda restriction terms)
 fn format_lambda_restriction_term(term: &JboTerm, var: i32) -> String {
     match term {
         JboTerm::BoundVar(n) if *n == var => "_".to_string(),
@@ -529,6 +546,7 @@ fn format_lambda_restriction_term(term: &JboTerm, var: i32) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboProp (logshow method for lambda restriction propositions)
 fn format_lambda_restriction_prop(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, crate::jbo_prop::JboQuantifier>, var: i32) -> String {
     match prop {
         Prop::Rel(JboRel::Among(t), terms) if matches!(terms.as_slice(), [JboTerm::BoundVar(n)] if *n == var) => {
@@ -552,6 +570,7 @@ fn format_lambda_restriction_prop(prop: &Prop<JboRel, JboTerm, String, crate::jb
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboRel (logshow method for restriction relations)
 fn format_restriction_rel(rel: &JboRel, var: i32) -> String {
     match rel {
         JboRel::AppliedRel(r, terms) => format!(
@@ -563,6 +582,7 @@ fn format_restriction_rel(rel: &JboRel, var: i32) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboProp (logshow method for restriction propositions)
 fn format_restriction_prop(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, crate::jbo_prop::JboQuantifier>, var: i32) -> String {
     match prop {
         Prop::Rel(rel, terms) => {
@@ -628,10 +648,12 @@ fn format_restriction_prop(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop:
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboProp (logshow method for lambda propositions)
 fn format_lambda_prop(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, crate::jbo_prop::JboQuantifier>) -> String {
     format_lambda_prop_at(prop, 1)
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboProp (logshow method for lambda propositions with variable tracking)
 fn format_lambda_prop_at(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, crate::jbo_prop::JboQuantifier>, next_var: i32) -> String {
     match prop {
         Prop::Rel(rel, terms) => {
@@ -678,7 +700,8 @@ fn format_lambda_prop_at(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::J
     }
 }
 
-// Mirrors `JboShow.hs :: logjboshow' Rel` display after scalar NAhE creates an applied rel with a skipped slot.
+// Ported from: JboShow.hs :: logjboshow' Rel (scalar negation case)
+// Mirrors scalar NAhE display after parsedSelbriToNewSelbri creates applied rel with skipped x2
 fn format_scalar_negated_rel_inner(rel: &JboRel) -> String {
     match rel {
         JboRel::AppliedRel(r, terms) if terms.len() > 2 && matches!(terms.get(1), Some(JboTerm::Unfilled)) => {
@@ -691,7 +714,7 @@ fn format_scalar_negated_rel_inner(rel: &JboRel) -> String {
     }
 }
 
-// Ports `JboShow.hs :: LogShow JboRel`.
+// Ported from: JboShow.hs :: instance JboShow JboRel (logshow method)
 fn format_rel(rel: &JboRel) -> String {
     match rel {
         JboRel::Brivla(s) => s.clone(),
@@ -740,9 +763,8 @@ fn format_rel(rel: &JboRel) -> String {
     }
 }
 
-// Ports `JboShow.hs :: logjboshow` for `JboVPred` with `Bindful.hs :: withShuntedRelVar`.
-// Haskell applies the predicate to a `BoundVar` shown as `_`; Rust stores tanru components as
-// `JboRel`, so seltau formatting applies the same placeholder explicitly.
+// Ported from: JboShow.hs :: logjboshow for JboVPred with Bindful.hs :: withShuntedRelVar
+// Helper for modal seltau inner proposition formatting
 fn format_modal_seltau_inner_prop(prop: &JboProp) -> String {
     match prop {
         Prop::Rel(rel, terms) if terms.is_empty() => format!("{}()", format_rel(rel)),
@@ -750,6 +772,8 @@ fn format_modal_seltau_inner_prop(prop: &JboProp) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: logjboshow for JboVPred with Bindful.hs :: withShuntedRelVar
+// Formats seltau (tanru left component) with placeholder variable for logical output
 fn format_seltau_prop(prop: &JboProp) -> String {
     match prop {
         Prop::Rel(JboRel::Among(t), terms)
@@ -792,6 +816,8 @@ fn format_seltau_prop(prop: &JboProp) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: logjboshow for JboVPred with Bindful.hs :: withShuntedRelVar
+// Formats seltau (tanru left component) with placeholder variable for logical output
 fn format_seltau(rel: &JboRel) -> String {
     match rel {
         JboRel::Among(t) => format!("(_ ≤ {})", format_term(t)),
@@ -823,12 +849,13 @@ fn format_seltau(rel: &JboRel) -> String {
     }
 }
 
-// Ports `JboShow.hs :: logjboshow' Prop`.
+// Ported from: JboShow.hs :: instance JboShow JboProp (logshow method)
 fn format_prop(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, crate::jbo_prop::JboQuantifier>) -> String {
     format_prop_at(prop, 1)
 }
 
-// Mirrors `JboParse.hs :: parseTag` plus `JboProp.hs :: connToFol` for connected logical tags.
+// Ported from: JboParse.hs :: parseTag + JboProp.hs :: connToFol
+// Expands connected logical tags into FOL connectives
 fn expand_connected_tag_modal(
     tag: &crate::jbo_prop::JboTag,
     mt: &Option<JboTerm>,
@@ -853,7 +880,7 @@ fn expand_connected_tag_modal(
     }
 }
 
-// Mirrors `JboShow.hs :: positionallyTaggedTerms` when scalar negation leaves an explicit empty x2.
+// Ported from: JboShow.hs :: positionallyTaggedTerms (scalar negation term reordering)
 fn scalar_negated_terms(terms: &[JboTerm]) -> Vec<JboTerm> {
     if terms.len() > 3 && matches!(terms.get(1), Some(JboTerm::Unfilled)) {
         std::iter::once(terms[0].clone())
@@ -865,7 +892,7 @@ fn scalar_negated_terms(terms: &[JboTerm]) -> Vec<JboTerm> {
     }
 }
 
-// Ports `JboShow.hs :: logjboshow' Prop`, with `next_var` replacing `Bindful.hs` variable allocation.
+// Ported from: JboShow.hs :: logjboshow' Prop (main proposition formatting with variable tracking)
 fn format_prop_at(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, crate::jbo_prop::JboQuantifier>, next_var: i32) -> String {
     match prop {
         Prop::Rel(rel, terms) => {
@@ -973,7 +1000,7 @@ fn format_prop_at(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModal
     }
 }
 
-// Ports the Haskell CLI's `.i` statement joining around `JboShow.hs` canonical output.
+// Ported from: JboShow.hs :: jboshow (canonical output with .i statement joining)
 fn push_canonical_line(lines: &mut Vec<String>, lojban: &str) {
     for line in lojban.lines().filter(|line| !line.is_empty()) {
         if lines.is_empty() || line.starts_with(".i ") {
@@ -984,8 +1011,8 @@ fn push_canonical_line(lines: &mut Vec<String>, lojban: &str) {
     }
 }
 
-// Mirrors `JboShow.hs :: Texticule` side display after `JboParse.hs :: replaceLastTermInProp`
-// stores discursive frees on `TermWithSides` instead of as top-level texticules.
+// Ported from: JboShow.hs :: instance JboShow Texticule (side texticule collection)
+// Mirrors JboParse.hs :: replaceLastTermInProp storing discursive frees on TermWithSides
 fn collect_term_side_texticules_from_texticule(texticule: &Texticule, out: &mut Vec<Texticule>) {
     match texticule {
         Texticule::TexticuleFrag(JboFragment::JboFragTerms(terms)) => {
@@ -999,6 +1026,7 @@ fn collect_term_side_texticules_from_texticule(texticule: &Texticule, out: &mut 
     }
 }
 
+// Rust adaptation: Helper for collect_term_side_texticules_from_texticule
 fn collect_term_side_texticules_from_term(term: &JboTerm, out: &mut Vec<Texticule>) {
     match term {
         JboTerm::TermWithSides(inner, sides) => {
@@ -1022,6 +1050,7 @@ fn collect_term_side_texticules_from_term(term: &JboTerm, out: &mut Vec<Texticul
     }
 }
 
+// Rust adaptation: Helper for collect_term_side_texticules_from_term
 fn collect_term_side_texticules_from_rel(rel: &JboRel, out: &mut Vec<Texticule>) {
     match rel {
         JboRel::Among(term) | JboRel::Moi(term, _) => collect_term_side_texticules_from_term(term, out),
@@ -1047,6 +1076,7 @@ fn collect_term_side_texticules_from_rel(rel: &JboRel, out: &mut Vec<Texticule>)
     }
 }
 
+// Rust adaptation: Helper for collect_term_side_texticules_from_rel
 fn collect_term_side_texticules_from_mex(mex: &crate::jbo_prop::JboMex, out: &mut Vec<Texticule>) {
     match mex {
         crate::jbo_prop::JboMex::Operation(op, args) => {
@@ -1071,6 +1101,7 @@ fn collect_term_side_texticules_from_mex(mex: &crate::jbo_prop::JboMex, out: &mu
     }
 }
 
+// Rust adaptation: Helper for collect_term_side_texticules_from_mex
 fn collect_term_side_texticules_from_operator(op: &crate::jbo_prop::JboOperator, out: &mut Vec<Texticule>) {
     match op {
         crate::jbo_prop::JboOperator::ConnectedOperator(_, _, left, right) => {
@@ -1086,6 +1117,7 @@ fn collect_term_side_texticules_from_operator(op: &crate::jbo_prop::JboOperator,
     }
 }
 
+// Rust adaptation: Helper for collect_term_side_texticules_from_operator
 fn collect_term_side_texticules_from_tag(tag: &crate::jbo_prop::JboTag, out: &mut Vec<Texticule>) {
     match tag {
         crate::jbo_prop::JboTag::DecoratedTagUnits(units) => {
@@ -1104,6 +1136,7 @@ fn collect_term_side_texticules_from_tag(tag: &crate::jbo_prop::JboTag, out: &mu
     }
 }
 
+// Ported from: JboShow.hs :: jboshow for side texticules (sei/to markers)
 fn jboshow_side_texticule(texticule: &Texticule) -> String {
     match texticule {
         Texticule::TexticuleSide(crate::jbo_prop::SideType::SideDiscursive, inner) => {
@@ -1116,6 +1149,7 @@ fn jboshow_side_texticule(texticule: &Texticule) -> String {
     }
 }
 
+// Rust-only: Helper to check if proposition starts with NonVeridical modal
 fn is_leading_nonveridical_prop(prop: &JboProp) -> bool {
     match prop {
         Prop::Modal(crate::jbo_prop::JboModalOp::NonVeridical, _) => true,
@@ -1124,6 +1158,7 @@ fn is_leading_nonveridical_prop(prop: &JboProp) -> bool {
     }
 }
 
+// Rust-only: Helper to count leading NonVeridical propositions for side insertion
 fn leading_nonveridical_count(result: &SemanticResult) -> usize {
     result
         .side_props
@@ -1133,6 +1168,7 @@ fn leading_nonveridical_count(result: &SemanticResult) -> usize {
         + usize::from(is_leading_nonveridical_prop(&result.prop))
 }
 
+// Ported from: JboShow.hs :: jboshow for fragment terms
 fn push_fragment_terms_line(lines: &mut Vec<String>, terms: &[JboTerm]) {
     if !terms.is_empty() {
         let frag = terms
@@ -1146,6 +1182,7 @@ fn push_fragment_terms_line(lines: &mut Vec<String>, terms: &[JboTerm]) {
     }
 }
 
+// Rust adaptation: Helper for collect_term_side_texticules_from_texticule
 fn collect_term_side_texticules(prop: &JboProp, out: &mut Vec<Texticule>) {
     match prop {
         Prop::Rel(rel, terms) => {
@@ -1166,7 +1203,8 @@ fn collect_term_side_texticules(prop: &JboProp, out: &mut Vec<Texticule>) {
     }
 }
 
-// Ports the Haskell CLI output split: logical `LogShow` lines plus canonical `JboShow` text.
+// Ported from: JboShow.hs :: jboshow + logshow (CLI output formatting)
+// Combines logical LogShow lines with canonical JboShow text
 fn format_result(result: &SemanticResult, preserve_term_side_markers: bool) -> (String, String) {
     let mut logical_lines = vec![];
     let mut term_sides = Vec::new();
@@ -1233,6 +1271,7 @@ fn format_result(result: &SemanticResult, preserve_term_side_markers: bool) -> (
     (logical, canonical)
 }
 
+// Ported from: Main.hs :: evalText output formatting
 /// Return `(logical, canonical, graph_json)` for CLI/JSON output.
 pub fn eval_text_to_outputs_with_options(text: &Text, include_term_sides: bool) -> (String, String, String) {
     let results = eval_text(text);
@@ -1275,6 +1314,7 @@ pub fn eval_text_to_outputs_with_options(text: &Text, include_term_sides: bool) 
     (logical, canonical, graph_json)
 }
 
+// Ported from: Main.hs :: evalText output formatting
 pub fn eval_text_to_outputs(text: &Text) -> (String, String, String) {
     eval_text_to_outputs_with_options(text, false)
 }

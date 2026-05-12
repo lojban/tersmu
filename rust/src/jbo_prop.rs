@@ -377,11 +377,13 @@ pub struct JboNPred {
 /// JboPred: Unary predicate
 pub type JboPred = Arc<dyn Fn(&JboTerm) -> JboProp>;
 
+// Ported from: JboProp.hs :: vPredToPred
 /// Convert variadic predicate to unary predicate
 pub fn v_pred_to_pred(vpred: JboVPred) -> JboPred {
     Arc::new(move |o: &JboTerm| vpred(&[o.clone()]))
 }
 
+// Ported from: JboProp.hs :: predToNPred
 /// Convert unary predicate to n-ary predicate
 pub fn pred_to_n_pred(pred: JboPred) -> JboNPred {
     JboNPred {
@@ -396,6 +398,7 @@ pub fn pred_to_n_pred(pred: JboPred) -> JboNPred {
     }
 }
 
+// Ported from: JboProp.hs :: jboPredToLojPred
 /// Convert JboPred to Logic Pred
 pub fn jbo_pred_to_loj_pred(pred: &JboPred) -> std::rc::Rc<dyn Fn(i32) -> JboProp + '_> {
     std::rc::Rc::new(move |v: i32| pred(&JboTerm::BoundVar(v)))
@@ -570,12 +573,14 @@ pub fn free_vars(prop: &JboProp) -> Vec<JboTerm> {
     vars
 }
 
+// Ported from: JboProp.hs :: freeVars (helper)
 fn push_free_var(term: &JboTerm, vars: &mut Vec<JboTerm>) {
     if !vars.contains(term) {
         vars.push(term.clone());
     }
 }
 
+// Ported from: JboProp.hs :: freeVars (recursive collector)
 fn collect_free_vars(prop: &JboProp, vars: &mut Vec<JboTerm>) {
     match prop {
         Prop::Rel(rel, terms) => {
@@ -599,6 +604,7 @@ fn collect_free_vars(prop: &JboProp, vars: &mut Vec<JboTerm>) {
     }
 }
 
+// Ported from: JboProp.hs :: freeVars (relation traversal)
 fn collect_free_vars_in_rel(rel: &JboRel, vars: &mut Vec<JboTerm>) {
     match rel {
         JboRel::Among(t) | JboRel::Moi(t, _) => collect_free_vars_in_term(t, vars),
@@ -624,6 +630,7 @@ fn collect_free_vars_in_rel(rel: &JboRel, vars: &mut Vec<JboTerm>) {
     }
 }
 
+// Ported from: JboProp.hs :: freeVars (term traversal)
 fn collect_free_vars_in_term(term: &JboTerm, vars: &mut Vec<JboTerm>) {
     match term {
         JboTerm::Var(_) => push_free_var(term, vars),
@@ -683,6 +690,7 @@ pub fn sub_term(old_term: &JboTerm, new_term: &JboTerm, prop: JboProp) -> JboPro
     }
 }
 
+// Ported from: JboProp.hs :: subTerm (term substitution helper)
 fn sub_term_in_term(old_term: &JboTerm, new_term: &JboTerm, term: &JboTerm) -> JboTerm {
     if term == old_term {
         new_term.clone()
@@ -710,6 +718,7 @@ fn sub_term_in_term(old_term: &JboTerm, new_term: &JboTerm, term: &JboTerm) -> J
     }
 }
 
+// Ported from: JboProp.hs :: subTerm (mex substitution helper)
 fn sub_term_in_mex(old_term: &JboTerm, new_term: &JboTerm, mex: JboMex) -> JboMex {
     match mex {
         JboMex::Operation(op, args) => JboMex::Operation(
@@ -734,6 +743,7 @@ fn sub_term_in_mex(old_term: &JboTerm, new_term: &JboTerm, mex: JboMex) -> JboMe
     }
 }
 
+// Ported from: JboProp.hs :: subTerm (operator substitution helper)
 fn sub_term_in_operator(old_term: &JboTerm, new_term: &JboTerm, op: JboOperator) -> JboOperator {
     match op {
         JboOperator::ConnectedOperator(fore, con, o1, o2) => JboOperator::ConnectedOperator(
@@ -754,6 +764,7 @@ fn sub_term_in_operator(old_term: &JboTerm, new_term: &JboTerm, op: JboOperator)
     }
 }
 
+// Ported from: JboProp.hs :: freeVars (mex traversal)
 fn collect_free_vars_in_mex(mex: &JboMex, vars: &mut Vec<JboTerm>) {
     match mex {
         JboMex::Operation(op, args) => {
@@ -778,6 +789,7 @@ fn collect_free_vars_in_mex(mex: &JboMex, vars: &mut Vec<JboTerm>) {
     }
 }
 
+// Ported from: JboProp.hs :: freeVars (operator traversal)
 fn collect_free_vars_in_operator(op: &JboOperator, vars: &mut Vec<JboTerm>) {
     match op {
         JboOperator::ConnectedOperator(_, _, o1, o2) => {
@@ -793,6 +805,7 @@ fn collect_free_vars_in_operator(op: &JboOperator, vars: &mut Vec<JboTerm>) {
     }
 }
 
+// Ported from: JboProp.hs :: freeVars (tag traversal)
 fn collect_free_vars_in_tag(tag: &JboTag, vars: &mut Vec<JboTerm>) {
     match tag {
         JboTag::DecoratedTagUnits(dtus) => {
@@ -807,6 +820,7 @@ fn collect_free_vars_in_tag(tag: &JboTag, vars: &mut Vec<JboTerm>) {
     }
 }
 
+// Ported from: JboProp.hs :: freeVars (tag unit traversal)
 fn collect_free_vars_in_tag_unit(tag_unit: &JboTagUnit, vars: &mut Vec<JboTerm>) {
     match tag_unit {
         JboTagUnit::ROI(_, _, m) => collect_free_vars_in_mex(m, vars),
@@ -815,6 +829,7 @@ fn collect_free_vars_in_tag_unit(tag_unit: &JboTagUnit, vars: &mut Vec<JboTerm>)
     }
 }
 
+// Ported from: JboProp.hs :: subTerm (modal operator substitution helper)
 fn sub_term_in_modal_op(old_term: &JboTerm, new_term: &JboTerm, op: JboModalOp) -> JboModalOp {
     match op {
         JboModalOp::Tagged(tag, term) => JboModalOp::Tagged(
@@ -826,6 +841,7 @@ fn sub_term_in_modal_op(old_term: &JboTerm, new_term: &JboTerm, op: JboModalOp) 
     }
 }
 
+// Ported from: JboProp.hs :: subTerm (relation substitution helper)
 fn sub_term_in_rel(old_term: &JboTerm, new_term: &JboTerm, rel: JboRel) -> JboRel {
     match rel {
         JboRel::Tanru(r1, r2) => JboRel::Tanru(
@@ -901,6 +917,7 @@ pub fn sub_rel(old_rel: &JboRel, new_rel: &JboRel, prop: JboProp) -> JboProp {
     }
 }
 
+// Ported from: JboProp.hs :: subRel (relation-in-relation substitution helper)
 fn sub_rel_in_rel(old_rel: &JboRel, new_rel: &JboRel, rel: JboRel) -> JboRel {
     if &rel == old_rel {
         new_rel.clone()
@@ -951,6 +968,7 @@ fn sub_rel_in_rel(old_rel: &JboRel, new_rel: &JboRel, rel: JboRel) -> JboRel {
     }
 }
 
+// Ported from: JboProp.hs :: subRel (relation-in-term substitution helper)
 fn sub_rel_in_term(old_rel: &JboRel, new_rel: &JboRel, term: JboTerm) -> JboTerm {
     match term {
         JboTerm::Constant(n, args) => JboTerm::Constant(
@@ -977,6 +995,7 @@ fn sub_rel_in_term(old_rel: &JboRel, new_rel: &JboRel, term: JboTerm) -> JboTerm
     }
 }
 
+// Ported from: JboProp.hs :: subRel (relation-in-mex substitution helper)
 fn sub_rel_in_mex(old_rel: &JboRel, new_rel: &JboRel, mex: JboMex) -> JboMex {
     match mex {
         JboMex::Operation(op, args) => JboMex::Operation(
@@ -1001,6 +1020,7 @@ fn sub_rel_in_mex(old_rel: &JboRel, new_rel: &JboRel, mex: JboMex) -> JboMex {
     }
 }
 
+// Ported from: JboProp.hs :: subRel (relation-in-operator substitution helper)
 fn sub_rel_in_operator(old_rel: &JboRel, new_rel: &JboRel, op: JboOperator) -> JboOperator {
     match op {
         JboOperator::ConnectedOperator(fore, con, o1, o2) => JboOperator::ConnectedOperator(
@@ -1021,6 +1041,7 @@ fn sub_rel_in_operator(old_rel: &JboRel, new_rel: &JboRel, op: JboOperator) -> J
     }
 }
 
+// Ported from: JboProp.hs :: subRel (relation-in-modal substitution helper)
 fn sub_rel_in_modal_op(old_rel: &JboRel, new_rel: &JboRel, modal: JboModalOp) -> JboModalOp {
     match modal {
         JboModalOp::Tagged(tag, term) => JboModalOp::Tagged(

@@ -20,7 +20,7 @@ enum ShowBinding {
     SRAss(i32),
 }
 
-// Ports `JboShow.hs :: nonJboQuoteDelimiter` delimiter search for `zoi` quotes.
+// Ported from: JboShow.hs :: nonJboQuoteDelimiter
 fn non_jbo_quote_delimiter(s: &str) -> String {
     let mut n = 0;
     loop {
@@ -36,6 +36,8 @@ fn non_jbo_quote_delimiter(s: &str) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: jbonum
+/// Convert integer to Lojban digit string
 pub fn jbonum(n: i32) -> String {
     match n {
         0 => "no".to_string(),
@@ -114,11 +116,13 @@ pub fn jbobracket(l: &str, r: &str, s: &str) -> String {
     format!("{} {} {}", l, s, r)
 }
 
-// Ports `JboShow.hs :: JboShow JboOperator`; the context carries Haskell's active relation binding.
+// Ported from: JboShow.hs :: instance JboShow JboOperator (jboshow method)
 fn jboshow_operator(op: &JboOperator) -> String {
     jboshow_operator_with_context(op, None, &[])
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboOperator (jboshow method)
+// Rust adaptation: explicit context parameters instead of Bindful monad state
 fn jboshow_operator_with_context(op: &JboOperator, rel_var: Option<ShowBinding>, bindings: &[(i32, ShowBinding)]) -> String {
     match op {
         JboOperator::ConnectedOperator(_, con, o1, o2) => format!(
@@ -140,7 +144,7 @@ fn jboshow_operator_with_context(op: &JboOperator, rel_var: Option<ShowBinding>,
     }
 }
 
-// Ports `JboShow.hs :: LogShow JboOperator`.
+// Ported from: JboShow.hs :: instance JboShow JboOperator (logshow method)
 fn logshow_operator(op: &JboOperator) -> String {
     match op {
         JboOperator::ConnectedOperator(_, con, o1, o2) => format!(
@@ -158,7 +162,7 @@ fn logshow_operator(op: &JboOperator) -> String {
     }
 }
 
-// Ports the numeric `JboShow.hs :: JboShow JboMex` cases used inside quantifiers and MOI.
+// Ported from: JboShow.hs :: instance JboShow JboMex (jboshow method), numeric cases only
 fn jboshow_mex_number(mex: &JboMex) -> String {
     match mex {
         JboMex::MexNumeralString(ns) => ns
@@ -175,11 +179,13 @@ fn jboshow_mex_number(mex: &JboMex) -> String {
     }
 }
 
-// Ports `JboShow.hs :: JboShow JboMex`; `rel_var` mirrors `Bindful.hs` relation scope.
+// Ported from: JboShow.hs :: instance JboShow JboMex (jboshow method)
 fn jboshow_mex(mex: &JboMex) -> String {
     jboshow_mex_with_context(mex, None, &[])
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboMex (jboshow method)
+// Rust adaptation: explicit context parameters instead of Bindful monad state
 fn jboshow_mex_with_context(mex: &JboMex, rel_var: Option<ShowBinding>, bindings: &[(i32, ShowBinding)]) -> String {
     match mex {
         JboMex::MexNumeralString(_) | JboMex::MexInt(_) => format!("{} boi", jboshow_mex_number(mex)),
@@ -215,11 +221,12 @@ fn jboshow_mex_with_context(mex: &JboMex, rel_var: Option<ShowBinding>, bindings
     }
 }
 
-// Ports `JboShow.hs :: JboShow LerfuString`.
+// Ported from: JboShow.hs :: instance JboShow LerfuString (jboshow method)
 fn jboshow_lerfu_string(ls: &[Lerfu]) -> String {
     ls.iter().map(jboshow_lerfu).collect::<Vec<_>>().join(" ")
 }
 
+// Ported from: JboShow.hs :: instance JboShow Lerfu (jboshow method)
 fn jboshow_lerfu(l: &Lerfu) -> String {
     match l {
         Lerfu::LerfuChar(c) if matches!(c, 'a' | 'e' | 'i' | 'o' | 'u') => format!("{}bu", c),
@@ -235,11 +242,12 @@ fn jboshow_lerfu(l: &Lerfu) -> String {
     }
 }
 
-// Ports `JboShow.hs :: LogShow LerfuString`.
+// Ported from: JboShow.hs :: instance JboShow LerfuString (logshow method)
 fn logshow_lerfu_string(ls: &[Lerfu]) -> String {
     ls.iter().map(logshow_lerfu).collect::<String>()
 }
 
+// Ported from: JboShow.hs :: instance JboShow Lerfu (logshow method)
 fn logshow_lerfu(l: &Lerfu) -> String {
     match l {
         Lerfu::LerfuChar(c) => c.to_string(),
@@ -249,6 +257,7 @@ fn logshow_lerfu(l: &Lerfu) -> String {
     }
 }
 
+// Rust-only: Debug helper for Lerfu, not present in Haskell
 fn logshow_lerfu_debug(l: &Lerfu) -> String {
     match l {
         Lerfu::LerfuChar(c) => format!("LerfuChar '{}'", c),
@@ -260,7 +269,8 @@ fn logshow_lerfu_debug(l: &Lerfu) -> String {
     }
 }
 
-// Ports `JboShow.hs :: JboShow SumtiAtom` for assignable, anaphora, and lerfu terms.
+// Ported from: JboShow.hs :: instance JboShow SumtiAtom (jboshow method)
+// Covers SAss (ko'a/ko'e/..., fo'a/fo'e/...) and anaphora (ri, ra)
 fn jboshow_sumti_atom(atom: &SumtiAtom) -> String {
     match atom {
         SumtiAtom::Assignable(n) if *n <= 5 => format!("ko'{}", vowelnum(*n)),
@@ -276,6 +286,7 @@ fn jboshow_sumti_atom(atom: &SumtiAtom) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow SumtiAtom (logshow method)
 fn logshow_sumti_atom(atom: &SumtiAtom) -> String {
     match atom {
         SumtiAtom::LerfuString(ls) => logshow_lerfu_string(ls),
@@ -283,7 +294,7 @@ fn logshow_sumti_atom(atom: &SumtiAtom) -> String {
     }
 }
 
-// Mirrors derived `Show` output for `JboSyntax.hs :: Operator` where logical display still sees syntax MEX.
+// Rust-only: Debug helper for syntax-level Operator, not present in Haskell
 fn logshow_syntax_operator(op: &crate::jbo_syntax::Operator) -> String {
     match op {
         crate::jbo_syntax::Operator::OpVUhU(s) => format!("OpVUhU \"{}\"", s),
@@ -291,6 +302,7 @@ fn logshow_syntax_operator(op: &crate::jbo_syntax::Operator) -> String {
     }
 }
 
+// Rust-only: Debug helper for syntax-level Mex, not present in Haskell
 fn logshow_syntax_mex(mex: &crate::jbo_syntax::Mex) -> String {
     match mex {
         crate::jbo_syntax::Mex::Operation(op, args) => {
@@ -326,6 +338,7 @@ fn logshow_syntax_mex(mex: &crate::jbo_syntax::Mex) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboMex (logshow method)
 fn logshow_mex(mex: &JboMex) -> String {
     match mex {
         JboMex::MexNumeralString(ns) => bracket('(', &ns
@@ -364,7 +377,7 @@ fn logshow_mex(mex: &JboMex) -> String {
     }
 }
 
-// Mirrors `JboShow.hs` syntax-level MEX operator rendering before semantic `JboOperator` conversion.
+// Rust-only: Syntax-level operator display helper, not present in Haskell
 fn jboshow_syntax_operator(op: &crate::jbo_syntax::Operator) -> String {
     match op {
         crate::jbo_syntax::Operator::OpVUhU(s) => s.clone(),
@@ -372,6 +385,7 @@ fn jboshow_syntax_operator(op: &crate::jbo_syntax::Operator) -> String {
     }
 }
 
+// Rust-only: Syntax-level Mex display helper, not present in Haskell
 fn jboshow_syntax_mex(mex: &crate::jbo_syntax::Mex) -> String {
     match mex {
         crate::jbo_syntax::Mex::MexNumeralString(ns) => ns
@@ -391,7 +405,7 @@ fn jboshow_syntax_mex(mex: &crate::jbo_syntax::Mex) -> String {
     }
 }
 
-// Ports `JboShow.hs :: JboShow JboQuantifier`.
+// Ported from: JboShow.hs :: instance JboShow JboQuantifier (jboshow method)
 fn jboshow_quantifier(q: &JboQuantifier) -> String {
     match q {
         JboQuantifier::QuestionQuantifier => "ma".to_string(),
@@ -403,6 +417,7 @@ fn jboshow_quantifier(q: &JboQuantifier) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboQuantifier (logshow method)
 fn logshow_quantifier(q: &JboQuantifier) -> String {
     match q {
         JboQuantifier::QuestionQuantifier => "?".to_string(),
@@ -412,6 +427,7 @@ fn logshow_quantifier(q: &JboQuantifier) -> String {
     }
 }
 
+// Rust-only: Helper for formatting quantified variable prefixes in logical output
 fn format_quantified_prefix(q: &JboQuantifier, name: &str) -> String {
     match q {
         JboQuantifier::LojQuantifier(crate::logic::LojQuantifier::Exists)
@@ -422,7 +438,7 @@ fn format_quantified_prefix(q: &JboQuantifier, name: &str) -> String {
     }
 }
 
-// Ports `JboShow.hs` bound-variable display helpers (`ce'u`, `da`, `broda`, `bu'a`).
+// Ported from: JboShow.hs :: instance JboShow ShowBindable (jboshow method), SLambda case
 fn jboshow_lambda_var(n: i32) -> String {
     match n.abs() {
         1 => "ce'u".to_string(),
@@ -430,6 +446,8 @@ fn jboshow_lambda_var(n: i32) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow ShowBindable (jboshow method), SVar case
+// Haskell: SVar n | n <= 3 -> "d" ++ vowelnum n
 fn jboshow_bound_var(n: i32) -> String {
     match n {
         1 => "da".to_string(),
@@ -439,6 +457,8 @@ fn jboshow_bound_var(n: i32) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow ShowBindable (jboshow method), SRAss case
+// Haskell: SRAss n | n <= 5 -> "brod" ++ vowelnum n
 fn jboshow_bound_rvar(n: i32) -> String {
     match n {
         1 => "broda".to_string(),
@@ -450,6 +470,8 @@ fn jboshow_bound_rvar(n: i32) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow ShowBindable (jboshow method), SRVar case
+// Haskell: SRVar n -> if n <= 3 then "bu'" ++ vowelnum n
 fn jboshow_unassigned_rvar(n: i32) -> String {
     match n {
         1 => "bu'a".to_string(),
@@ -460,7 +482,7 @@ fn jboshow_unassigned_rvar(n: i32) -> String {
 }
 
 
-// Ports `JboShow.hs :: LogShow Texticule`.
+// Ported from: JboShow.hs :: instance JboShow Texticule (logshow method)
 fn logshow_texticule(texticule: &Texticule) -> String {
     match texticule {
         Texticule::TexticuleFrag(fragment) => match fragment {
@@ -472,11 +494,12 @@ fn logshow_texticule(texticule: &Texticule) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow [Texticule] (logshow method)
 fn logshow_text(text: &[Texticule]) -> String {
     text.iter().map(logshow_texticule).collect::<Vec<_>>().join("\n")
 }
 
-// Ports `JboShow.hs :: JboShow Texticule`.
+// Ported from: JboShow.hs :: instance JboShow Texticule (jboshow method)
 pub fn jboshow_texticule(texticule: &Texticule) -> String {
     match texticule {
         Texticule::TexticuleFrag(fragment) => match fragment {
@@ -488,8 +511,8 @@ pub fn jboshow_texticule(texticule: &Texticule) -> String {
     }
 }
 
-// Mirrors `JboShow.hs :: Texticule` side display after `JboParse.hs :: replaceLastTermInProp`
-// stores discursive frees on `TermWithSides` instead of as top-level texticules.
+// Rust adaptation: Collects side texticules from TermWithSides for display
+// Haskell stores sides differently; this mirrors the display behavior
 fn collect_term_side_texticules_from_texticule(texticule: &Texticule, out: &mut Vec<Texticule>) {
     match texticule {
         Texticule::TexticuleFrag(JboFragment::JboFragTerms(terms)) => {
@@ -503,6 +526,7 @@ fn collect_term_side_texticules_from_texticule(texticule: &Texticule, out: &mut 
     }
 }
 
+// Rust adaptation: Helper for collect_term_side_texticules_from_texticule
 fn collect_term_side_texticules_from_term(term: &JboTerm, out: &mut Vec<Texticule>) {
     match term {
         JboTerm::TermWithSides(inner, sides) => {
@@ -524,6 +548,7 @@ fn collect_term_side_texticules_from_term(term: &JboTerm, out: &mut Vec<Texticul
     }
 }
 
+// Rust adaptation: Helper for collect_term_side_texticules_from_texticule
 fn collect_term_side_texticules(prop: &JboProp, out: &mut Vec<Texticule>) {
     match prop {
         Prop::Rel(_, terms) => {
@@ -541,7 +566,8 @@ fn collect_term_side_texticules(prop: &JboProp, out: &mut Vec<Texticule>) {
     }
 }
 
-// Ports `JboShow.hs :: jboshow` for text lists, including term-attached side texticules.
+// Ported from: JboShow.hs :: instance JboShow [Texticule] (jboshow method)
+// Includes side texticule collection for Rust's TermWithSides representation
 pub fn jboshow_text(text: &[Texticule]) -> String {
     let mut lines = text.iter().map(jboshow_texticule).collect::<Vec<_>>();
     let mut side_lines = Vec::new();
@@ -570,10 +596,13 @@ pub fn jboshow_text(text: &[Texticule]) -> String {
     lines.join("\n.i ")
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboTerm (jboshow method)
 fn jboshow_term_with_lambdas(term: &JboTerm, lambda_vars: &[i32]) -> String {
     jboshow_term_with_context(term, lambda_vars, None, &[])
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboTerm (jboshow method)
+// Rust adaptation: explicit context parameters instead of Bindful monad state
 fn jboshow_term_with_context(term: &JboTerm, lambda_vars: &[i32], rel_var: Option<ShowBinding>, bindings: &[(i32, ShowBinding)]) -> String {
     match term {
         JboTerm::NonAnaph(s) => s.clone(),
@@ -623,12 +652,13 @@ fn jboshow_term_with_context(term: &JboTerm, lambda_vars: &[i32], rel_var: Optio
     }
 }
 
-// Ports `JboShow.hs :: instance JboShow JboTerm`.
+// Ported from: JboShow.hs :: instance JboShow JboTerm (jboshow method)
+// Wrapper that uses default context
 pub fn jboshow_term(term: &JboTerm) -> String {
     jboshow_term_with_lambdas(term, &[])
 }
 
-// Ports `JboShow.hs :: instance LogShow JboTerm`.
+// Ported from: JboShow.hs :: instance JboShow JboTerm (logshow method)
 pub fn logshow_term(term: &JboTerm) -> String {
     match term {
         JboTerm::NonAnaph(s) => s.clone(),
@@ -665,7 +695,7 @@ pub fn logshow_term(term: &JboTerm) -> String {
     }
 }
 
-// Ports `JboShow.hs` connective rendering for JA/JOI/EK/GIhA families.
+// Ported from: JboShow.hs :: instance JboShow Connective (jboshow method for LogJboConnective)
 fn jboshow_log_connective(prefix: &str, con: &crate::jbo_syntax::LogJboConnective) -> String {
     let mut parts = Vec::new();
     if !con.b1 {
@@ -682,6 +712,7 @@ fn jboshow_log_connective(prefix: &str, con: &crate::jbo_syntax::LogJboConnectiv
     parts.join(" ")
 }
 
+// Ported from: JboShow.hs :: instance JboShow Connective (jboshow method)
 fn jboshow_connective(prefix: &str, con: &crate::jbo_syntax::Connective) -> String {
     let (base, mtag) = match con {
         crate::jbo_syntax::Connective::JboConnLog(mtag, lcon) => (jboshow_log_connective(prefix, lcon), mtag.as_deref()),
@@ -701,6 +732,7 @@ fn jboshow_connective(prefix: &str, con: &crate::jbo_syntax::Connective) -> Stri
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow Tag (jboshow method for syntax-level Tag)
 fn jboshow_tag_syntax(tag: &crate::jbo_syntax::Tag) -> String {
     match tag {
         crate::jbo_syntax::Tag::DecoratedTagUnits(dtus) => dtus
@@ -727,11 +759,12 @@ fn jboshow_tag_syntax(tag: &crate::jbo_syntax::Tag) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow Connective (logshow method)
 fn logshow_connective(prefix: &str, con: &crate::jbo_syntax::Connective) -> String {
     format!("{{{}}}", jboshow_connective(prefix, con))
 }
 
-// Ports `JboShow.hs :: JboShow JboTag` after semantic conversion in `JboParse.hs :: parseTag`.
+// Ported from: JboShow.hs :: instance JboShow JboTag (jboshow method for semantic JboTag)
 pub fn jboshow_tag(tag: &crate::jbo_prop::JboTag) -> String {
     match tag {
         crate::jbo_prop::JboTag::DecoratedTagUnits(dtus) => dtus
@@ -774,6 +807,8 @@ pub fn jboshow_tag(tag: &crate::jbo_prop::JboTag) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboModalOp (logshow method)
+// Helper for modal prefix in logical output
 fn logshow_modal_rel_prefix(modal: &JboModalOp, placeholder_var: Option<i32>) -> String {
     match modal {
         JboModalOp::Tagged(tag, term) => {
@@ -790,10 +825,14 @@ fn logshow_modal_rel_prefix(modal: &JboModalOp, placeholder_var: Option<i32>) ->
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboModalOp (logshow method)
+// Full modal relation display for logical output
 fn logshow_modal_rel(modal: &JboModalOp, rel: &JboRel) -> String {
     format!("{}. {}(_)", logshow_modal_rel_prefix(modal, None), logshow_rel(rel))
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboModalOp (jboshow method)
+// Modal relation display for canonical Lojban output
 fn jboshow_modal_rel(modal: &JboModalOp, rel: &JboRel, lambda_vars: &[i32], rel_var: Option<ShowBinding>, bindings: &[(i32, ShowBinding)]) -> String {
     match modal {
         JboModalOp::Tagged(tag, term) => {
@@ -808,12 +847,14 @@ fn jboshow_modal_rel(modal: &JboModalOp, rel: &JboRel, lambda_vars: &[i32], rel_
     }
 }
 
-// Ports `JboShow.hs :: instance JboShow JboRel`; `lambda_vars`/`ShowBinding` stand in for `Bindful.hs`.
+// Ported from: JboShow.hs :: instance JboShow JboRel (jboshow method)
+// Wrapper that uses default lambda_vars context
 fn jboshow_rel_with_lambdas(rel: &JboRel, lambda_vars: &[i32]) -> String {
     jboshow_rel_with_context(rel, lambda_vars, None, &[])
 }
 
-// Mirrors `JboShow.hs :: logjboshow' Rel` display after scalar NAhE creates an applied rel with a skipped slot.
+// Ported from: JboShow.hs :: logjboshow' Rel (scalar negation case)
+// Mirrors scalar NAhE display after parsedSelbriToNewSelbri creates applied rel with skipped x2
 fn jboshow_scalar_negated_rel_inner(rel: &JboRel, lambda_vars: &[i32], rel_var: Option<ShowBinding>, bindings: &[(i32, ShowBinding)]) -> String {
     match rel {
         JboRel::AppliedRel(r, terms) if terms.len() > 2 && matches!(terms.get(1), Some(JboTerm::Unfilled)) => {
@@ -826,6 +867,8 @@ fn jboshow_scalar_negated_rel_inner(rel: &JboRel, lambda_vars: &[i32], rel_var: 
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboRel (jboshow method)
+// Rust adaptation: explicit context parameters instead of Bindful monad state
 fn jboshow_rel_with_context(rel: &JboRel, lambda_vars: &[i32], rel_var: Option<ShowBinding>, bindings: &[(i32, ShowBinding)]) -> String {
     match rel {
         JboRel::Brivla(s) => s.clone(),
@@ -918,11 +961,13 @@ fn jboshow_rel_with_context(rel: &JboRel, lambda_vars: &[i32], rel_var: Option<S
     }
 }
 
-// Ports `JboShow.hs :: instance JboShow JboRel`.
+// Ported from: JboShow.hs :: instance JboShow JboRel (jboshow method)
+// Wrapper that uses default context
 pub fn jboshow_rel(rel: &JboRel) -> String {
     jboshow_rel_with_lambdas(rel, &[])
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboTerm (logshow method for lambda terms)
 fn logshow_lambda_term(term: &JboTerm) -> String {
     match term {
         JboTerm::BoundVar(n) if *n < 0 => format!("\\{}", n.abs()),
@@ -930,6 +975,7 @@ fn logshow_lambda_term(term: &JboTerm) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboRel (logshow method for lambda relations)
 fn logshow_lambda_rel(rel: &JboRel) -> String {
     match rel {
         JboRel::AppliedRel(r, terms) => {
@@ -939,6 +985,7 @@ fn logshow_lambda_rel(rel: &JboRel) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboTerm (logshow method for lambda restriction terms)
 fn logshow_lambda_restriction_term(term: &JboTerm, var: i32) -> String {
     match term {
         JboTerm::BoundVar(n) if *n == var => "_".to_string(),
@@ -946,6 +993,7 @@ fn logshow_lambda_restriction_term(term: &JboTerm, var: i32) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboProp (logshow method for lambda restriction propositions)
 fn logshow_lambda_restriction_prop(prop: &JboProp, var: i32) -> String {
     match prop {
         Prop::Rel(JboRel::Among(t), terms) if matches!(terms.as_slice(), [JboTerm::BoundVar(n)] if *n == var) => {
@@ -969,6 +1017,7 @@ fn logshow_lambda_restriction_prop(prop: &JboProp, var: i32) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboProp (logshow method for lambda propositions with placeholder)
 fn logshow_lambda_prop_with_placeholder(prop: &JboProp, placeholder_var: Option<i32>) -> String {
     match prop {
         Prop::Rel(rel, terms) => {
@@ -1030,11 +1079,12 @@ fn logshow_lambda_prop_with_placeholder(prop: &JboProp, placeholder_var: Option<
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboProp (logshow method for lambda propositions)
 fn logshow_lambda_prop(prop: &JboProp) -> String {
     logshow_lambda_prop_with_placeholder(prop, None)
 }
 
-// Ports `JboShow.hs :: instance LogShow JboRel`.
+// Ported from: JboShow.hs :: instance JboShow JboRel (logshow method)
 pub fn logshow_rel(rel: &JboRel) -> String {
     match rel {
         JboRel::Brivla(s) => s.clone(),
@@ -1076,9 +1126,8 @@ pub fn logshow_rel(rel: &JboRel) -> String {
     }
 }
 
-// Ports `JboShow.hs :: logjboshow` for `JboVPred` with `Bindful.hs :: withShuntedRelVar`.
-// Haskell applies the predicate to a `BoundVar` shown as `_`; Rust stores tanru components as
-// `JboRel`, so seltau formatting applies the same placeholder explicitly.
+// Ported from: JboShow.hs :: logjboshow for JboVPred with Bindful.hs :: withShuntedRelVar
+// Formats seltau (tanru left component) with placeholder variable for logical output
 pub fn logshow_seltau(rel: &JboRel) -> String {
     match rel {
         JboRel::VPredRel(vpred) => match vpred(&[JboTerm::BoundVar(0)]) {
@@ -1130,15 +1179,20 @@ pub fn logshow_seltau(rel: &JboRel) -> String {
     }
 }
 
+// Ported from: JboShow.hs :: instance JboShow JboProp (jboshow method)
+// Wrapper that uses default lambda_vars context
 fn jboshow_prop_with_lambdas(prop: &JboProp, lambda_vars: &[i32]) -> String {
     jboshow_prop_with_context(prop, lambda_vars, None)
 }
 
-// Ports `JboShow.hs :: positionallyTaggedTerms`/`jboshowPred` behavior for predicate abstractions.
+// Ported from: JboShow.hs :: jboshowPred / positionallyTaggedTerms
+// Formats predicate propositions for abstraction display
 fn jboshow_pred_prop(prop: &JboProp, rel_var: i32) -> String {
     jboshow_pred_prop_with_rel_context(prop, rel_var, Some(ShowBinding::SRel(rel_var)))
 }
 
+// Ported from: JboShow.hs :: jboshowPred / positionallyTaggedTerms
+// Formats predicate propositions with explicit rel_var context
 fn jboshow_pred_prop_with_rel_context(prop: &JboProp, placeholder_var: i32, active_rel_var: Option<ShowBinding>) -> String {
     match prop {
         Prop::Rel(rel, terms) if terms.is_empty() => {
@@ -1187,32 +1241,37 @@ fn jboshow_pred_prop_with_rel_context(prop: &JboProp, placeholder_var: i32, acti
     }
 }
 
-// Ports `JboShow.hs :: JboShow JboProp`, threading Haskell's binding state explicitly.
+// Ported from: JboShow.hs :: instance JboShow JboProp (jboshow method)
+// Rust adaptation: explicit binding state threading instead of Bindful monad
 fn jboshow_prop_with_context(prop: &JboProp, lambda_vars: &[i32], rel_var: Option<ShowBinding>) -> String {
     jboshow_prop_with_context_at(prop, lambda_vars, rel_var, 1, &[])
 }
 
+// Rust-only: Helper for finding next available binding index
 fn next_binding_index(bindings: &[(i32, ShowBinding)], binding: impl Fn(i32) -> ShowBinding) -> i32 {
     (1..)
         .find(|n| !bindings.iter().any(|(_, existing)| *existing == binding(*n)))
         .unwrap()
 }
 
+// Rust-only: Helper for adding a binding to the binding list
 fn with_binding(bindings: &[(i32, ShowBinding)], key: i32, binding: ShowBinding) -> Vec<(i32, ShowBinding)> {
     let mut next = bindings.to_vec();
     next.push((key, binding));
     next
 }
 
+// Rust-only: Helper for looking up a term binding by key
 fn term_binding(bindings: &[(i32, ShowBinding)], key: i32) -> Option<ShowBinding> {
     bindings.iter().rev().find_map(|(binding_key, binding)| (*binding_key == key).then_some(*binding))
 }
 
+// Rust-only: Helper for finding next available binding key
 fn next_binding_key(bindings: &[(i32, ShowBinding)]) -> i32 {
     (1..).find(|n| !bindings.iter().any(|(key, _)| key == n)).unwrap()
 }
 
-// Ports modal-prefix accumulation from `JboShow.hs :: jboshow' Prop`.
+// Ported from: JboShow.hs :: jboshow' Prop (modal prefix accumulation)
 fn jboshow_modal_prefix(modal_op: &JboModalOp, lambda_vars: &[i32], rel_var: Option<ShowBinding>, bindings: &[(i32, ShowBinding)]) -> Vec<String> {
     match modal_op {
         JboModalOp::Tagged(tag, mt) => {
@@ -1228,7 +1287,7 @@ fn jboshow_modal_prefix(modal_op: &JboModalOp, lambda_vars: &[i32], rel_var: Opt
     }
 }
 
-// Ports `JboShow.hs :: jboshow' Prop` prefix threading for modals and quantifiers.
+// Ported from: JboShow.hs :: jboshow' Prop (prefix threading for modals and quantifiers)
 fn jboshow_prop_with_prefixes(prop: &JboProp, lambda_vars: &[i32], rel_var: Option<ShowBinding>, next_var: i32, bindings: &[(i32, ShowBinding)], mut prefixes: Vec<String>) -> String {
     match prop {
         Prop::Modal(JboModalOp::NonVeridical, inner) => {
@@ -1301,7 +1360,7 @@ fn jboshow_prop_with_prefixes(prop: &JboProp, lambda_vars: &[i32], rel_var: Opti
     }
 }
 
-// Mirrors `JboShow.hs :: positionallyTaggedTerms` when scalar negation leaves an explicit empty x2.
+// Ported from: JboShow.hs :: positionallyTaggedTerms (scalar negation term reordering)
 fn scalar_negated_terms(terms: &[JboTerm]) -> Vec<JboTerm> {
     if terms.len() > 3 && matches!(terms.get(1), Some(JboTerm::Unfilled)) {
         std::iter::once(terms[0].clone())
@@ -1313,6 +1372,7 @@ fn scalar_negated_terms(terms: &[JboTerm]) -> Vec<JboTerm> {
     }
 }
 
+// Ported from: JboShow.hs :: jboshow' Prop (main proposition formatting with binding context)
 fn jboshow_prop_with_context_at(prop: &JboProp, lambda_vars: &[i32], rel_var: Option<ShowBinding>, next_var: i32, bindings: &[(i32, ShowBinding)]) -> String {
     match prop {
         Prop::Rel(rel, terms) => {
@@ -1422,12 +1482,12 @@ fn jboshow_prop_with_context_at(prop: &JboProp, lambda_vars: &[i32], rel_var: Op
     }
 }
 
-// Ports `JboShow.hs :: instance JboShow JboProp`.
+// Ported from: JboShow.hs :: instance JboShow JboProp (jboshow method)
 pub fn jboshow_prop(prop: &JboProp) -> String {
     jboshow_prop_with_lambdas(prop, &[])
 }
 
-// Ports modal-prefix rendering from `JboShow.hs :: logjboshow' Prop`.
+// Ported from: JboShow.hs :: logjboshow' Prop (modal prefix rendering for logical output)
 fn logshow_modal_prefix(modal_op: &JboModalOp) -> Vec<String> {
     match modal_op {
         JboModalOp::Tagged(tag, mt) => {
@@ -1444,7 +1504,8 @@ fn logshow_modal_prefix(modal_op: &JboModalOp) -> Vec<String> {
     }
 }
 
-// Mirrors `JboParse.hs :: parseTag` plus `JboProp.hs :: connToFol` for connected logical tags.
+// Ported from: JboParse.hs :: parseTag + JboProp.hs :: connToFol
+// Expands connected logical tags into FOL connectives
 fn expand_connected_tag_modal(
     tag: &crate::jbo_prop::JboTag,
     mt: &Option<JboTerm>,
@@ -1469,7 +1530,7 @@ fn expand_connected_tag_modal(
     }
 }
 
-// Ports `JboShow.hs :: logjboshow' Prop` prefix accumulation.
+// Ported from: JboShow.hs :: logjboshow' Prop (prefix accumulation for logical output)
 fn logshow_prop_with_prefixes(prop: &JboProp, mut prefixes: Vec<String>) -> String {
     match prop {
         Prop::Modal(modal_op, inner) => {
@@ -1496,6 +1557,7 @@ fn logshow_prop_with_prefixes(prop: &JboProp, mut prefixes: Vec<String>) -> Stri
     }
 }
 
+// Ported from: JboShow.hs :: logjboshow' Prop (main proposition formatting without prefixes)
 fn logshow_prop_without_prefixes(prop: &JboProp) -> String {
     match prop {
         Prop::Rel(rel, terms) => {
@@ -1523,18 +1585,18 @@ fn logshow_prop_without_prefixes(prop: &JboProp) -> String {
     }
 }
 
-// Ports `JboShow.hs :: instance LogShow JboProp`.
+// Ported from: JboShow.hs :: instance JboShow JboProp (logshow method)
 pub fn logshow_prop(prop: &JboProp) -> String {
     logshow_prop_with_prefixes(prop, Vec::new())
 }
 
-// Ported from: JboShow.hs :: jboshow for propositions
+// Ported from: JboShow.hs :: instance JboShow JboProp (jboshow method)
 /// Convert proposition to Lojban text
 pub fn prop_to_lojban(prop: &JboProp) -> String {
     jboshow_prop(prop)
 }
 
-// Ported from: JboShow.hs :: logjboshow for JboFragTerms
+// Ported from: JboShow.hs :: instance JboShow JboFragment (jboshow method for JboFragTerms)
 /// Build Lojban output for fragment with terms
 /// Fragments show ju'a nai prefixes for non-veridical propositions,
 /// followed by .i and the fragment terms.

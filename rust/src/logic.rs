@@ -100,6 +100,7 @@ pub fn big_and<R: Clone, T: Clone, C: Clone, O: Clone, Q: Clone>(
     big_and_inner(filtered)
 }
 
+// Ported from: Logic.hs :: bigAnd (recursive helper)
 fn big_and_inner<R: Clone, T: Clone, C: Clone, O: Clone, Q: Clone>(
     props: Vec<Prop<R, T, C, O, Q>>
 ) -> Prop<R, T, C, O, Q> {

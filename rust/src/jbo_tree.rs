@@ -250,16 +250,19 @@ fn convert_prop_to_graph_with_last_term(
     }
 }
 
+// Ported from: JboTree.hs :: convertPropToGraph
 fn convert_prop_to_graph(state: &mut GraphState, prop: &JboProp, parent_id: Option<String>) -> String {
     convert_prop_to_graph_with_last_term(state, prop, parent_id).0
 }
 
+// Ported from: JboTree.hs :: addParentEdge
 fn add_parent_edge(state: &mut GraphState, parent_id: Option<String>, node_id: &str) {
     if let Some(parent_id) = parent_id {
         add_edge(state, parent_id, node_id.to_string(), String::new());
     }
 }
 
+// Ported from: JboTree.hs :: convertRelPropToGraph
 fn convert_rel_prop_to_graph(
     state: &mut GraphState,
     rel: &JboRel,
@@ -318,6 +321,7 @@ fn convert_rel_prop_to_graph(
     }
 }
 
+// Ported from: JboTree.hs :: addTermEdges
 fn add_term_edges(state: &mut GraphState, node_id: &str, terms: &[JboTerm], prefix: &str) -> Option<String> {
     let mut last = None;
     for (idx, term) in terms.iter().enumerate() {
@@ -515,6 +519,7 @@ fn convert_term(term: &JboTerm) -> (String, String, String, Option<String>) {
     }
 }
 
+// Ported from: JboTree.hs :: sideTexticuleToNode
 fn side_texticule_to_node(state: &mut GraphState, side_type: &crate::jbo_prop::SideType, texticule: &Texticule) -> String {
     let side_type = format!("{:?}", side_type);
     let content = match texticule {
@@ -533,6 +538,7 @@ fn side_texticule_to_node(state: &mut GraphState, side_type: &crate::jbo_prop::S
     )
 }
 
+// Ported from: JboTree.hs :: convertQuantifier
 fn convert_quantifier(q: &JboQuantifier) -> String {
     match q {
         JboQuantifier::MexQuantifier(mex) => format!("{:?}", mex),

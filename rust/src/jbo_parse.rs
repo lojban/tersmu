@@ -21,6 +21,8 @@ use crate::parse_m::{ParseState, VariableDomain, Bridi, PreProp, jbo_rel_to_brid
 
 pub type JboProp = Prop<JboRel, JboTerm, String, JboModalOp, JboQuantifier>;
 
+// Ported from: JboParse.hs :: withQuestionsScoped
+/// Scope questions within a computation, applying them at the end
 fn with_questions_scoped<P, F>(top: bool, state: &mut ParseState, f: F) -> Result<P, String>
 where
     P: PreProp,
@@ -36,6 +38,8 @@ where
     Ok(result)
 }
 
+// Ported from: JboParse.hs :: withQuestionsScoped (bridi version)
+/// Scope questions within a bridi computation
 fn with_questions_scoped_bridi<F>(top: bool, state: &mut ParseState, f: F) -> Result<Bridi, String>
 where
     F: FnOnce(&mut ParseState) -> Result<Bridi, String>,
@@ -72,6 +76,7 @@ where
     replace_last_term_in_prop_with_status(f, prop).0
 }
 
+// Ported from: JboParse.hs :: replaceLastTermInProp (internal helper with status tracking)
 fn replace_last_term_in_prop_with_status<F>(f: std::rc::Rc<F>, prop: JboProp) -> (JboProp, bool)
 where
     F: Fn(JboTerm) -> JboTerm + 'static,
@@ -147,11 +152,13 @@ pub fn mex_exists() -> Mex {
     Mex::MexNumeralString(vec![Numeral::PA("su'o".to_string())])
 }
 
+// Ported from: JboParse.hs :: mexForall
 pub fn mex_forall() -> Mex {
     use crate::jbo_syntax::{Mex, Numeral};
     Mex::MexNumeralString(vec![Numeral::PA("ro".to_string())])
 }
 
+// Ported from: JboParse.hs :: nullMex
 pub fn null_mex() -> Mex {
     use crate::jbo_syntax::{Mex, Numeral};
     Mex::MexNumeralString(vec![Numeral::PA("tu'o".to_string())])
@@ -274,9 +281,8 @@ pub fn segregate_rels(rels: &[JboRelClause]) -> (Vec<&JboPred>, Vec<&JboPred>, V
     (restrictives, incidentals, assignments)
 }
 
-// Integration helper for syntax-level callers; semantic tag parsing uses `parse_connective_helper`,
-// which ports JboParse.hs :: parseConnective with ParseM state.
-/// Preserve syntax-level connectives before semantic tag parsing is available at the call site.
+// Rust integration: Preserve syntax-level connectives before semantic tag parsing is available at the call site.
+// Semantic tag parsing uses `parse_connective_helper`, which ports JboParse.hs :: parseConnective with ParseM state.
 pub fn parse_connective(conn: &Connective) -> Connective {
     conn.clone()
 }
@@ -323,7 +329,7 @@ pub fn eval_text(text: &Text) -> Vec<SemanticResult> {
     eval_text_with_full_parser(text)
 }
 
-// Full parser version with quantification support
+// Rust adaptation: Full parser version with quantification support
 fn eval_text_with_full_parser(text: &Text) -> Vec<SemanticResult> {
     let mut state = ParseState::new();
     let mut results = vec![];
@@ -381,6 +387,7 @@ fn eval_text_with_full_parser(text: &Text) -> Vec<SemanticResult> {
     results
 }
 
+// Ported from: JboParse.hs :: evalText (texticule collection path)
 fn eval_texticules(text: &Text) -> Vec<Texticule> {
     let mut state = ParseState::new();
     let mut result = Vec::new();
@@ -440,7 +447,7 @@ fn eval_texticules(text: &Text) -> Vec<Texticule> {
     with_sides
 }
 
-// Full parser version of eval_statement
+// Rust adaptation: Full parser version of eval_statement
 fn eval_statement_full(state: &mut ParseState, stmt: &Statement) -> Option<SemanticResult> {
     state.non_veridical_props.clear();
     let prop = parse_statement(stmt, state).ok()?;
@@ -483,7 +490,7 @@ fn eval_statement_full(state: &mut ParseState, stmt: &Statement) -> Option<Seman
     })
 }
 
-// Full parser version of eval_sentence
+// Rust adaptation: Full parser version of eval_sentence
 fn eval_sentence_full(state: &mut ParseState, sentence: &Sentence) -> Option<SemanticResult> {
     // Clear non-veridical props from previous sentence
     state.non_veridical_props.clear();
@@ -522,6 +529,7 @@ fn eval_sentence_full(state: &mut ParseState, sentence: &Sentence) -> Option<Sem
     })
 }
 
+// Rust-only: Convert parse_m::Texticule to JboProp
 fn prop_texticule_to_prop(texticule: crate::parse_m::Texticule) -> JboProp {
     match texticule {
         crate::parse_m::Texticule::TexticuleProp(prop) => prop,
@@ -529,6 +537,7 @@ fn prop_texticule_to_prop(texticule: crate::parse_m::Texticule) -> JboProp {
     }
 }
 
+// Rust-only: Convert parse_m::Texticule to jbo_prop::Texticule
 fn prop_texticule_to_jbo(texticule: crate::parse_m::Texticule) -> Texticule {
     match texticule {
         crate::parse_m::Texticule::TexticuleProp(prop) => Texticule::TexticuleProp(prop),
@@ -538,6 +547,7 @@ fn prop_texticule_to_jbo(texticule: crate::parse_m::Texticule) -> Texticule {
     }
 }
 
+// Rust-only: Convert jbo_prop::Texticule to parse_m::Texticule
 fn prop_texticule_to_parse(texticule: Texticule) -> Result<crate::parse_m::Texticule, String> {
     match texticule {
         Texticule::TexticuleProp(prop) => Ok(crate::parse_m::Texticule::TexticuleProp(prop)),
@@ -549,6 +559,7 @@ fn prop_texticule_to_parse(texticule: Texticule) -> Result<crate::parse_m::Texti
     }
 }
 
+// Rust-only: Convert side texticules to propositions
 fn side_texticules_to_props(side_texticules: Vec<crate::parse_m::Texticule>) -> Vec<JboProp> {
     side_texticules
         .into_iter()
@@ -556,6 +567,7 @@ fn side_texticules_to_props(side_texticules: Vec<crate::parse_m::Texticule>) -> 
         .collect()
 }
 
+// Rust-only: Split side propositions into veridical and non-veridical
 fn split_side_props(side_props: &[JboProp], veridical: &mut Vec<JboProp>, non_veridical: &mut Vec<JboProp>) {
     for prop in side_props {
         match prop {
@@ -565,6 +577,7 @@ fn split_side_props(side_props: &[JboProp], veridical: &mut Vec<JboProp>, non_ve
     }
 }
 
+// Rust-only: Extract veridical propositions (non-NonVeridical)
 fn extract_veridical_props(prop: &JboProp, result: &mut Vec<JboProp>) {
     match prop {
         Prop::Modal(JboModalOp::NonVeridical, _) => {}
@@ -578,6 +591,7 @@ fn extract_veridical_props(prop: &JboProp, result: &mut Vec<JboProp>) {
     }
 }
 
+// Rust-only: Extract non-veridical (rel, term) pairs
 fn extract_non_veridical_pairs(prop: &JboProp, result: &mut Vec<(JboRel, JboTerm)>) {
     match prop {
         Prop::Modal(JboModalOp::NonVeridical, inner) => {
@@ -592,7 +606,7 @@ fn extract_non_veridical_pairs(prop: &JboProp, result: &mut Vec<(JboRel, JboTerm
     }
 }
 
-// Helper function to extract (rel, term) pairs from a proposition
+// Rust-only: Extract (rel, term) pairs from a proposition
 fn extract_rel_term_pairs(prop: &JboProp, result: &mut Vec<(JboRel, JboTerm)>) {
     match prop {
         Prop::Rel(rel, terms) => {
@@ -609,7 +623,7 @@ fn extract_rel_term_pairs(prop: &JboProp, result: &mut Vec<(JboRel, JboTerm)>) {
     }
 }
 
-// Full parser version of eval_fragment
+// Rust adaptation: Full parser version of eval_fragment
 fn eval_fragment_full(state: &mut ParseState, frag: &Fragment) -> Option<SemanticResult> {
     // Ported from: JboParse.hs :: parseFrag (lines 62-64)
     // parseFrag :: Fragment -> ParseStateM JboFragment
@@ -662,6 +676,7 @@ fn eval_fragment_full(state: &mut ParseState, frag: &Fragment) -> Option<Semanti
     }
 }
 
+// Rust-only: Create semantic result for unparsed fragments
 fn unparsed_fragment_result(frag: &Fragment) -> SemanticResult {
     let lojban_output = match frag {
         Fragment::FragLaName(name) => name.clone(),
@@ -714,10 +729,12 @@ fn strip_nulls(ms: Vec<JboMex>) -> Vec<JboMex> {
     result
 }
 
+// Ported from: JboParse.hs :: stripNulls (helper for null mex detection)
 fn is_null_mex(m: &JboMex) -> bool {
     matches!(m, JboMex::MexNumeralString(ns) if ns.len() == 1 && matches!(&ns[0], Numeral::PA(s) if s == "tu'o"))
 }
 
+// Ported from: JboParse.hs :: stripNulls (helper for null operator detection)
 fn is_null_op(op: &JboOperator) -> bool {
     matches!(op, JboOperator::OpVUhU(s) if s == "ge'a")
 }
@@ -752,10 +769,12 @@ fn apply_jbo_operator(op: JboOperator, os: Vec<JboMex>) -> JboMex {
     }
 }
 
+// Rust-only: Helper for null mex construction
 fn null_jbo_mex() -> JboMex {
     JboMex::MexNumeralString(vec![Numeral::PA("tu'o".to_string())])
 }
 
+// Ported from: JboParse.hs :: parseMex (logical connective branch extraction)
 fn logical_connected_mex_branches(m: &JboMex) -> Option<(crate::jbo_syntax::LogJboConnective, JboMex, JboMex)> {
     match m {
         JboMex::ConnectedMex(_, Connective::JboConnLog(_, lcon), m1, m2) => {
@@ -791,6 +810,7 @@ pub fn parse_mex(m: &Mex, state: &mut ParseState) -> Result<JboMex, String> {
     Ok(reduce_mex(parsed))
 }
 
+// Ported from: JboParse.hs :: parseMex (reduction helper)
 fn reduce_mex(m: JboMex) -> JboMex {
     match m {
         JboMex::Operation(op, ms) => apply_jbo_operator(*op, ms),
@@ -1010,6 +1030,7 @@ impl ConnectiveResult for JboOperator {
     }
 }
 
+// Ported from: JboParse.hs :: doConnective (generic version for ConnectiveResult types)
 fn do_connective<T, F1, F2>(
     is_forethought: bool,
     con: &Connective,
@@ -1081,7 +1102,7 @@ where
     Ok(T::combine_connective(is_forethought, parse_connective(con), left, right))
 }
 
-// Version of do_connective that accepts BridiParseState
+// Ported from: JboParse.hs :: doConnective (bridi version with BridiParseState)
 fn do_connective_with_bridi<F1, F2>(
     is_forethought: bool,
     con: &Connective,
@@ -1184,6 +1205,7 @@ where
         apply_transform_list(outer_transforms.clone(), prop)
     }))
 }
+// Ported from: JboParse.hs :: doConnective (continuation argument extraction)
 fn continuation_args_after_branch(
     final_args: &crate::parse_m::Args,
     branch_args: &crate::parse_m::Args,
@@ -1204,6 +1226,7 @@ fn continuation_args_after_branch(
         .collect()
 }
 
+// Rust-only: Sort argument positions for deterministic ordering
 fn sorted_args(args: &crate::parse_m::Args) -> Vec<(&crate::parse_m::ArgPos, &JboTerm)> {
     let mut items = args.iter().collect::<Vec<_>>();
     items.sort_by(|(a, _), (b, _)| a.cmp(b));
@@ -1212,7 +1235,7 @@ fn sorted_args(args: &crate::parse_m::Args) -> Vec<(&crate::parse_m::ArgPos, &Jb
 
 // Helper: Apply FOL connective to two results (removed - not needed with current approach)
 
-// Helper: Check if tag is a tense
+// Ported from: JboParse.hs :: parseTag (tense tag detection helper)
 fn is_tense_tag(tag: &Tag) -> bool {
     match tag {
         Tag::DecoratedTagUnits(dtus) => {
@@ -1227,7 +1250,7 @@ fn is_tense_tag(tag: &Tag) -> bool {
     }
 }
 
-// Helper: Parse tag
+// Ported from: JboParse.hs :: parseTag
 fn parse_tag_helper(tag: &Tag, state: &mut ParseState) -> Result<crate::jbo_prop::JboTag, String> {
     match tag {
         Tag::ConnectedTag(con, tag1, tag2) => {
@@ -1258,7 +1281,7 @@ fn parse_tag_helper(tag: &Tag, state: &mut ParseState) -> Result<crate::jbo_prop
     }
 }
 
-// Helper: Parse tag unit
+// Ported from: JboParse.hs :: parseTag (tag unit parsing)
 fn parse_tag_unit_helper(
     tu: &TagUnit,
     state: &mut ParseState,
@@ -1286,7 +1309,7 @@ fn parse_tag_unit_helper(
     }
 }
 
-// Helper: Parse connective
+// Ported from: JboParse.hs :: parseConnective
 fn parse_connective_helper(
     con: &Connective,
     state: &mut ParseState,
@@ -1315,12 +1338,12 @@ fn parse_connective_helper(
     }
 }
 
-// Helper: Apply modal operator
+// Ported from: JboParse.hs :: doModal
 fn do_modal_helper(op: &crate::jbo_prop::JboModalOp, state: &mut ParseState) {
     state.map_prop(crate::parse_m::PropTransform::ApplyModal(op.clone()));
 }
 
-// Helper: Apply tag
+// Ported from: JboParse.hs :: doTag (tag concatenation helper)
 fn append_tags(left: crate::jbo_prop::JboTag, right: crate::jbo_prop::JboTag) -> crate::jbo_prop::JboTag {
     match (left, right) {
         (crate::jbo_prop::JboTag::DecoratedTagUnits(mut left), crate::jbo_prop::JboTag::DecoratedTagUnits(right)) => {
@@ -1335,6 +1358,7 @@ fn append_tags(left: crate::jbo_prop::JboTag, right: crate::jbo_prop::JboTag) ->
     }
 }
 
+// Ported from: JboParse.hs :: doTag
 fn do_tag_helper(
     jtag: &crate::jbo_prop::JboTag,
     mt: Option<JboTerm>,
@@ -1402,7 +1426,7 @@ fn do_tag_helper(
     }
 }
 
-// Helper: Check if tag unit NAI is scalar
+// Ported from: JboParse.hs :: doTag (NAI scalar detection for tag units)
 fn tag_nai_is_scalar(tu: &crate::jbo_prop::JboTagUnit) -> bool {
     matches!(
         tu,
@@ -1412,12 +1436,12 @@ fn tag_nai_is_scalar(tu: &crate::jbo_prop::JboTagUnit) -> bool {
     )
 }
 
-// Helper: Parse mex (wrapper for parse_mex_inner)
+// Ported from: JboParse.hs :: parseMex (wrapper)
 fn parse_mex_helper(m: &crate::jbo_syntax::Mex, state: &mut ParseState) -> Result<JboMex, String> {
     parse_mex_inner(m, state)
 }
 
-// Helper: Quantify (wrapper)
+// Ported from: JboParse.hs :: quantify (wrapper)
 fn quantify_helper(
     m: &crate::jbo_syntax::Mex,
     r: Option<JboPred>,
@@ -1470,6 +1494,7 @@ fn parsed_selbri_to_vpred(bridi: Bridi, captured_args: crate::parse_m::Args) -> 
     Ok(bridi_to_jbo_vpred(resolved))
 }
 
+// Ported from: JboParse.hs :: selbriToSeltauRel
 fn selbri_to_seltau_rel(sb: &Selbri, state: &mut ParseState) -> Result<JboRel, String> {
     let vpred = selbri_to_vpred(sb, state)?;
     match vpred(&[JboTerm::BoundVar(0)]) {
@@ -1508,14 +1533,17 @@ fn parse_selbri2(sb2: &Selbri2, bridi_state: &mut crate::parse_m::BridiParseStat
     }
 }
 
+// Ported from: JboParse.hs :: parseSelbri2 (seltau parsing helper)
 fn parse_seltau_selbri2(sb2: &Selbri2, bridi_state: &crate::parse_m::BridiParseState, state: &mut ParseState) -> Result<Bridi, String> {
     parse_seltau_bridi(bridi_state, state, |sub_state, state| parse_selbri2(sb2, sub_state, state))
 }
 
+// Ported from: JboParse.hs :: parseSelbri3 (seltau parsing helper)
 fn parse_seltau_selbri3(sb3: &Selbri3, bridi_state: &crate::parse_m::BridiParseState, state: &mut ParseState) -> Result<Bridi, String> {
     parse_seltau_bridi(bridi_state, state, |sub_state, state| parse_selbri3(sb3, sub_state, state))
 }
 
+// Ported from: JboParse.hs :: parseSelbri (seltau parsing with isolated bridi state)
 fn parse_seltau_bridi<F>(
     bridi_state: &crate::parse_m::BridiParseState,
     state: &mut ParseState,
@@ -1538,6 +1566,7 @@ where
     }))
 }
 
+// Ported from: JboParse.hs :: parseSelbri3 (broda/brode/brodi alias detection)
 fn brodv_alias(sb3: &Selbri3) -> Option<TanruUnit> {
     if let Selbri3::TanruHead(frees, tu, terms) = sb3 {
         if frees.is_empty() && terms.is_empty() {
@@ -1551,6 +1580,7 @@ fn brodv_alias(sb3: &Selbri3) -> Option<TanruUnit> {
     None
 }
 
+// Ported from: JboParse.hs :: parseSelbri3 (bridi binding alias extraction)
 fn bridi_binding_alias(sb3: &Selbri3) -> Option<TanruUnit> {
     match sb3 {
         Selbri3::BridiBinding(left, right) => brodv_alias(right).or_else(|| brodv_alias(left)),
@@ -1562,6 +1592,7 @@ fn bridi_binding_alias(sb3: &Selbri3) -> Option<TanruUnit> {
     }
 }
 
+// Ported from: JboParse.hs :: parseSelbri3 (bridi binding primary extraction)
 fn bridi_binding_primary(sb3: &Selbri3) -> Option<&Selbri3> {
     match sb3 {
         Selbri3::BridiBinding(left, right) => {
@@ -1797,7 +1828,7 @@ fn parse_tu(tu: &TanruUnit, bridi_state: &mut crate::parse_m::BridiParseState, s
 }
 
 
-// Helper: Fill terms into a proposition
+// Rust-only: Fill terms into a proposition (helper for term application)
 fn fill_terms_in_prop(prop: JboProp, terms: &[JboTerm]) -> JboProp {
     match prop {
         Prop::Rel(rel, _) => Prop::Rel(rel, terms.to_vec()),
@@ -1821,6 +1852,7 @@ fn fill_terms_in_prop(prop: JboProp, terms: &[JboTerm]) -> JboProp {
     }
 }
 
+// Ported from: JboParse.hs :: parseSelbri (linkargs application helper)
 fn apply_linkargs_to_bridi(bridi: Bridi, linkargs: crate::parse_m::Args) -> Bridi {
     Box::new(move |args: &crate::parse_m::Args| {
         let combined_args = crate::parse_m::join_args(args, &linkargs);
@@ -1840,7 +1872,7 @@ fn apply_seltau(seltau: Bridi, tertau: Bridi) -> Result<Bridi, String> {
     }))
 }
 
-// Helper: Apply tanru relation to all relations in a proposition
+// Ported from: JboParse.hs :: applySeltau (tanru relation application to proposition)
 fn apply_tanru_rel_to_prop(seltau_rel: JboRel, prop: JboProp) -> JboProp {
     match prop {
         Prop::Rel(rel, terms) => {
@@ -1880,7 +1912,7 @@ fn apply_tanru_rel_to_prop(seltau_rel: JboRel, prop: JboProp) -> JboProp {
     }
 }
 
-// Helper: Map over all relations in a proposition
+// Ported from: JboParse.hs :: mapRelsInProp
 fn map_rels_in_prop<F>(f: F, prop: JboProp) -> JboProp
 where
     F: Fn(JboRel) -> JboRel + Clone + 'static,
@@ -1912,7 +1944,7 @@ where
     }
 }
 
-// Helper: Swap argument positions
+// Rust-only: Swap argument positions in permutation vector
 fn swap_arg_positions(mut perm: Vec<usize>, i: usize, j: usize) -> Vec<usize> {
     if i < perm.len() && j < perm.len() {
         perm.swap(i, j);
@@ -2127,7 +2159,7 @@ fn parse_sumti(s: &Sumti, state: &mut ParseState) -> Result<JboTerm, String> {
     Ok(o)
 }
 
-// Helper: Convert selbri to predicate
+// Ported from: JboParse.hs :: parseSumti (selbri to predicate conversion)
 fn selbri_to_pred(sb: &Selbri, state: &mut ParseState) -> Result<JboPred, String> {
     let vpred = selbri_to_vpred(sb, state)?;
     Ok(crate::jbo_prop::v_pred_to_pred(vpred))
@@ -2465,7 +2497,7 @@ fn parse_sumti_atom(sa: &SumtiAtom, state: &mut ParseState) -> Result<(JboTerm, 
     Ok((o, jrels))
 }
 
-// Helper: Check if sumti atom gets ri backcount
+// Ported from: JboParse.hs :: parseSumtiAtom (ri backcount detection)
 pub fn gets_ri(sa: &SumtiAtom) -> bool {
     crate::jbo_syntax::gets_ri(sa)
 }
@@ -2600,7 +2632,7 @@ fn parse_rels(rels: &[RelClause], state: &mut ParseState) -> Result<Vec<JboRelCl
     Ok(result)
 }
 
-// Helper: Parse a single relative clause
+// Ported from: JboParse.hs :: parseRel (single relative clause parsing)
 fn parse_rel(rel: &RelClause, state: &mut ParseState) -> Result<Option<JboRelClause>, String> {
     match rel {
         RelClause::Restrictive(ss) => {
@@ -2815,9 +2847,8 @@ fn parse_bridi_tail(bt: &BridiTail, bridi_state: &mut crate::parse_m::BridiParse
     }
 }
 
-// Helper: Parse inverted tanru in bridi tail
-/// Ported from: JboParse.hs :: parseBTail (lines 178-183)
-/// Handles: BridiTail3 (Selbri2 (SBInverted sb sb')) tts
+// Ported from: JboParse.hs :: parseBTail (lines 178-183)
+// Handles: BridiTail3 (Selbri2 (SBInverted sb sb')) tts
 fn parse_inverted_bridi_tail(
     sb3: &Selbri3,
     sb2: &Selbri2,
@@ -2834,6 +2865,7 @@ fn parse_inverted_bridi_tail(
     apply_seltau(seltau, tertau)
 }
 
+// Ported from: JboParse.hs :: parseBTail (inverted tanru seltau parsing)
 fn parse_inverted_seltau_bridi(
     sb2: &Selbri2,
     tail_terms: &[Term],
@@ -2857,13 +2889,13 @@ fn parse_inverted_seltau_bridi(
     }
 }
 
-// Helper: Apply bare tag (tag without sumti)
+// Ported from: JboParse.hs :: doTag (bare tag application without sumti)
 fn do_bare_tag(tag: &crate::jbo_prop::JboTag, state: &mut ParseState) -> Result<(), String> {
     do_tag_helper(tag, None, state)
 }
 
 
-// Helper: Parse GOI relative clause
+// Ported from: JboParse.hs :: parseRel (GOI relative clause parsing)
 fn parse_goi_rel<F>(
     goi: &str,
     term: &Term,
@@ -2915,7 +2947,7 @@ where
     }
 }
 
-// Helper: Parse assignment relative clause
+// Ported from: JboParse.hs :: parseRel (assignment relative clause parsing)
 fn parse_assignment_rel(term: &Term, state: &mut ParseState) -> Result<Option<JboRelClause>, String> {
     // Check if it's a simple assignable sumti atom
     if let Term::Sumti(Tagged::Untagged, sumti) = term {
@@ -2941,7 +2973,7 @@ fn parse_assignment_rel(term: &Term, state: &mut ParseState) -> Result<Option<Jb
     Ok(None)
 }
 
-// Helper: Check if sumti atom is assignable
+// Ported from: JboParse.hs :: parseRel (assignable atom detection)
 fn is_assignable_atom(atom: &SumtiAtom) -> bool {
     matches!(
         atom,
@@ -3286,6 +3318,7 @@ fn parse_terms(terms: &[Term], bridi_state: &mut crate::parse_m::BridiParseState
     parse_terms_helper(terms, false, bridi_state, state)
 }
 
+// Ported from: JboParse.hs :: parseTerms (prenex term parsing)
 fn parse_prenex_terms(terms: &[Term], bridi_state: &mut crate::parse_m::BridiParseState, state: &mut ParseState) -> Result<Vec<JboTerm>, String> {
     let saved_arglist = bridi_state.arglist.clone();
     let result = parse_terms_helper(terms, true, bridi_state, state);
@@ -3293,6 +3326,7 @@ fn parse_prenex_terms(terms: &[Term], bridi_state: &mut crate::parse_m::BridiPar
     result
 }
 
+// Ported from: JboParse.hs :: parseTerms (term parsing with mode flag)
 fn parse_terms_helper(
     terms: &[Term],
     prenex: bool,
@@ -3636,6 +3670,7 @@ where
 }
 
 // Helper: Swap argument positions in a proposition
+// Ported from: JboParse.hs :: parsedSelbriToNewSelbri (swap argument positions in proposition)
 fn swap_arg_positions_in_prop(n: i32, prop: crate::parse_m::JboProp) -> crate::parse_m::JboProp {
     use crate::logic::Prop;
 
@@ -3683,6 +3718,7 @@ fn push_canonical_lines(lines: &mut Vec<String>, lojban: &str) {
     }
 }
 
+// Ported from: JboShow.hs :: propToLojban (canonical line formatting)
 fn build_lojban_output_from_prop(
     prop: &crate::parse_m::JboProp,
     side_props: &[JboProp],
@@ -3700,6 +3736,7 @@ fn build_lojban_output_from_prop(
     lines.join("\n")
 }
 
+// Ported from: JboShow.hs :: propToLojban (texticule-based output formatting)
 fn build_lojban_output_from_texticules(
     prop: &crate::parse_m::JboProp,
     side_texticules: &[Texticule],

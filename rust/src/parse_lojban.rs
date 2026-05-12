@@ -45,13 +45,14 @@ thread_local! {
     static SI_CLAUSE_PEG: OnceCell<Peg> = const { OnceCell::new() };
 }
 
-// Integration glue for `Lojban.pappy` start rules: camxes-rs builds a PEG for the named
-// surface rule that generated Haskell would expose through `lojbanParse`.
+// Rust integration: Builds a camxes PEG parser for a Lojban.pappy grammar rule
+// Replaces Haskell's Pappy-generated parser infrastructure
 fn build_peg(start: &str) -> Result<Peg, usize> {
     let (_, grammar) = crate::camxes::LOJBAN_GRAMMAR;
     Peg::new(start, grammar).map_err(|_| 0usize)
 }
 
+// Rust integration: Thread-local PEG cache for "text" rule
 fn with_text_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
     TEXT_PEG.with(|cell| {
         if cell.get().is_none() {
@@ -63,6 +64,7 @@ fn with_text_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize
     })
 }
 
+// Rust integration: Thread-local PEG cache for "free" rule
 fn with_free_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
     FREE_PEG.with(|cell| {
         if cell.get().is_none() {
@@ -74,6 +76,7 @@ fn with_free_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize
     })
 }
 
+// Rust integration: Thread-local PEG cache for "joik_ek" rule
 fn with_joik_ek_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
     JOIK_EK_PEG.with(|cell| {
         if cell.get().is_none() {
@@ -85,6 +88,7 @@ fn with_joik_ek_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, us
     })
 }
 
+// Rust integration: Thread-local PEG cache for "LA_clause" rule
 fn with_la_clause_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
     LA_CLAUSE_PEG.with(|cell| {
         if cell.get().is_none() {
@@ -96,6 +100,7 @@ fn with_la_clause_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, 
     })
 }
 
+// Rust integration: Thread-local PEG cache for "MAI_clause" rule
 fn with_mai_clause_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
     MAI_CLAUSE_PEG.with(|cell| {
         if cell.get().is_none() {
@@ -107,6 +112,7 @@ fn with_mai_clause_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R,
     })
 }
 
+// Rust integration: Thread-local PEG cache for "ZOI_clause" rule
 fn with_zoi_clause_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
     ZOI_CLAUSE_PEG.with(|cell| {
         if cell.get().is_none() {
@@ -118,6 +124,7 @@ fn with_zoi_clause_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R,
     })
 }
 
+// Rust integration: Thread-local PEG cache for "SEI_clause" rule
 fn with_sei_clause_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
     SEI_CLAUSE_PEG.with(|cell| {
         if cell.get().is_none() {
@@ -129,6 +136,7 @@ fn with_sei_clause_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R,
     })
 }
 
+// Rust integration: Thread-local PEG cache for "indicators" rule
 fn with_indicators_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
     INDICATORS_PEG.with(|cell| {
         if cell.get().is_none() {
@@ -140,6 +148,7 @@ fn with_indicators_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R,
     })
 }
 
+// Rust integration: Thread-local PEG cache for "SI_clause" rule
 fn with_si_clause_peg<R>(f: impl FnOnce(&Peg) -> Result<R, usize>) -> Result<R, usize> {
     SI_CLAUSE_PEG.with(|cell| {
         if cell.get().is_none() {
@@ -179,7 +188,7 @@ struct TermsGikTerms {
     ts2: Vec<Term>,
 }
 
-// Ports `Lojban.pappy` sumti-tail relative-clause attachment into `JboSyntax.hs :: Term`.
+// Ported from: Lojban.pappy :: sumti rule behavior
 fn attach_rels_to_term(term: Term, extra_rels: Vec<RelClause>) -> Term {
     if extra_rels.is_empty() {
         return term;
@@ -205,7 +214,7 @@ fn attach_rels_to_term(term: Term, extra_rels: Vec<RelClause>) -> Term {
     }
 }
 
-// Ports the same `Lojban.pappy` relative-clause attachment for reducers that already hold a Sumti.
+// Ported from: Lojban.pappy :: sumti rule behavior
 fn attach_rels_to_sumti(sumti: Sumti, rels: Vec<RelClause>) -> Sumti {
     match attach_rels_to_term(Term::Sumti(Tagged::Untagged, sumti), rels) {
         Term::Sumti(_, sumti) => sumti,
@@ -213,7 +222,7 @@ fn attach_rels_to_sumti(sumti: Sumti, rels: Vec<RelClause>) -> Sumti {
     }
 }
 
-// Ports `Lojban.pappy` numeric PA reducer behavior for literal digit strings.
+// Ported from: Lojban.pappy :: PA digit reduction to literal integers
 fn litnum(numerals: &[Numeral]) -> Option<i32> {
     let mut n = 0;
     for numeral in numerals {
@@ -238,7 +247,7 @@ fn litnum(numerals: &[Numeral]) -> Option<i32> {
     Some(n)
 }
 
-// Ports `Lojban.pappy` quantifier threading where outer term quantifiers attach to parsed sumti.
+// Ported from: Lojban.pappy :: quantifier attachment in sumti rules
 fn attach_quant_to_term(term: Term, outer_quant: Option<Mex>) -> Term {
     let Some(q) = outer_quant else {
         return term;
@@ -257,7 +266,7 @@ fn attach_quant_to_term(term: Term, outer_quant: Option<Mex>) -> Term {
     }
 }
 
-// Ports connective-tag reducers from `Lojban.pappy` (`jek`/`joik` variants with modal tags).
+// Ported from: Lojban.pappy :: jek/joik tag attachment rules
 fn attach_tag_to_connective(
     mut con: crate::jbo_syntax::Connective,
     tag: Option<crate::jbo_syntax::Tag>,
@@ -272,7 +281,7 @@ fn attach_tag_to_connective(
     con
 }
 
-// Integration helper for camxes semantic nodes carrying `JboSyntax.hs :: Tag` values.
+// Rust integration: Extracts Tag from camxes semantic node children
 fn first_child_tag(children: &[SemanticNode]) -> Option<crate::jbo_syntax::Tag> {
     children.iter().find_map(|child| {
         child
@@ -281,7 +290,7 @@ fn first_child_tag(children: &[SemanticNode]) -> Option<crate::jbo_syntax::Tag> 
     })
 }
 
-// Ports `Lojban.pappy :: joik` spelling preservation, including interval GAhO endpoints.
+// Ported from: Lojban.pappy :: joik rule, preserving interval GAhO endpoints
 fn joik_string_from_words(words: &[&str]) -> Option<String> {
     let interval_idx = words
         .iter()
@@ -328,6 +337,7 @@ fn joik_string_from_words(words: &[&str]) -> Option<String> {
     Some(joik)
 }
 
+// Ported from: Lojban.pappy :: sumti_6 connected sumti reduction
 fn reduce_connected_sumti(children: &[SemanticNode], input: &str) -> Option<Term> {
     let mut terms: Vec<Term> = Vec::new();
     let mut conns: Vec<crate::jbo_syntax::Connective> = Vec::new();
@@ -384,6 +394,7 @@ fn reduce_connected_sumti(children: &[SemanticNode], input: &str) -> Option<Term
     Some(attach_rels_to_term(Term::Sumti(Tagged::Untagged, connected), rels))
 }
 
+// Rust integration: Collects tail terms from bridi_tail parse nodes
 fn collect_tail_terms(node: &SemanticNode, out: &mut Vec<Term>) {
     if let Some(v) = node.value_ref() {
         if let Some(term) = downcast_ref::<Term>(v) {
@@ -405,6 +416,7 @@ fn collect_tail_terms(node: &SemanticNode, out: &mut Vec<Term>) {
     }
 }
 
+// Ported from: JboShow.hs :: jbonum (inverse mapping for PA parsing)
 fn pa_to_int(s: &str) -> Option<i32> {
     match s {
         "no" => Some(0),
@@ -421,6 +433,7 @@ fn pa_to_int(s: &str) -> Option<i32> {
     }
 }
 
+// Ported from: Lojban.pappy :: PA digit sequence parsing
 fn pa_words_to_int(words: &[&str]) -> Option<i32> {
     let mut n = 0;
     let mut saw_digit = false;
@@ -432,6 +445,7 @@ fn pa_words_to_int(words: &[&str]) -> Option<i32> {
     saw_digit.then_some(n)
 }
 
+// Ported from: Lojban.pappy :: XI literal parsing from word sequences
 fn xi_lit_from_words(words: &[&str], pos: usize) -> Option<i32> {
     if words.get(pos + 1) == Some(&"xi") {
         let end = words[pos + 2..]
@@ -445,6 +459,7 @@ fn xi_lit_from_words(words: &[&str], pos: usize) -> Option<i32> {
     }
 }
 
+// Rust integration: Parses PA digit sequence from string prefix
 fn pa_sequence_prefix(s: &str) -> Option<i32> {
     let mut n = 0;
     let mut rest = s;
@@ -460,6 +475,7 @@ fn pa_sequence_prefix(s: &str) -> Option<i32> {
     saw_digit.then_some(n)
 }
 
+// Rust integration: Splits ko'a-style words with embedded "xi" literals
 fn split_koh_a_xi_lit(word: &str) -> (&str, Option<i32>) {
     if let Some((base, suffix)) = word.split_once("xi") {
         if !base.is_empty() {
@@ -471,6 +487,7 @@ fn split_koh_a_xi_lit(word: &str) -> (&str, Option<i32>) {
     (word, None)
 }
 
+// Ported from: Lojban.pappy :: KOhA_clause reduction to SumtiAtom
 fn koh_a_sumti_atom_from_words(words: &[&str]) -> Option<SumtiAtom> {
     let (text, compact_xi_lit) = split_koh_a_xi_lit(words.first()?);
     let xi_lit = compact_xi_lit.or_else(|| xi_lit_from_words(words, 0));
@@ -506,6 +523,7 @@ fn koh_a_sumti_atom_from_words(words: &[&str]) -> Option<SumtiAtom> {
     })
 }
 
+// Rust integration: Helper to wrap SumtiAtom in Term structure
 fn qatom_term(atom: SumtiAtom) -> Term {
     Term::Sumti(
         Tagged::Untagged,
@@ -518,10 +536,12 @@ fn qatom_term(atom: SumtiAtom) -> Term {
     )
 }
 
+// Ported from: ParseText.hs :: BAhE filtering behavior
 fn is_haskell_bahe(word: &str) -> bool {
     matches!(word.trim_matches('.'), "ba'e" | "za'e")
 }
 
+// Ported from: ParseText.hs :: BAhE filtering for word sequences
 fn words_without_bahe(text: &str) -> Vec<String> {
     text.split_whitespace()
         .map(|word| word.trim_matches('.'))
@@ -530,14 +550,17 @@ fn words_without_bahe(text: &str) -> Vec<String> {
         .collect()
 }
 
+// Ported from: ParseText.hs :: BAhE filtering helper
 fn first_non_bahe_word(text: &str) -> String {
     words_without_bahe(text).into_iter().next().unwrap_or_default()
 }
 
+// Ported from: Lojban.pappy :: KAU depth parsing with XI literals
 fn kau_depth_from_words(words: &[&str], pos: usize) -> i32 {
     xi_lit_from_words(words, pos).unwrap_or(1)
 }
 
+// Ported from: Lojban.pappy :: XU truth question parsing with KAU depth
 fn truthq_from_text(text: &str) -> Option<Free> {
     let words: Vec<&str> = text
         .split_whitespace()
@@ -550,6 +573,7 @@ fn truthq_from_text(text: &str) -> Option<Free> {
     Some(Free::TruthQ(kau_depth))
 }
 
+// Ported from: Lojban.pappy :: KAU depth extraction from sumti text
 fn sumti_kau_depth_from_text(text: &str) -> Option<i32> {
     let words: Vec<&str> = text
         .split_whitespace()
@@ -560,6 +584,7 @@ fn sumti_kau_depth_from_text(text: &str) -> Option<i32> {
     Some(kau_depth_from_words(&words, pos))
 }
 
+// Rust integration: Extracts KAU depth from text between sumti_6 and next node
 fn direct_sumti_kau_depth(children: &[SemanticNode], input: &str) -> Option<i32> {
     let mut sumti6_end = None;
     let mut next_start = None;
@@ -580,6 +605,7 @@ fn direct_sumti_kau_depth(children: &[SemanticNode], input: &str) -> Option<i32>
     sumti_kau_depth_from_text(&input[start..end])
 }
 
+// Ported from: Lojban.pappy :: XO quantifier KAU depth parsing
 fn quantifier_free_kau_depth(children: &[SemanticNode], input: &str) -> Option<i32> {
     children.iter().find_map(|child| {
         if let SemanticNode::NonTerminal { name, span, .. } = child {
@@ -599,6 +625,7 @@ fn quantifier_free_kau_depth(children: &[SemanticNode], input: &str) -> Option<i
     })
 }
 
+// Rust integration: Searches for quantifier KAU depth within sumti_5 nodes
 fn quantifier_free_kau_depth_in_sumti5(node: &SemanticNode, input: &str) -> Option<i32> {
     let SemanticNode::NonTerminal { name, children, .. } = node else {
         return None;
@@ -612,6 +639,7 @@ fn quantifier_free_kau_depth_in_sumti5(node: &SemanticNode, input: &str) -> Opti
     None
 }
 
+// Rust integration: Extracts KAU depth from direct free children
 fn direct_free_kau_depth(children: &[SemanticNode], input: &str) -> Option<i32> {
     children.iter().find_map(|child| {
         if let SemanticNode::NonTerminal { name, span, .. } = child {
@@ -623,6 +651,7 @@ fn direct_free_kau_depth(children: &[SemanticNode], input: &str) -> Option<i32> 
     })
 }
 
+// Rust integration: Recursively searches for KAU depth in free nodes
 fn child_free_kau_depth(node: &SemanticNode, input: &str) -> Option<i32> {
     match node {
         SemanticNode::NonTerminal { name, span, children, .. } => {
@@ -636,6 +665,7 @@ fn child_free_kau_depth(node: &SemanticNode, input: &str) -> Option<i32> {
     }
 }
 
+// Ported from: Lojban.pappy :: KAU attachment to sumti terms
 fn with_sumti_kau(term: Term, depth: Option<i32>) -> Term {
     let Some(depth) = depth else {
         return term;
@@ -657,6 +687,7 @@ fn with_sumti_kau(term: Term, depth: Option<i32>) -> Term {
     }
 }
 
+// Ported from: Lojban.pappy :: Free attachment to sumti terms
 fn with_sumti_frees(term: Term, extra_frees: &[Free]) -> Term {
     if extra_frees.is_empty() {
         return term;
@@ -670,6 +701,7 @@ fn with_sumti_frees(term: Term, extra_frees: &[Free]) -> Term {
     }
 }
 
+// Ported from: Lojban.pappy :: Tag concatenation with jo'u connective
 fn append_tags(left: crate::jbo_syntax::Tag, right: crate::jbo_syntax::Tag) -> crate::jbo_syntax::Tag {
     match (left, right) {
         (crate::jbo_syntax::Tag::DecoratedTagUnits(mut left), crate::jbo_syntax::Tag::DecoratedTagUnits(right)) => {
@@ -684,6 +716,7 @@ fn append_tags(left: crate::jbo_syntax::Tag, right: crate::jbo_syntax::Tag) -> c
     }
 }
 
+// Ported from: Lojban.pappy :: Bare tag merging into tagged sumti
 fn merge_bare_tag_into_tagged_sumti(left: &Term, right: &Term, left_text: &str, between: &str) -> Option<Term> {
     if left_text
         .split_whitespace()
@@ -704,6 +737,7 @@ fn merge_bare_tag_into_tagged_sumti(left: &Term, right: &Term, left_text: &str, 
     ))
 }
 
+// Ported from: Lojban.pappy :: Term collection with tag grouping
 fn collect_terms_with_grouped_tags(children: &[SemanticNode], input: &str) -> Vec<Term> {
     let mut items: Vec<(Term, Span)> = Vec::new();
     for child in children {
@@ -739,6 +773,7 @@ fn collect_terms_with_grouped_tags(children: &[SemanticNode], input: &str) -> Ve
     result.into_iter().map(|(term, _)| term).collect()
 }
 
+// Ported from: Lojban.pappy :: XO quantifier KAU depth extraction
 fn xo_kau_depth(mex: &Mex, span: Span, input: &str) -> Option<i32> {
     match mex {
         Mex::MexNumeralString(ns)
@@ -756,6 +791,7 @@ fn xo_kau_depth(mex: &Mex, span: Span, input: &str) -> Option<i32> {
     }
 }
 
+// Ported from: Lojban.pappy :: Bridi question selbri construction
 fn selbri_bridi_question(depth: i32) -> Selbri {
     Selbri::Selbri2(crate::jbo_syntax::Selbri2::Selbri3(
         crate::jbo_syntax::Selbri3::TanruHead(
@@ -766,6 +802,7 @@ fn selbri_bridi_question(depth: i32) -> Selbri {
     ))
 }
 
+// Rust integration: Collects Free nodes from parse tree
 fn collect_frees(node: &SemanticNode, out: &mut Vec<Free>) {
     if let Some(v) = node.value_ref() {
         if let Some(free) = downcast_ref::<Free>(v) {
@@ -786,6 +823,7 @@ fn collect_frees(node: &SemanticNode, out: &mut Vec<Free>) {
     }
 }
 
+// Rust integration: Collects frees before a given span position
 fn collect_frees_before_span(node: &SemanticNode, before: usize, out: &mut Vec<Free>) {
     if let SemanticNode::NonTerminal { span: Span(_, end), .. } = node {
         if *end > before {
@@ -795,6 +833,7 @@ fn collect_frees_before_span(node: &SemanticNode, before: usize, out: &mut Vec<F
     collect_frees(node, out);
 }
 
+// Rust integration: Collects frees after a given span position
 fn collect_frees_after_span(node: &SemanticNode, after: usize, out: &mut Vec<Free>) {
     if let SemanticNode::NonTerminal { span: Span(start, _), .. } = node {
         if *start < after {
@@ -804,6 +843,7 @@ fn collect_frees_after_span(node: &SemanticNode, after: usize, out: &mut Vec<Fre
     collect_frees(node, out);
 }
 
+// Rust integration: Deep collection of Term nodes from parse tree
 fn collect_terms_deep(node: &SemanticNode, out: &mut Vec<Term>) {
     if let Some(v) = node.value_ref() {
         if let Some(term) = downcast_ref::<Term>(v) {
@@ -825,6 +865,7 @@ fn collect_terms_deep(node: &SemanticNode, out: &mut Vec<Term>) {
     }
 }
 
+// Ported from: Lojban.pappy :: Statement wrapper construction from Sentence
 fn statement_from_sentence(sentence: &Sentence) -> Statement {
     Statement {
         frees: Vec::new(),
@@ -836,6 +877,7 @@ fn statement_from_sentence(sentence: &Sentence) -> Statement {
     }
 }
 
+// Ported from: Lojban.pappy :: Statement1 wrapper construction from Sentence
 fn statement1_from_sentence(sentence: &Sentence) -> Statement1 {
     Statement1::StatementSentence {
         frees: Vec::new(),
@@ -843,6 +885,7 @@ fn statement1_from_sentence(sentence: &Sentence) -> Statement1 {
     }
 }
 
+// Rust integration: Collects Statement nodes from parse tree
 fn collect_statement_items(node: &SemanticNode, out: &mut Vec<Statement>) {
     if let Some(v) = node.value_ref() {
         if let Some(stmt) = downcast_ref::<Statement>(v) {
@@ -861,6 +904,7 @@ fn collect_statement_items(node: &SemanticNode, out: &mut Vec<Statement>) {
     }
 }
 
+// Rust integration: Collects Paragraph nodes from parse tree
 fn collect_paragraph_items(node: &SemanticNode, out: &mut Vec<Paragraph>) {
     if let Some(v) = node.value_ref() {
         if let Some(paras) = downcast_ref::<Vec<Paragraph>>(v) {
@@ -882,6 +926,7 @@ fn collect_paragraph_items(node: &SemanticNode, out: &mut Vec<Paragraph>) {
     }
 }
 
+// Rust integration: Collects Selbri4 items (connectives and selbri3) from parse tree
 fn collect_selbri4_items(node: &SemanticNode, items: &mut Vec<Selbri4Item>) {
     if let Some(v) = node.value_ref() {
         if let Some(pair) = downcast_ref::<Jeksbs>(v) {
@@ -924,6 +969,7 @@ enum MexSeqItem {
     Operator(Operator),
 }
 
+// Rust integration: Extracts Mex or Operator from parse node for RPN processing
 fn mex_seq_item(node: &SemanticNode) -> Option<MexSeqItem> {
     if let Some(v) = node.value_ref() {
         if let Some(m) = downcast_ref::<Mex>(v) {
@@ -943,6 +989,8 @@ fn mex_seq_item(node: &SemanticNode) -> Option<MexSeqItem> {
     None
 }
 
+// Ported from: Lojban.pappy grammar rules → semantic reducers
+// This function builds the reducer table that maps grammar rules to AST constructors
 fn build_reducers() -> ReducerTable {
     let mut reducers = ReducerTable::new();
 
@@ -5004,6 +5052,7 @@ fn build_reducers() -> ReducerTable {
     reducers
 }
 
+// Ported from: ParseText.hs :: parseText (camxes integration wrapper)
 // Ports the `Either Int` failure contract of `ParseText.hs :: parseText` on top of camxes-rs
 // `ParseResult`, preserving Pappy-style furthest-error (`joinErrors`) positions.
 fn parse_full(peg: &Peg, input: &str) -> Result<usize, usize> {
@@ -5070,6 +5119,7 @@ fn parse_full(peg: &Peg, input: &str) -> Result<usize, usize> {
     }
 }
 
+// Rust integration: Pappy continuation-error position matching for camxes partial parses
 // Integration glue for matching generated Pappy continuation-error positions when camxes accepts a
 // prefix but leaves an unparseable tail.
 fn partial_parse_error_position(consumed: usize, remaining: &str) -> usize {
@@ -5094,6 +5144,7 @@ fn partial_parse_error_position(consumed: usize, remaining: &str) -> usize {
     consumed + skipped + offset
 }
 
+// Rust integration: Pappy `I !jek !joik !joikJek` continuation check
 // Integration helper for the Pappy `I !jek !joik !joikJek` continuation checks.
 fn is_i_blocking_connector(word: &str) -> bool {
     matches!(word, "ja" | "je" | "jo" | "ju")
@@ -5109,6 +5160,7 @@ fn is_i_blocking_connector(word: &str) -> bool {
         || word.starts_with("bi'o")
 }
 
+// Ported from: ParseText.hs :: nudgeFrees (failure path with free re-parse)
 // Ports the `nudgeFrees` failure path that re-parses a candidate `free` at the failing tail.
 fn parse_full_or_free_error(peg: &Peg, free_peg: &Peg, input: &str) -> Result<usize, usize> {
     match parse_full(peg, input) {
@@ -5125,6 +5177,7 @@ fn parse_full_or_free_error(peg: &Peg, free_peg: &Peg, input: &str) -> Result<us
     }
 }
 
+// Ported from: ParseText.hs :: nudgeFrees (retry semantics)
 // Ports `ParseText.hs :: nudgeFrees` retry semantics with camxes-specific probes for rule tails
 // that generated Pappy reports as partial continuation failures.
 fn parse_full_for_nudge(peg: &Peg, free_peg: &Peg, input: &str) -> Result<usize, usize> {
@@ -5185,6 +5238,7 @@ fn parse_full_for_nudge(peg: &Peg, free_peg: &Peg, input: &str) -> Result<usize,
     Err(pos)
 }
 
+// Ported from: ParseText.hs :: nudgeFrees joik/ek tail free detection
 fn joik_ek_tail_free_pos(input: &str) -> Result<Option<usize>, usize> {
     with_joik_ek_peg(|joik_ek_peg| {
         with_free_peg(|free_peg| {
@@ -5210,6 +5264,7 @@ fn joik_ek_tail_free_pos(input: &str) -> Result<Option<usize>, usize> {
     })
 }
 
+// Ported from: ParseText.hs :: nudgeFrees MAI clause detection
 fn mai_clause_pos(input: &str) -> Result<Option<usize>, usize> {
     with_mai_clause_peg(|mai_clause_peg| {
         let mut offset = 0usize;
@@ -5225,6 +5280,7 @@ fn mai_clause_pos(input: &str) -> Result<Option<usize>, usize> {
     })
 }
 
+// Rust integration: word iterator with byte offset tracking
 fn next_word_with_offset(input: &str, pred: impl Fn(&str) -> bool) -> Option<(usize, &str)> {
     let mut offset = 0usize;
     for word in input.split_whitespace() {
@@ -5238,6 +5294,7 @@ fn next_word_with_offset(input: &str, pred: impl Fn(&str) -> bool) -> Option<(us
     None
 }
 
+// Ported from: ParseText.hs :: nudgeFrees joik/ek tail free scanning
 fn find_joik_ek_tail_free_pos(input: &str) -> Result<Option<usize>, usize> {
     let mut offset = 0usize;
     let mut tail = input;
@@ -5252,6 +5309,7 @@ fn find_joik_ek_tail_free_pos(input: &str) -> Result<Option<usize>, usize> {
     Ok(None)
 }
 
+// Ported from: ParseText.hs :: nudgeFrees SEI clause tail indicator detection
 fn sei_tail_indicator_pos(input: &str) -> Result<Option<usize>, usize> {
     with_sei_clause_peg(|sei_clause_peg| {
         let mut offset = 0usize;
@@ -5283,6 +5341,7 @@ fn sei_tail_indicator_pos(input: &str) -> Result<Option<usize>, usize> {
     })
 }
 
+// Ported from: ParseText.hs :: nudgeFrees ZOI clause error detection
 fn zoi_clause_error_pos(input: &str) -> Result<Option<usize>, usize> {
     with_zoi_clause_peg(|zoi_clause_peg| {
         let Some((zoi_pos, _)) = next_word_with_offset(input, |word| matches!(word, "zoi" | "la'o")) else {
@@ -5297,6 +5356,7 @@ fn zoi_clause_error_pos(input: &str) -> Result<Option<usize>, usize> {
     })
 }
 
+// Ported from: ParseText.hs :: nudgeFrees LA clause followed by connector check
 fn la_clause_followed_by_connector_before_si(input: &str) -> bool {
     let Ok(Some(after_la)) = with_la_clause_peg(|la_clause_peg| {
         let result = la_clause_peg.parse(input);
@@ -5326,6 +5386,7 @@ fn la_clause_followed_by_connector_before_si(input: &str) -> bool {
         .any(|word| word.trim_matches('.') == "si")
 }
 
+// Ported from: ParseText.hs :: nudgeFrees SI clause error detection
 fn si_clause_error_pos(input: &str) -> Result<Option<usize>, usize> {
     with_si_clause_peg(|si_clause_peg| {
         let mut offset = 0usize;
@@ -5349,6 +5410,7 @@ fn si_clause_error_pos(input: &str) -> Result<Option<usize>, usize> {
     })
 }
 
+// Rust integration: UTF-8 safe string splitting at byte position
 fn split_at_safe_boundary(s: &str, pos: usize) -> (&str, &str) {
     let p = if pos > s.len() {
         s.len()
@@ -5364,6 +5426,7 @@ fn split_at_safe_boundary(s: &str, pos: usize) -> (&str, &str) {
     s.split_at(p)
 }
 
+// Ported from: ParseText.hs :: nudgeFrees single free backward movement
 fn nudge_free_once(head: &str, tail: &str, free_len: usize) -> String {
     let ws: Vec<&str> = head.split_whitespace().collect();
     let (head_keep, head_move) = if ws.is_empty() {
@@ -5391,14 +5454,15 @@ fn nudge_free_once(head: &str, tail: &str, free_len: usize) -> String {
 }
 
 /// Ports `ParseText.hs :: nudgeFrees`.
-///
-/// Move indicators and frees backwards until they're in prescribed positions where the grammar can
-/// parse them. The Haskell parser does this around `lojbanterminatedText`; Rust keeps the same loop
-/// but uses camxes-rs `text`/`free` PEGs as the parser functions.
+// Ported from: ParseText.hs :: nudgeFrees
+// Move indicators and frees backwards until they're in prescribed positions where the grammar can
+// parse them. The Haskell parser does this around `lojbanterminatedText`; Rust keeps the same loop
+// but uses camxes-rs `text`/`free` PEGs as the parser functions.
 fn nudge_frees(input: &str, text_peg: &Peg, free_peg: &Peg) -> Result<String, usize> {
     nudge_frees_inner(input, text_peg, free_peg, false).map(|(nudged, _)| nudged)
 }
 
+// Ported from: ParseText.hs :: nudgeFrees (recursive worker)
 // Recursive worker for `ParseText.hs :: nudgeFrees`; `in_free` models the nested free-parser call.
 fn nudge_frees_inner(
     input: &str,
@@ -5460,6 +5524,7 @@ fn nudge_frees_inner(
     Err(0)
 }
 
+// Ported from: ParseText.hs :: parseText
 /// Ports ParseText.parseText from Haskell:
 /// ```haskell
 /// parseText :: String -> Either Int Text
