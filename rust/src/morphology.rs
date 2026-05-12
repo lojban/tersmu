@@ -211,7 +211,7 @@ mod tests {
     fn test_morph_simple_sentence() {
         let result = morph("mi klama le zarci");
         if let Err(pos) = &result {
-            eprintln!("morph failed at position: {}", pos);
+            log::debug!("morph failed at position: {}", pos);
         }
         assert!(result.is_ok(), "morph failed: {:?}", result);
         assert_eq!(result.unwrap(), "mi klama le zarci");
@@ -221,7 +221,7 @@ mod tests {
     fn test_morph_with_punctuation() {
         let result = morph(".i coi do!");
         if let Err(pos) = &result {
-            eprintln!("morph failed at position: {}", pos);
+            log::debug!("morph failed at position: {}", pos);
         }
         assert!(result.is_ok(), "morph failed: {:?}", result);
         // Punctuation should be stripped

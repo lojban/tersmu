@@ -46,6 +46,34 @@ echo "mi klama le zarci" | ./target/release/tersmu -l -L
 echo "mi klama le zarci" | ./target/release/tersmu -j -L
 ```
 
+### Logging
+
+The `tersmu` library uses the `log` crate for internal diagnostics. To enable logging output when using the CLI or integrating the library:
+
+```bash
+# Enable all debug logs
+RUST_LOG=debug ./target/release/tersmu -L input.jbo
+
+# Enable only tersmu logs at debug level
+RUST_LOG=tersmu=debug ./target/release/tersmu -L input.jbo
+
+# Enable specific module logs
+RUST_LOG=tersmu::morphology=debug,tersmu::parse_lojban=trace ./target/release/tersmu -L input.jbo
+```
+
+When using `tersmu` as a library dependency, initialize a logger in your application:
+
+```rust
+use tersmu::parse_lojban::parse_text;
+
+fn main() {
+    env_logger::init();  // or any other log implementation
+    
+    let result = parse_text("mi klama le zarci");
+    // Internal tersmu diagnostics will be logged based on RUST_LOG
+}
+```
+
 Useful options:
 
 | Option | Description |

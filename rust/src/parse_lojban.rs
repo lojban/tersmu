@@ -5509,12 +5509,12 @@ mod tests {
         let text_peg = build_peg("text").expect("text peg");
         let input = "mi klama le zarci %%%END%%%";
         let result = text_peg.parse(input);
-        println!("Parse result for {:?}:", input);
-        println!("  Position: {}", result.1);
-        println!("  Error position: {}", result.2);
-        println!("  Success: {}", result.3.is_ok());
+        log::debug!("Parse result for {:?}:", input);
+        log::debug!("  Position: {}", result.1);
+        log::debug!("  Error position: {}", result.2);
+        log::debug!("  Success: {}", result.3.is_ok());
         if let Err(e) = result.3.as_ref() {
-            println!("  Error at position: {}", e.position);
+            log::debug!("  Error at position: {}", e.position);
         }
     }
 
@@ -5523,10 +5523,10 @@ mod tests {
         let parsed = parse_text("mi klama le zarci");
         assert!(parsed.is_ok(), "Should parse: {:?}", parsed);
         let text = parsed.unwrap();
-        println!("Parsed text:");
-        println!("  text_paras.len(): {}", text.text_paras.len());
+        log::debug!("Parsed text:");
+        log::debug!("  text_paras.len(): {}", text.text_paras.len());
         for (i, para) in text.text_paras.iter().enumerate() {
-            println!("  paragraph {}: {} items", i, para.len());
+            log::debug!("  paragraph {}: {} items", i, para.len());
         }
 
         // Also test the raw parse tree to see what rules are present
@@ -5534,9 +5534,9 @@ mod tests {
         let text_peg = build_peg("text").expect("text peg");
         let input = "mi klama le zarci %%%END%%%";
         let forest = parse_with_semantics(&text_peg, input, &reducers).expect("parse");
-        println!("\nParse forest has {} roots", forest.len());
+        log::debug!("\nParse forest has {} roots", forest.len());
         for (i, node) in forest.iter().enumerate() {
-            println!("Root {}: {:?}", i, node);
+            log::debug!("Root {}: {:?}", i, node);
         }
     }
 
@@ -5545,7 +5545,7 @@ mod tests {
         // Currently returns empty Text since semantic extraction is not implemented
         let parsed = parse_text("mi klama le zarci");
         if let Err(pos) = &parsed {
-            println!("Parse failed at position: {}", pos);
+            log::debug!("Parse failed at position: {}", pos);
         }
         assert!(parsed.is_ok(), "Parser should succeed: {:?}", parsed);
     }
@@ -5555,7 +5555,7 @@ mod tests {
         // Empty input with %%%END%%% should parse successfully
         let parsed = parse_text("");
         if let Err(pos) = &parsed {
-            println!("Parse failed at position: {}", pos);
+            log::debug!("Parse failed at position: {}", pos);
         }
         assert!(parsed.is_ok(), "Should handle empty input: {:?}", parsed);
     }
@@ -5567,7 +5567,7 @@ mod tests {
         let input = "mi klama le zarci %%%END%%%";
         let result = nudge_frees(input, &text, &free);
         if let Err(pos) = &result {
-            println!("nudge_frees failed at position: {}", pos);
+            log::debug!("nudge_frees failed at position: {}", pos);
         }
         // nudgeFrees should succeed even if semantic extraction isn't implemented
         assert!(result.is_ok(), "nudge_frees should succeed: {:?}", result);
@@ -5577,7 +5577,7 @@ mod tests {
     fn strips_existing_end_marker() {
         let parsed = parse_text("mi klama %%%END%%%");
         if let Err(pos) = &parsed {
-            println!("Parse failed at position: {}", pos);
+            log::debug!("Parse failed at position: {}", pos);
         }
         assert!(parsed.is_ok(), "Should strip existing %%%END%%% marker");
     }

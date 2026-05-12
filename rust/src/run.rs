@@ -258,7 +258,7 @@ pub fn main_with_args(opts: Options, args: Vec<String>) -> io::Result<()> {
             (Some(s), h)
         }
         _ => {
-            eprintln!("too many arguments");
+            log::error!("too many arguments");
             std::process::exit(2);
         }
     };
