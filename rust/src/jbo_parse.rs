@@ -122,14 +122,11 @@ where
                 }) as std::rc::Rc<dyn Fn(i32) -> JboProp>
             };
             let prop = Prop::Quantified(q, restriction, body);
-            let _ = match &prop {
-                Prop::Quantified(_, restriction, body) => {
-                    if let Some(restriction) = restriction {
-                        restriction(1);
-                    }
-                    body(1);
+            if let Prop::Quantified(_, restriction, body) = &prop {
+                if let Some(restriction) = restriction {
+                    restriction(1);
                 }
-                _ => {}
+                body(1);
             };
             (prop, changed.get())
         }
@@ -778,11 +775,11 @@ fn null_jbo_mex() -> JboMex {
 fn logical_connected_mex_branches(m: &JboMex) -> Option<(crate::jbo_syntax::LogJboConnective, JboMex, JboMex)> {
     match m {
         JboMex::ConnectedMex(_, Connective::JboConnLog(_, lcon), m1, m2) => {
-            Some((lcon.clone(), (**m1).clone(), (**m2).clone()))
+            Some((*lcon, (**m1).clone(), (**m2).clone()))
         }
         JboMex::Operation(op, args) => match op.as_ref() {
             JboOperator::ConnectedOperator(_, Connective::JboConnLog(_, lcon), op1, op2) => Some((
-                lcon.clone(),
+                *lcon,
                 apply_jbo_operator((**op1).clone(), args.clone()),
                 apply_jbo_operator((**op2).clone(), args.clone()),
             )),
@@ -1229,7 +1226,7 @@ fn continuation_args_after_branch(
 // Rust-only: Sort argument positions for deterministic ordering
 fn sorted_args(args: &crate::parse_m::Args) -> Vec<(&crate::parse_m::ArgPos, &JboTerm)> {
     let mut items = args.iter().collect::<Vec<_>>();
-    items.sort_by(|(a, _), (b, _)| a.cmp(b));
+    items.sort_by_key(|(a, _)| *a);
     items
 }
 
@@ -1322,7 +1319,7 @@ fn parse_connective_helper(
             };
             Ok(crate::jbo_prop::JboConnective::JboConnLog(
                 mtag_parsed.map(Box::new),
-                lcon.clone(),
+                *lcon,
             ))
         }
         Connective::JboConnJoik(mtag, joik) => {
@@ -1725,7 +1722,7 @@ fn parse_tu(tu: &TanruUnit, bridi_state: &mut crate::parse_m::BridiParseState, s
         TanruUnit::TUAbstraction(crate::jbo_syntax::Abstractor::LogConnectedAbstractor(lcon, abs1, abs2), ss) => {
             let left = parse_tu(&TanruUnit::TUAbstraction(*abs1.clone(), ss.clone()), bridi_state, state)?;
             let right = parse_tu(&TanruUnit::TUAbstraction(*abs2.clone(), ss.clone()), bridi_state, state)?;
-            let lcon = lcon.clone();
+            let lcon = *lcon;
             Ok(Box::new(move |args| {
                 crate::jbo_prop::conn_to_fol(&lcon, left(args), right(args))
             }))
@@ -1961,7 +1958,7 @@ fn swap_arg_positions(mut perm: Vec<usize>, i: usize, j: usize) -> Vec<usize> {
 /// - QAtom (quantified atom with frees and relative clauses)
 /// - QSelbri (quantified selbri as sumti)
 fn parse_sumti(s: &Sumti, state: &mut ParseState) -> Result<JboTerm, String> {
-    let (mut o, mut jrels) = match s {
+    let (mut o, jrels) = match s {
         Sumti::ConnectedSumti(forethought, conn, sumti1, sumti2, rels) => {
             // Connected sumti with logical or non-logical connective
             let o = match conn {
@@ -2019,7 +2016,7 @@ fn parse_sumti(s: &Sumti, state: &mut ParseState) -> Result<JboTerm, String> {
                         state.variable_domains.insert(*n, VariableDomain::FiniteDomain(vec![o1.clone(), o2.clone()]));
                     }
                     state.map_prop(crate::parse_m::PropTransform::LogicalConnectBranches {
-                        conn: lcon.clone(),
+                        conn: *lcon,
                         fresh: fresh.clone(),
                         left_term: o1,
                         left_transforms,
@@ -2260,7 +2257,7 @@ fn parse_sumti_atom(sa: &SumtiAtom, state: &mut ParseState) -> Result<(JboTerm, 
 
             // Apply gadri semantics
             let gadri_char = gadri.chars().nth(1).unwrap_or('o');
-            let mut o = match gadri_char {
+            let o = match gadri_char {
                 'o' => {
                     // lo - veridical constant
                     let o = state.get_fresh_constant();
@@ -2269,7 +2266,7 @@ fn parse_sumti_atom(sa: &SumtiAtom, state: &mut ParseState) -> Result<(JboTerm, 
                 'e' => {
                     let o = state.get_fresh_constant();
                     let pred = nonveridicial_pred(crate::jbo_prop::and_pred(xorlo_ps));
-                    crate::parse_m::do_incidentals(o, &vec![pred], state)
+                    crate::parse_m::do_incidentals(o, &[pred], state)
                 }
                 'a' => {
                     // la - named entity
@@ -2356,7 +2353,7 @@ fn parse_sumti_atom(sa: &SumtiAtom, state: &mut ParseState) -> Result<(JboTerm, 
                     );
                 }
                 state.map_prop(crate::parse_m::PropTransform::LogicalConnectBranches {
-                    conn: lcon.clone(),
+                    conn: *lcon,
                     fresh: fresh.clone(),
                     left_term: JboTerm::Value(jm1),
                     left_transforms,
@@ -2397,27 +2394,27 @@ fn parse_sumti_atom(sa: &SumtiAtom, state: &mut ParseState) -> Result<(JboTerm, 
             state.put_lambda(*lambda, *number)
         }
 
-        SumtiAtom::Ri(n) => {
+        SumtiAtom::Ri(_n) => {
             // ri - anaphora to previous sumti
             state.get_sumbasti(sa)
         }
 
-        SumtiAtom::Ra(cmavo) => {
+        SumtiAtom::Ra(_cmavo) => {
             // ra/ru/ri - anaphora
             state.get_sumbasti(sa)
         }
 
-        SumtiAtom::Assignable(n) => {
+        SumtiAtom::Assignable(_n) => {
             // ko'a, fo'a, etc. - assignable pronouns
             state.get_sumbasti(sa)
         }
 
-        SumtiAtom::LerfuString(ls) => {
+        SumtiAtom::LerfuString(_ls) => {
             // Lerfu string - assignable
             state.get_sumbasti(sa)
         }
 
-        SumtiAtom::MainBridiSumbasti(n) => {
+        SumtiAtom::MainBridiSumbasti(_n) => {
             // ce'u, etc. - main bridi sumbasti
             state.get_sumbasti(sa)
         }
@@ -2432,7 +2429,7 @@ fn parse_sumti_atom(sa: &SumtiAtom, state: &mut ParseState) -> Result<(JboTerm, 
             JboTerm::NonAnaph(ps.clone())
         }
 
-        SumtiAtom::Name(gadri, _, name) => {
+        SumtiAtom::Name(_gadri, _, name) => {
             // la <name> - named constant
             // JboParse.hs :: parseSumtiAtom also returns `Named s` here and carries the gadri into the later lai/lei/loi/la'i/le'i/lo'i branch.
             JboTerm::Named(name.clone())
@@ -2454,12 +2451,12 @@ fn parse_sumti_atom(sa: &SumtiAtom, state: &mut ParseState) -> Result<(JboTerm, 
             JboTerm::Valsi(s.clone())
         }
 
-        SumtiAtom::Variable(n) => {
+        SumtiAtom::Variable(_n) => {
             // Should not reach here - handled in parse_sumti
             return Err("Variable should be handled in parse_sumti".to_string());
         }
 
-        SumtiAtom::SumtiQ(kau) => {
+        SumtiAtom::SumtiQ(_kau) => {
             // Should not reach here - handled in parse_sumti
             return Err("SumtiQ should be handled in parse_sumti".to_string());
         }
@@ -2486,7 +2483,7 @@ fn parse_sumti_atom(sa: &SumtiAtom, state: &mut ParseState) -> Result<(JboTerm, 
                 let pred: JboPred = std::sync::Arc::new(move |x| {
                     Prop::Rel(collector.clone(), vec![x.clone(), o_clone.clone()])
                 });
-                o = crate::parse_m::do_incidentals(o_prime, &vec![pred], state);
+                o = crate::parse_m::do_incidentals(o_prime, &[pred], state);
             }
         }
     }
@@ -2554,7 +2551,7 @@ fn quantify(
                     )
                 };
                 state.map_prop(crate::parse_m::PropTransform::ConnectQuantifyTagged {
-                    conn: lcon.clone(),
+                    conn: *lcon,
                     fresh: fresh.clone(),
                     left_quant: terp_jbo_mex_as_quantifier_from_jbo(m1),
                     right_quant: terp_jbo_mex_as_quantifier_from_jbo(m2),
@@ -2565,7 +2562,7 @@ fn quantify(
                 });
             } else {
                 state.map_prop(crate::parse_m::PropTransform::ConnectQuantify {
-                    conn: lcon.clone(),
+                    conn: *lcon,
                     fresh: fresh.clone(),
                     left_quant: terp_jbo_mex_as_quantifier_from_jbo(m1),
                     right_quant: terp_jbo_mex_as_quantifier_from_jbo(m2),
@@ -2952,7 +2949,7 @@ fn parse_assignment_rel(term: &Term, state: &mut ParseState) -> Result<Option<Jb
     // Check if it's a simple assignable sumti atom
     if let Term::Sumti(Tagged::Untagged, sumti) = term {
         if let Sumti::QAtom { atom, .. } = sumti {
-            if is_assignable_atom(&**atom) {
+            if is_assignable_atom(atom) {
                 // Result<SumtiAtom, JboTerm> where Ok = SumtiAtom (Left in Haskell Either)
                 return Ok(Some(JboRelClause::JRAssign(Ok((**atom).clone()))));
             }
@@ -3678,7 +3675,7 @@ fn swap_arg_positions_in_prop(n: i32, prop: crate::parse_m::JboProp) -> crate::p
         Prop::Rel(rel, terms) => {
             // Swap arguments in the term list
             let mut new_terms = terms.clone();
-            if n >= 1 && n <= 4 {
+            if (1..=4).contains(&n) {
                 let idx = n as usize; // Position to swap with x1 (position 0)
                 if new_terms.len() > idx {
                     new_terms.swap(0, idx);

@@ -140,7 +140,6 @@ fn jboshow_operator_with_context(op: &JboOperator, rel_var: Option<ShowBinding>,
             &jboshow_pred_prop_with_rel_context(&s(&[JboTerm::BoundVar(0)]), 0, rel_var),
         ),
         JboOperator::OpVUhU(s) => s.clone(),
-        _ => "<operator>".to_string(),
     }
 }
 
@@ -158,7 +157,6 @@ fn logshow_operator(op: &JboOperator) -> String {
         JboOperator::OpMex(m) => bracket('[', &logshow_mex(m)),
         JboOperator::OpSelbri(s) => bracket('[', &logshow_prop(&s(&[JboTerm::BoundVar(0)]))),
         JboOperator::OpVUhU(s) => format!("{{{}}}", s),
-        _ => "operator".to_string(),
     }
 }
 
@@ -217,7 +215,6 @@ fn jboshow_mex_with_context(mex: &JboMex, rel_var: Option<ShowBinding>, bindings
             ms.iter().map(|m| jboshow_mex_with_context(m, rel_var, bindings)).collect::<Vec<_>>().join(" ")
         ),
         JboMex::MexSumti(t) => format!("mo'e {} te'u", jboshow_term_with_context(t, &[], rel_var, bindings)),
-        _ => "<mex>".to_string(),
     }
 }
 
@@ -1138,7 +1135,7 @@ pub fn logshow_seltau(rel: &JboRel) -> String {
                     && matches!(applied_terms.as_slice(), [JboTerm::BoundVar(0)]) =>
             {
                 if let JboRel::Among(t) = r.as_ref() {
-                    format!("(_ <= {})", logshow_term(&t))
+                    format!("(_ <= {})", logshow_term(t))
                 } else {
                     unreachable!()
                 }

@@ -290,6 +290,7 @@ pub enum JboTagUnit {
     CAhA(String),
     BAI(String),
     FAhA(Option<bool>, String),
+    #[allow(non_camel_case_types)]
     TAhE_ZAhO(bool, String),
     ROI(String, bool, JboMex),
     FIhO(JboVPred),
@@ -321,7 +322,7 @@ impl Clone for JboTagUnit {
             JboTagUnit::TenseCmavo(s) => JboTagUnit::TenseCmavo(s.clone()),
             JboTagUnit::CAhA(s) => JboTagUnit::CAhA(s.clone()),
             JboTagUnit::BAI(s) => JboTagUnit::BAI(s.clone()),
-            JboTagUnit::FAhA(m, s) => JboTagUnit::FAhA(m.clone(), s.clone()),
+            JboTagUnit::FAhA(m, s) => JboTagUnit::FAhA(*m, s.clone()),
             JboTagUnit::TAhE_ZAhO(b, s) => JboTagUnit::TAhE_ZAhO(*b, s.clone()),
             JboTagUnit::ROI(s, b, m) => JboTagUnit::ROI(s.clone(), *b, m.clone()),
             JboTagUnit::FIhO(p) => JboTagUnit::FIhO(p.clone()),

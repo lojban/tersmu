@@ -109,7 +109,7 @@ impl SemanticNode {
 }
 
 /// Slice of `input` covered by `span` (byte offsets).
-pub fn span_slice<'a>(input: &'a str, span: Span) -> &'a str {
+pub fn span_slice(input: &str, span: Span) -> &str {
     let Span(lo, hi) = span;
     if lo <= hi && hi <= input.len() {
         &input[lo..hi]

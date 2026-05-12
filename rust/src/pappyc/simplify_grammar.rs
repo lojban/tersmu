@@ -161,7 +161,7 @@ fn alts_simplify(alts: Vec<Rule>) -> (Vec<Rule>, bool) {
             Rule::RuleSeq(ref ms2, ref p2),
         ) = (&alts[0], &alts[1])
         {
-            if ms1.len() >= 1 && ms2.is_empty() {
+            if !ms1.is_empty() && ms2.is_empty() {
                 if let Match::MatchAnon(Rule::RuleChar(c)) = &ms1[0] {
                     let c = *c;
                     let rest_ms = ms1[1..].to_vec();

@@ -118,6 +118,12 @@ pub enum PropTransform {
     ApplyModal(JboModalOp),
 }
 
+impl Default for ParseState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ParseState {
     pub fn new() -> Self {
         ParseState {
@@ -280,8 +286,7 @@ impl ParseState {
     /// Put a lambda variable and return the term
     pub fn put_lambda(&mut self, mlev: Option<i32>, mnum: Option<i32>) -> JboTerm {
         let lev = mlev.unwrap_or(1);
-        let next = self.lambdas.iter()
-            .filter_map(|(pos, _)| if pos.level == lev { Some(pos.num) } else { None })
+        let next = self.lambdas.keys().filter_map(|pos| if pos.level == lev { Some(pos.num) } else { None })
             .max()
             .unwrap_or(0) + 1;
         let num = mnum.unwrap_or(next);
@@ -309,6 +314,12 @@ pub struct BridiParseState {
     pub var_bindings: VarBindings,
     pub rvar_bindings: RVarBindings,
     pub is_sub_bridi: bool,
+}
+
+impl Default for BridiParseState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl BridiParseState {
@@ -406,6 +417,12 @@ impl std::fmt::Debug for VariableDomain {
 pub struct Arglist {
     pub args: Args,
     pub position: i32,
+}
+
+impl Default for Arglist {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Arglist {

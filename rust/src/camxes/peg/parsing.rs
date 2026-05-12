@@ -8,9 +8,9 @@ use std::sync::Arc;
 // parse failure is the furthest-right position the parser ever reached, not the position of
 // the top-level failure. Reset before each call to `Peg::parse`.
 thread_local! {
-    pub static FURTHEST_POS: Cell<usize> = Cell::new(0);
-    pub static FURTHEST_ERROR_POS: Cell<usize> = Cell::new(0);
-    pub static ERROR_CUTOFF_POS: Cell<usize> = Cell::new(usize::MAX);
+    pub static FURTHEST_POS: Cell<usize> = const { Cell::new(0) };
+    pub static FURTHEST_ERROR_POS: Cell<usize> = const { Cell::new(0) };
+    pub static ERROR_CUTOFF_POS: Cell<usize> = const { Cell::new(usize::MAX) };
 }
 
 /// Reset the furthest-position tracker. Call before each `Peg::parse` invocation.

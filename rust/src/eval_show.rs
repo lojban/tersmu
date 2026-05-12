@@ -185,7 +185,6 @@ fn format_mex(mex: &JboMex) -> String {
             ms.iter().map(format_mex).collect::<Vec<_>>().join(",")
         ),
         JboMex::MexSumti(t) => format!("[{}]", format_term(t)),
-        _ => "<mex>".to_string(),
     }
 }
 
@@ -380,7 +379,6 @@ fn format_operator(op: &JboOperator) -> String {
         JboOperator::OpMex(m) => format!("[{}]", format_mex(m)),
         JboOperator::OpSelbri(s) => format!("[{}]", format_seltau_prop(&s(&[JboTerm::BoundVar(0)]))),
         JboOperator::OpVUhU(s) => format!("{{{}}}", s),
-        _ => "operator".to_string(),
     }
 }
 
@@ -1284,7 +1282,7 @@ pub fn eval_text_to_outputs_with_options(text: &Text, include_term_sides: bool) 
     let mut canonical_lines = Vec::new();
 
     for result in results.iter() {
-        let (logical, canonical) = format_result(&result, include_term_sides);
+        let (logical, canonical) = format_result(result, include_term_sides);
         logical_lines.push(logical);
         for line in canonical.lines().filter(|line| !line.is_empty()) {
             if canonical_lines.is_empty() || line.starts_with(".i ") {

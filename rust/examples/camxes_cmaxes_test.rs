@@ -186,11 +186,10 @@ fn lujvo_segments(input: &str, nodes: &[ParseNode]) -> Option<Vec<String>> {
                                 // (fuhivla_trim onset)(y) form: include onset in rafsi (e.g. arb + y)
                                 rafsi_end = rafsi_end.max(ne);
                             }
-                            if nname == "h" || nname == "y" {
-                                if ns < hy_start {
+                            if (nname == "h" || nname == "y")
+                                && ns < hy_start {
                                     hy_start = ns;
                                 }
-                            }
                         }
                     }
                     if rafsi_end > s {
@@ -206,16 +205,14 @@ fn lujvo_segments(input: &str, nodes: &[ParseNode]) -> Option<Vec<String>> {
                     for n in sub {
                         if let ParseNode::NonTerminal { name: nname, span: nspan, .. } = n {
                             let (ns, ne) = (nspan.0, nspan.1);
-                            if nname != "h" && nname != "y" {
-                                if ne > rafsi_end {
+                            if nname != "h" && nname != "y"
+                                && ne > rafsi_end {
                                     rafsi_end = ne;
                                 }
-                            }
-                            if nname == "h" || nname == "y" {
-                                if ns < hy_start {
+                            if (nname == "h" || nname == "y")
+                                && ns < hy_start {
                                     hy_start = ns;
                                 }
-                            }
                         }
                     }
                     if rafsi_end > s {

@@ -78,7 +78,7 @@ fn parse_word_prefix(peg: &Peg, input: &str) -> Option<usize> {
     let trimmed_end = input.trim_end().len();
     if trimmed_end > 0 {
         let full_result = peg.parse(&input[..trimmed_end]);
-        if matches!(full_result.3.as_ref(), Ok(_)) && full_result.1 == trimmed_end {
+        if full_result.3.as_ref().is_ok() && full_result.1 == trimmed_end {
             return Some(trimmed_end);
         }
     }

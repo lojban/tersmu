@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 fn main() {
-    let inputs = vec!["mi klama", "do tavla", "ti zdani"];
+    let inputs = ["mi klama", "do tavla", "ti zdani"];
     
     let start = Instant::now();
     for (i, input) in inputs.iter().enumerate() {

@@ -99,7 +99,7 @@ impl Transformer<'_> {
                     let (expr, new_refs) = self.convert_sequence(&chunk[0])?;
                     exprs.push(expr);
                     refs.extend(new_refs);
-                    if chunk.get(1).map_or(false, |t| !Self::is_token(SLASH, t)) {
+                    if chunk.get(1).is_some_and(|t| !Self::is_token(SLASH, t)) {
                         return Err(TransformError::UnExpectedToken(SLASH.into()));
                     }
                     Ok((exprs, refs))

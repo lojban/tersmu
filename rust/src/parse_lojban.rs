@@ -327,11 +327,11 @@ fn joik_string_from_words(words: &[&str]) -> Option<String> {
         .iter()
         .find(|word| matches!(**word, "fa'u" | "pi'u" | "joi" | "jo'u" | "jo'e" | "ju'e" | "ce'o" | "ce" | "ku'a"))?;
     let mut joik = String::new();
-    if words.iter().any(|word| *word == "se") {
+    if words.contains(&"se") {
         joik.push_str("se");
     }
     joik.push_str(joi);
-    if words.iter().any(|word| *word == "nai") {
+    if words.contains(&"nai") {
         joik.push_str("nai");
     }
     Some(joik)
@@ -1193,7 +1193,7 @@ fn build_reducers() -> ReducerTable {
                 .filter(|word| !word.is_empty())
                 .collect::<Vec<_>>();
             words.first().map(|cmavo| Free::Indicator {
-                indicator_nai: words.iter().any(|word| *word == "nai"),
+                indicator_nai: words.contains(&"nai"),
                 indicator_cmavo: (*cmavo).to_string(),
             })
         })
@@ -1461,11 +1461,7 @@ fn build_reducers() -> ReducerTable {
             }
         }
 
-        if let Some(s) = selbri {
-            Some(BridiTail::BridiTail3(s, tail_terms))
-        } else {
-            None
-        }
+        selbri.map(|s| BridiTail::BridiTail3(s, tail_terms))
     });
 
     reducers.on("subsentence", |_name, _span, children, _input| {
@@ -1716,8 +1712,8 @@ fn build_reducers() -> ReducerTable {
         }
 
         let span_tokens = span_text.split_whitespace().collect::<Vec<_>>();
-        if span_tokens.first() == Some(&"zoi") || span_tokens.first() == Some(&"la'o") {
-            if span_tokens.len() >= 3 {
+        if (span_tokens.first() == Some(&"zoi") || span_tokens.first() == Some(&"la'o"))
+            && span_tokens.len() >= 3 {
                 let quoted = span_tokens[2..span_tokens.len().saturating_sub(1)].join(" ");
                 return Some(Term::Sumti(
                     Tagged::Untagged,
@@ -1729,7 +1725,6 @@ fn build_reducers() -> ReducerTable {
                     },
                 ));
             }
-        }
 
         if span_tokens.first() == Some(&"lo'u") {
             let words = span_tokens
@@ -2190,8 +2185,7 @@ fn build_reducers() -> ReducerTable {
             if let Some(v) = child.value_ref() {
                 let selbri = if let Some(selbri) = downcast_ref::<crate::jbo_syntax::Selbri>(v) {
                     Some(selbri.clone())
-                } else if let Some(tu) = downcast_ref::<crate::jbo_syntax::TanruUnit>(v) {
-                    Some(crate::jbo_syntax::Selbri::Selbri2(
+                } else { downcast_ref::<crate::jbo_syntax::TanruUnit>(v).map(|tu| crate::jbo_syntax::Selbri::Selbri2(
                         crate::jbo_syntax::Selbri2::Selbri3(
                             crate::jbo_syntax::Selbri3::TanruHead(
                                 Vec::new(),
@@ -2199,10 +2193,7 @@ fn build_reducers() -> ReducerTable {
                                 Vec::new(),
                             ),
                         ),
-                    ))
-                } else {
-                    None
-                };
+                    )) };
                 if let Some(selbri) = selbri {
                     return Some(if negated {
                         crate::jbo_syntax::Selbri::Negated(Box::new(selbri))
@@ -2543,7 +2534,7 @@ fn build_reducers() -> ReducerTable {
                 'o'
             } else if words.iter().any(|word| matches!(*word, "ju" | "gu" | "gu'u" | "gi'u")) {
                 'u'
-            } else if words.iter().any(|word| *word == "je'i") {
+            } else if words.contains(&"je'i") {
                 'i'
             } else {
                 return None;
@@ -2552,9 +2543,9 @@ fn build_reducers() -> ReducerTable {
             Some(crate::jbo_syntax::Connective::JboConnLog(
                 None,
                 crate::jbo_syntax::LogJboConnective {
-                    b1: !words.iter().any(|word| *word == "na"),
-                    c: if words.iter().any(|word| *word == "se") && conchar == 'u' { 'U' } else { conchar },
-                    b2: !words.iter().any(|word| *word == "nai"),
+                    b1: !words.contains(&"na"),
+                    c: if words.contains(&"se") && conchar == 'u' { 'U' } else { conchar },
+                    b2: !words.contains(&"nai"),
                 },
             ))
         }
@@ -3033,14 +3024,14 @@ fn build_reducers() -> ReducerTable {
             }
         }
         let words: Vec<&str> = span_slice(input, span).split_whitespace().collect();
-        if words.iter().any(|word| *word == "cei") && units.len() >= 2 {
+        if words.contains(&"cei") && units.len() >= 2 {
             let left = tanru_unit_to_selbri3(&units[0]);
             let right = tanru_unit_to_selbri3(&units[1]);
             return Some(crate::jbo_syntax::TanruUnit::TUSelbri3(
                 crate::jbo_syntax::Selbri3::BridiBinding(Box::new(left), Box::new(right)),
             ));
         }
-        if words.iter().any(|word| *word == "jai") {
+        if words.contains(&"jai") {
             units.into_iter().last()
         } else {
             units.into_iter().next()
@@ -3375,9 +3366,9 @@ fn build_reducers() -> ReducerTable {
 
     fn log_connective_from_words(words: &[&str]) -> Option<crate::jbo_syntax::Connective> {
         let compact = words.join("");
-        let left = !words.iter().any(|word| *word == "na") && !compact.starts_with("na");
-        let right = !words.iter().any(|word| *word == "nai") && !compact.ends_with("nai");
-        let se = words.iter().any(|word| *word == "se");
+        let left = !words.contains(&"na") && !compact.starts_with("na");
+        let right = !words.contains(&"nai") && !compact.ends_with("nai");
+        let se = words.contains(&"se");
         let conchar = if words.iter().any(|word| matches!(*word, "ja" | "ga" | "gu'a" | "gi'a")) || compact.contains("gi'a") {
             'a'
         } else if words.iter().any(|word| matches!(*word, "je" | "ge" | "gu'e" | "gi'e")) || compact.contains("gi'e") {
@@ -3416,7 +3407,7 @@ fn build_reducers() -> ReducerTable {
 
     reducers.on("gek", |_name, span, children, input| {
         let words: Vec<&str> = span_slice(input, span).split_whitespace().collect();
-        let se = words.iter().any(|word| *word == "se");
+        let se = words.contains(&"se");
         let conchar = if words.iter().any(|word| matches!(*word, "ga" | "gu'a")) {
             'a'
         } else if words.iter().any(|word| matches!(*word, "ge" | "gu'e")) {
@@ -3449,7 +3440,7 @@ fn build_reducers() -> ReducerTable {
             crate::jbo_syntax::Connective::JboConnLog(
                 None,
                 crate::jbo_syntax::LogJboConnective {
-                    b1: !words.iter().any(|word| *word == "nai"),
+                    b1: !words.contains(&"nai"),
                     c: conchar,
                     b2: true,
                 },
@@ -3465,7 +3456,7 @@ fn build_reducers() -> ReducerTable {
 
     reducers.on("gik", |_name, span, _children, input| {
         let words: Vec<&str> = span_slice(input, span).split_whitespace().collect();
-        Some(!words.iter().any(|word| *word == "nai"))
+        Some(!words.contains(&"nai"))
     });
 
     reducers.on("ek", |_name, span, children, input| {
@@ -3478,22 +3469,22 @@ fn build_reducers() -> ReducerTable {
             'o'
         } else if words.iter().any(|word| matches!(*word, "u" | "gu")) {
             'u'
-        } else if words.iter().any(|word| *word == "ji") {
+        } else if words.contains(&"ji") {
             'i'
         } else {
             return None;
         };
         let tag = first_child_tag(children).map(Box::new);
-        let conchar = if words.iter().any(|word| *word == "se") && conchar == 'u' { 'U' } else { conchar };
+        let conchar = if words.contains(&"se") && conchar == 'u' { 'U' } else { conchar };
         let con = if conchar == 'i' {
             crate::jbo_syntax::Connective::JboConnJoik(tag, "??".to_string())
         } else {
             crate::jbo_syntax::Connective::JboConnLog(
                 tag,
                 crate::jbo_syntax::LogJboConnective {
-                    b1: !words.iter().any(|word| *word == "na"),
+                    b1: !words.contains(&"na"),
                     c: conchar,
-                    b2: !words.iter().any(|word| *word == "nai"),
+                    b2: !words.contains(&"nai"),
                 },
             )
         };
@@ -3885,11 +3876,10 @@ fn build_reducers() -> ReducerTable {
                         if qualifier.is_none() {
                             qualifier = Some(SumtiQualifier::LAhE(s.clone()));
                         }
-                    } else if matches!(s.as_str(), "na'e" | "to'e" | "no'e" | "je'a") {
-                        if qualifier.is_none() {
+                    } else if matches!(s.as_str(), "na'e" | "to'e" | "no'e" | "je'a")
+                        && qualifier.is_none() {
                             qualifier = Some(SumtiQualifier::NAhE_BO(s.clone()));
                         }
-                    }
                 } else if let Some(term) = downcast_ref::<Term>(v) {
                     if let Term::Sumti(_, sumti) = term {
                         mohe_sumti = Some(sumti.clone());
@@ -4653,11 +4643,10 @@ fn build_reducers() -> ReducerTable {
                     }
                     "NAI_clause" => nai = true,
                     "KI_clause" => ki = true,
-                    "time" | "space" | "time_offset" | "space_offset" | "space_interval" | "space_int_props" | "interval_property" => {
-                        if contains_rule(child, "NAI_clause") {
+                    "time" | "space" | "time_offset" | "space_offset" | "space_interval" | "space_int_props" | "interval_property"
+                        if contains_rule(child, "NAI_clause") => {
                             nai_indices.push(tag_units.len());
                         }
-                    }
                     _ => {}
                 }
             }

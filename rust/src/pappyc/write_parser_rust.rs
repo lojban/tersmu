@@ -48,9 +48,7 @@ pub fn write_parser_rust(memos: &[Identifier], g: &Grammar) -> Result<String, Pa
     ));
     out.push_str(&format!("#[derive(Clone)]\npub struct {derivs} {{\n"));
     out.push_str(&format!("    pub {dv}_pos: Pos,\n"));
-    out.push_str(&format!(
-        "    /// Remaining input (suffix). Matches Haskell `grammarDerivs pos text` carrying `text`.\n"
-    ));
+    out.push_str("    /// Remaining input (suffix). Matches Haskell `grammarDerivs pos text` carrying `text`.\n");
     out.push_str(&format!("    pub {dv}_text: String,\n"));
     out.push_str("}\n\n");
 
@@ -277,7 +275,7 @@ fn emit_forward_prim(dv: &str, target_nt: &str) -> String {
 
 /// Postfix `?` on a literal or unit NT: top-level [`Rule::RuleOpt`], or one match in `RuleSeq` with
 /// `-> …` (any producer; ignored for Rust emission) ([`unwrap_unit_opt_rule`]).
-fn unwrap_unit_opt_rule<'a>(rule: &'a Rule) -> Option<&'a Rule> {
+fn unwrap_unit_opt_rule(rule: &Rule) -> Option<&Rule> {
     match rule {
         Rule::RuleOpt(inner) => Some(inner.as_ref()),
         Rule::RuleSeq(ms, p)
@@ -329,7 +327,7 @@ fn emit_unit_optional(dv: &str, derivs: &str, rule: &Rule, nts: &[Nonterminal]) 
 
 /// `?` on a literal or `String` NT: top-level [`Rule::RuleOpt`], or one match in `RuleSeq` with `->`
 /// (including `-> { … }`; producer ignored — result is `""` when absent).
-fn unwrap_string_opt_rule<'a>(rule: &'a Rule) -> Option<&'a Rule> {
+fn unwrap_string_opt_rule(rule: &Rule) -> Option<&Rule> {
     match rule {
         Rule::RuleOpt(inner) => Some(inner.as_ref()),
         Rule::RuleSeq(ms, p)
@@ -968,7 +966,7 @@ fn unit_repeat_inner_supported(inner: &Rule, nts: &[Nonterminal]) -> bool {
 }
 
 /// Top-level [`Rule::RuleStar`] or `"a"* -> ()` as [`RuleSeq`] with one [`MatchAnon`](Match::MatchAnon)([`RuleStar`]).
-fn unwrap_unit_star_inner<'a>(rule: &'a Rule) -> Option<&'a Rule> {
+fn unwrap_unit_star_inner(rule: &Rule) -> Option<&Rule> {
     match rule {
         Rule::RuleStar(inner) => Some(inner.as_ref()),
         Rule::RuleSeq(ms, p)
@@ -987,7 +985,7 @@ fn unwrap_unit_star_inner<'a>(rule: &'a Rule) -> Option<&'a Rule> {
 }
 
 /// Top-level [`Rule::RulePlus`] or `"a"+ -> ()` as [`RuleSeq`] with one match wrapping [`RulePlus`].
-fn unwrap_unit_plus_inner<'a>(rule: &'a Rule) -> Option<&'a Rule> {
+fn unwrap_unit_plus_inner(rule: &Rule) -> Option<&Rule> {
     match rule {
         Rule::RulePlus(inner) => Some(inner.as_ref()),
         Rule::RuleSeq(ms, p)
