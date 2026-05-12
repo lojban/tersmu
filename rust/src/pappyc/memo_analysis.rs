@@ -49,7 +49,7 @@ fn sel(
 ) -> Option<Nonterminal> {
     match (best, rest.split_first()) {
         (Some((nt, c)), Some((nt2 @ (n, _, r), tail))) => {
-            let c2 = cost_rule(vnts, &[n.clone()], r);
+            let c2 = cost_rule(vnts, std::slice::from_ref(n), r);
             if use_cand(vnts, c, c2, n) {
                 sel(vnts, Some(((*nt2).clone(), c2)), tail)
             } else {
@@ -57,7 +57,7 @@ fn sel(
             }
         }
         (None, Some((nt2 @ (n, _, r), tail))) => {
-            let c2 = cost_rule(vnts, &[n.clone()], r);
+            let c2 = cost_rule(vnts, std::slice::from_ref(n), r);
             if use_cand(vnts, Cost::Infinite, c2, n) {
                 sel(vnts, Some(((*nt2).clone(), c2)), tail)
             } else {
@@ -86,7 +86,7 @@ fn cost_rule(vnts: &[Nonterminal], visited: &[Identifier], r: &Rule) -> Cost {
             if visited.contains(n) {
                 Cost::Infinite
             } else if let Some((_, _, r2)) = find_nt(n, vnts) {
-                Cost::Finite(1).add(cost_rule(vnts, &[visited, &[n.clone()]].concat(), r2))
+                Cost::Finite(1).add(cost_rule(vnts, &[visited, std::slice::from_ref(n)].concat(), r2))
             } else {
                 Cost::Finite(1)
             }

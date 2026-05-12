@@ -333,7 +333,7 @@ impl Rule {
             Rule::Class(symbols) => {
                 // Longest match first: sort by length descending
                 let mut syms: Vec<&String> = symbols.iter().collect();
-                syms.sort_by(|a, b| b.len().cmp(&a.len()));
+                syms.sort_by_key(|b| std::cmp::Reverse(b.len()));
                 let matched = syms
                     .into_iter()
                     .find(|s| input[position..].starts_with(s.as_str()));

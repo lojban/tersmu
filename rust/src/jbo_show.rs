@@ -12,6 +12,7 @@ use crate::logic::Prop;
 pub type JboProp = Prop<JboRel, JboTerm, String, JboModalOp, JboQuantifier>;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::enum_variant_names)]
 enum ShowBinding {
     SVar(i32),
     SAss(i32),
@@ -619,7 +620,7 @@ fn jboshow_term_with_context(term: &JboTerm, lambda_vars: &[i32], rel_var: Optio
         JboTerm::BoundVar(n) => match term_binding(bindings, *n) {
             Some(ShowBinding::SVar(i)) => jboshow_bound_var(i),
             Some(ShowBinding::SAss(i)) => jboshow_sumti_atom(&SumtiAtom::Assignable(i)),
-            Some(ShowBinding::SRel(i)) if i == 1 => "ke'a".to_string(),
+            Some(ShowBinding::SRel(1)) => "ke'a".to_string(),
             Some(ShowBinding::SRel(i)) => format!("ke'a xi {}", jbonum(i)),
             _ => jboshow_bound_var(*n),
         },

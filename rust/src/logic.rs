@@ -50,10 +50,12 @@ pub enum Prop<R, T, C, O, Q> {
     NonLogConnected(C, Box<Prop<R, T, C, O, Q>>, Box<Prop<R, T, C, O, Q>>),
     Modal(O, Box<Prop<R, T, C, O, Q>>),
     /// Quantified proposition with quantifier, optional predicate, and body function
-    Quantified(Q, Option<Rc<dyn Fn(i32) -> Prop<R, T, C, O, Q>>>, Rc<dyn Fn(i32) -> Prop<R, T, C, O, Q>>),
+    Quantified(Q, Option<PropFn<R, T, C, O, Q>>, PropFn<R, T, C, O, Q>),
     Rel(R, Vec<T>),
     Eet,
 }
+
+type PropFn<R, T, C, O, Q> = Rc<dyn Fn(i32) -> Prop<R, T, C, O, Q>>;
 
 impl<R: Clone, T: Clone, C: Clone, O: Clone, Q: Clone> Clone for Prop<R, T, C, O, Q> {
     fn clone(&self) -> Self {

@@ -3,6 +3,8 @@
 //! Ported from: JboParse.hs
 //!
 //! This is a complete port of JboParse.hs that handles:
+
+#![allow(clippy::arc_with_non_send_sync)]
 //! - Modal operators (PU, ZI, VA, etc.)
 //! - Tags and FA terms
 //! - Connectives (logical and non-logical)
@@ -1181,20 +1183,9 @@ where
 
     let con = con.clone();
     Ok(Box::new(move |args| {
-        let left_prop = if is_forethought {
-            let continuation_args = continuation_args_after_branch(args, &right_args);
-            left_bridi(&crate::parse_m::join_args(&continuation_args, &left_args))
-        } else {
-            let continuation_args = continuation_args_after_branch(args, &right_args);
-            left_bridi(&crate::parse_m::join_args(&continuation_args, &left_args))
-        };
-        let right_prop = if is_forethought {
-            let continuation_args = continuation_args_after_branch(args, &right_args);
-            right_bridi(&crate::parse_m::join_args(&continuation_args, &right_args))
-        } else {
-            let continuation_args = continuation_args_after_branch(args, &right_args);
-            right_bridi(&crate::parse_m::join_args(&continuation_args, &right_args))
-        };
+        let continuation_args = continuation_args_after_branch(args, &right_args);
+        let left_prop = left_bridi(&crate::parse_m::join_args(&continuation_args, &left_args));
+        let right_prop = right_bridi(&crate::parse_m::join_args(&continuation_args, &right_args));
         let prop = match &con {
             Connective::JboConnLog(_, lcon) => crate::jbo_prop::conn_to_fol(lcon, left_prop, right_prop),
             Connective::JboConnJoik(_, joik) => crate::jbo_prop::joik_to_fol(joik.clone(), left_prop, right_prop),
@@ -2947,12 +2938,10 @@ where
 // Ported from: JboParse.hs :: parseRel (assignment relative clause parsing)
 fn parse_assignment_rel(term: &Term, state: &mut ParseState) -> Result<Option<JboRelClause>, String> {
     // Check if it's a simple assignable sumti atom
-    if let Term::Sumti(Tagged::Untagged, sumti) = term {
-        if let Sumti::QAtom { atom, .. } = sumti {
-            if is_assignable_atom(atom) {
-                // Result<SumtiAtom, JboTerm> where Ok = SumtiAtom (Left in Haskell Either)
-                return Ok(Some(JboRelClause::JRAssign(Ok((**atom).clone()))));
-            }
+    if let Term::Sumti(Tagged::Untagged, Sumti::QAtom { atom, .. }) = term {
+        if is_assignable_atom(atom) {
+            // Result<SumtiAtom, JboTerm> where Ok = SumtiAtom (Left in Haskell Either)
+            return Ok(Some(JboRelClause::JRAssign(Ok((**atom).clone()))));
         }
     }
 
@@ -3335,20 +3324,20 @@ fn parse_terms_helper(
     for term in terms {
         // Ported from JboParse.hs :: parseTerm: the "quantified buha in prenex" special case.
         if prenex {
-            if let Term::Sumti(Tagged::Untagged, sumti) = term {
-                if let Sumti::QSelbri { quant, selbri, .. } = sumti {
-                    if let Selbri::Selbri2(sb2) = selbri {
-                        if let Selbri2::Selbri3(sb3) = sb2 {
-                            if let Selbri3::TanruHead(_, tu, _) = sb3 {
-                                if tu_is_buha(tu) {
-                                    // Parse quantifier and do buha
-                                    let m = parse_mex(quant, state)?;
-                                    do_buha(&m, tu, state)?;
-                                    continue; // Skip adding to result
-                                }
-                            }
-                        }
-                    }
+            if let Term::Sumti(
+                Tagged::Untagged,
+                Sumti::QSelbri {
+                    quant,
+                    selbri: Selbri::Selbri2(Selbri2::Selbri3(Selbri3::TanruHead(_, tu, _))),
+                    ..
+                },
+            ) = term
+            {
+                if tu_is_buha(tu) {
+                    // Parse quantifier and do buha
+                    let m = parse_mex(quant, state)?;
+                    do_buha(&m, tu, state)?;
+                    continue; // Skip adding to result
                 }
             }
         }
@@ -3394,11 +3383,13 @@ enum Either<L, R> {
 ///       BareFA Nothing -> return []
 ///       NullTerm -> return []
 ///       BareTag tag -> (\jt -> [Left (jt, Nothing)]) <$> parseTag tag
+type ParseTermResult = Result<Vec<Either<(crate::jbo_prop::JboTag, Option<JboTerm>), JboTerm>>, String>;
+
 fn parse_term(
     term: &Term,
     bridi_state: &mut crate::parse_m::BridiParseState,
     state: &mut ParseState,
-) -> Result<Vec<Either<(crate::jbo_prop::JboTag, Option<JboTerm>), JboTerm>>, String> {
+) -> ParseTermResult {
     match term {
         Term::Termset(ts) => {
             // Flatten termset

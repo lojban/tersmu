@@ -3,6 +3,8 @@
 //! Ported from: ParseM.hs
 //!
 //! This module provides the monadic context for parsing and semantic analysis.
+
+#![allow(clippy::arc_with_non_send_sync)]
 //! It manages:
 //! - Fresh variable/constant generation
 //! - Variable binding context
@@ -71,6 +73,7 @@ impl std::fmt::Debug for ParseState {
 
 /// Represents a transformation to apply to a proposition (like quantification, negation, modals)
 #[derive(Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum PropTransform {
     Quantify(JboTerm, JboQuantifier, Option<Rc<dyn Fn(i32) -> JboProp>>),
     ConnectQuantify {
@@ -449,6 +452,7 @@ pub type RVarBindings = HashMap<TanruUnit, JboRel>;
 
 // Ported from: ParseM.hs :: Texticule
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum Texticule {
     TexticuleProp(JboProp),
     TexticuleSide(SideType, Box<Texticule>),
@@ -1239,12 +1243,10 @@ pub fn do_assign(
 // Helper for doAssign
 // Ported from: JboSyntax.hs :: isAssignable
 fn is_assignable(atom: &SumtiAtom) -> bool {
-    match atom {
-        SumtiAtom::Assignable(_) => true,
-        SumtiAtom::LerfuString(_) => true,
-        SumtiAtom::Name(_, _, _) => true,
-        _ => false,
-    }
+    matches!(
+        atom,
+        SumtiAtom::Assignable(_) | SumtiAtom::LerfuString(_) | SumtiAtom::Name(_, _, _)
+    )
 }
 
 // Helper type for Either

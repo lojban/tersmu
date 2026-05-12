@@ -197,8 +197,8 @@ impl<'a> Cursor<'a> {
     fn expect_keyword(&mut self, kw: &str) -> Result<(), PappycError> {
         self.skip_ws();
         let rest = &self.s[self.i..];
-        if rest.starts_with(kw) {
-            let next = rest[kw.len()..].chars().next();
+        if let Some(stripped) = rest.strip_prefix(kw) {
+            let next = stripped.chars().next();
             if next.map(|c| !is_ident_cont(c)).unwrap_or(true) {
                 self.i += kw.len();
                 return Ok(());
@@ -210,8 +210,8 @@ impl<'a> Cursor<'a> {
     fn try_keyword(&mut self, kw: &str) -> bool {
         self.skip_ws();
         let rest = &self.s[self.i..];
-        if rest.starts_with(kw) {
-            let next = rest[kw.len()..].chars().next();
+        if let Some(stripped) = rest.strip_prefix(kw) {
+            let next = stripped.chars().next();
             if next.map(|c| !is_ident_cont(c)).unwrap_or(true) {
                 self.i += kw.len();
                 return true;

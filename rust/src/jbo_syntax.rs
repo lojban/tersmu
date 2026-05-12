@@ -489,9 +489,5 @@ pub fn is_tense<R, T>(tag: &AbsTag<R, T>) -> bool {
 }
 
 fn is_tense_dtu<R, T>(tu: &AbsTagUnit<R, T>) -> bool {
-    match tu {
-        AbsTagUnit::BAI(_) => false,
-        AbsTagUnit::FIhO(_) => false,
-        _ => true,
-    }
+    !matches!(tu, AbsTagUnit::BAI(_) | AbsTagUnit::FIhO(_))
 }

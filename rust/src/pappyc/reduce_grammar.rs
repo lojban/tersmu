@@ -312,8 +312,8 @@ fn newnt(base: &str, nonterms: &[Nonterminal], ng: &[Nonterminal]) -> String {
 }
 
 fn elim_left(
-    all_defs: &[Nonterminal],
-    grammar_token: &Option<Identifier>,
+    _all_defs: &[Nonterminal],
+    _grammar_token: &Option<Identifier>,
     mut ng: Vec<Nonterminal>,
     n: &str,
     t: &str,
@@ -321,7 +321,7 @@ fn elim_left(
 ) -> Result<(Vec<Nonterminal>, Rule), PappycError> {
     match r {
         Rule::RuleError(r2, s) => {
-            let (ng2, r3) = elim_left(all_defs, grammar_token, ng, n, t, *r2)?;
+            let (ng2, r3) = elim_left(_all_defs, _grammar_token, ng, n, t, *r2)?;
             Ok((ng2, Rule::RuleError(Box::new(r3), s)))
         }
         Rule::RuleAlt(alts) => {

@@ -1,5 +1,7 @@
 //! Evaluation-layer types from [JboProp.hs](../JboProp.hs). Filled in as [crate::eval](super::eval) grows.
 
+#![allow(clippy::arc_with_non_send_sync)]
+
 pub use crate::jbo_syntax::Fragment;
 pub use crate::logic::Prop;
 use std::sync::Arc;
@@ -372,8 +374,10 @@ pub type JboVPred = Arc<dyn Fn(&[JboTerm]) -> JboProp>;
 #[derive(Clone)]
 pub struct JboNPred {
     pub arity: usize,
-    pub pred: Arc<dyn Fn(&[JboTerm]) -> JboProp>,
+    pub pred: JboNPredFn,
 }
+
+type JboNPredFn = Arc<dyn Fn(&[JboTerm]) -> JboProp>;
 
 /// JboPred: Unary predicate
 pub type JboPred = Arc<dyn Fn(&JboTerm) -> JboProp>;
@@ -381,7 +385,7 @@ pub type JboPred = Arc<dyn Fn(&JboTerm) -> JboProp>;
 // Ported from: JboProp.hs :: vPredToPred
 /// Convert variadic predicate to unary predicate
 pub fn v_pred_to_pred(vpred: JboVPred) -> JboPred {
-    Arc::new(move |o: &JboTerm| vpred(&[o.clone()]))
+    Arc::new(move |o: &JboTerm| vpred(std::slice::from_ref(o)))
 }
 
 // Ported from: JboProp.hs :: predToNPred

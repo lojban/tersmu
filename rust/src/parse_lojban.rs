@@ -599,8 +599,8 @@ fn direct_sumti_kau_depth(children: &[SemanticNode], input: &str) -> Option<i32>
         }
     }
     let start = sumti6_end?;
-    let end = next_start.unwrap_or_else(|| children.iter().filter_map(|child| match child {
-        SemanticNode::NonTerminal { span, .. } | SemanticNode::Terminal { span } => Some(span.1),
+    let end = next_start.unwrap_or_else(|| children.iter().map(|child| match child {
+        SemanticNode::NonTerminal { span, .. } | SemanticNode::Terminal { span } => span.1,
     }).max().unwrap_or(start));
     sumti_kau_depth_from_text(&input[start..end])
 }
@@ -937,11 +937,9 @@ fn collect_selbri4_items(node: &SemanticNode, items: &mut Vec<Selbri4Item>) {
             items.push(Selbri4Item::Connective(con.clone()));
             return;
         }
-        if let Some(selbri) = downcast_ref::<crate::jbo_syntax::Selbri>(v) {
-            if let crate::jbo_syntax::Selbri::Selbri2(crate::jbo_syntax::Selbri2::Selbri3(sb3)) = selbri {
-                items.push(Selbri4Item::Selbri3(sb3.clone()));
-                return;
-            }
+        if let Some(crate::jbo_syntax::Selbri::Selbri2(crate::jbo_syntax::Selbri2::Selbri3(sb3))) = downcast_ref::<crate::jbo_syntax::Selbri>(v) {
+            items.push(Selbri4Item::Selbri3(sb3.clone()));
+            return;
         }
     }
 
@@ -2669,24 +2667,20 @@ fn build_reducers() -> ReducerTable {
                 if let Some(tag) = downcast_ref::<crate::jbo_syntax::Tag>(v) {
                     jai_tag = Some(tag.clone());
                 }
-                if let Some(term) = downcast_ref::<Term>(v) {
-                    if let Term::Sumti(_, s) = term {
-                        sumti = Some(s.clone());
-                    }
+                if let Some(Term::Sumti(_, s)) = downcast_ref::<Term>(v) {
+                    sumti = Some(s.clone());
                 }
-                if let Some(selbri) = downcast_ref::<crate::jbo_syntax::Selbri>(v) {
-                    if let crate::jbo_syntax::Selbri::Selbri2(crate::jbo_syntax::Selbri2::Selbri3(sb3)) = selbri {
-                        let mut tu = crate::jbo_syntax::TanruUnit::TUSelbri3(sb3.clone());
-                        if saw_jai {
-                            tu = crate::jbo_syntax::TanruUnit::TUJai(jai_tag.clone(), Box::new(tu));
-                        }
-                        let tu = wrap_frees(wrap_nahe(tu, &nahe), &frees);
-                        return Some(if let Some(n) = se {
-                            crate::jbo_syntax::TanruUnit::TUPermuted(n, Box::new(tu))
-                        } else {
-                            tu
-                        });
+                if let Some(crate::jbo_syntax::Selbri::Selbri2(crate::jbo_syntax::Selbri2::Selbri3(sb3))) = downcast_ref::<crate::jbo_syntax::Selbri>(v) {
+                    let mut tu = crate::jbo_syntax::TanruUnit::TUSelbri3(sb3.clone());
+                    if saw_jai {
+                        tu = crate::jbo_syntax::TanruUnit::TUJai(jai_tag.clone(), Box::new(tu));
                     }
+                    let tu = wrap_frees(wrap_nahe(tu, &nahe), &frees);
+                    return Some(if let Some(n) = se {
+                        crate::jbo_syntax::TanruUnit::TUPermuted(n, Box::new(tu))
+                    } else {
+                        tu
+                    });
                 }
                 if let Some(tu) = downcast_ref::<crate::jbo_syntax::TanruUnit>(v) {
                     let mut tu = tu.clone();
@@ -2944,9 +2938,7 @@ fn build_reducers() -> ReducerTable {
             }
 
             let mut iter = statements.into_iter();
-            let Some(first) = iter.next() else {
-                return None;
-            };
+            let first = iter.next()?;
             let mut frees = first.frees;
             let mut prenex = first.prenex;
             let mut result = first.body;
@@ -3521,10 +3513,8 @@ fn build_reducers() -> ReducerTable {
             if let Some(v) = child.value_ref() {
                 if let Some(con_value) = downcast_ref::<crate::jbo_syntax::Connective>(v) {
                     con = Some(con_value.clone());
-                } else if let Some(selbri) = downcast_ref::<crate::jbo_syntax::Selbri>(v) {
-                    if let crate::jbo_syntax::Selbri::Selbri2(crate::jbo_syntax::Selbri2::Selbri3(sb3)) = selbri {
-                        right = Some(sb3.clone());
-                    }
+                } else if let Some(crate::jbo_syntax::Selbri::Selbri2(crate::jbo_syntax::Selbri2::Selbri3(sb3))) = downcast_ref::<crate::jbo_syntax::Selbri>(v) {
+                    right = Some(sb3.clone());
                 }
             }
         }
@@ -4283,10 +4273,8 @@ fn build_reducers() -> ReducerTable {
                             ),
                         ),
                     ));
-                } else if let Some(term) = downcast_ref::<Term>(v) {
-                    if let Term::Sumti(_, s) = term {
-                        sumti = Some(s.clone());
-                    }
+                } else if let Some(Term::Sumti(_, s)) = downcast_ref::<Term>(v) {
+                    sumti = Some(s.clone());
                 }
             }
         }
