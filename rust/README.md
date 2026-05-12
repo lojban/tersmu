@@ -206,6 +206,196 @@ Do not treat `pappyc` as required for normal `tersmu` parsing, golden validation
 - [docs/camxes-plan-archive.md](docs/camxes-plan-archive.md) — archived standalone camxes plan.
 - [../docs/](../docs/) — repository-level design notes and historical documentation.
 
+## Using tersmu as a camxes parser library
+
+The `tersmu` crate includes the integrated `camxes` PEG parser, which can be used independently for Lojban parsing without the full semantic analysis pipeline.
+
+### API Compatibility Note
+
+**Important:** The embedded `tersmu::camxes` API differs from the standalone `camxes-rs` crate in one critical way:
+
+- **camxes-rs:** `ParseResult(cost, position, result)` - result at index 2
+- **tersmu::camxes:** `ParseResult(cost, position, error_position, result)` - result at index 3
+
+The tersmu version adds an explicit error position field for better error diagnostics. When migrating from `camxes-rs`, change `result.2` to `result.3` to access the parse result.
+
+### Basic camxes usage
+
+```rust
+use tersmu::camxes::peg::grammar::Peg;
+use tersmu::camxes::LOJBAN_GRAMMAR;
+
+fn main() {
+    // Create a parser from the embedded Lojban grammar
+    let (start_rule, grammar_text) = LOJBAN_GRAMMAR;
+    let parser = Peg::new(start_rule, grammar_text).expect("Failed to build parser");
+    
+    // Parse Lojban text
+    let input = "mi klama le zarci";
+    let result = parser.parse(input);
+    
+    // result is a ParseResult(cost, consumed_pos, error_pos, Result<Vec<ParseNode>, ParseError>)
+    match result.3.as_ref() {
+        Ok(nodes) => {
+            println!("Parse succeeded!");
+            for node in nodes {
+                println!("{:?}", node);
+            }
+        }
+        Err(err) => {
+            println!("Parse failed at position {}: {:?}", err.position, err);
+        }
+    }
+}
+```
+
+### Type signatures
+
+```rust
+use tersmu::camxes::peg::grammar::Peg;
+use tersmu::camxes::peg::parsing::{ParseResult, ParseNode, ParseError};
+
+// Create a parser for a specific grammar rule
+let parser: Peg = Peg::new("text", grammar_text)?;
+
+// Parse input and get results
+let ParseResult(cost: u32, consumed: usize, error_pos: usize, result: Arc<Result<Vec<ParseNode>, ParseError>>) 
+    = parser.parse(input);
+
+// ParseNode is an enum with Terminal and NonTerminal variants
+match node {
+    ParseNode::Terminal { name, start, end } => {
+        let text = &input[start..end];
+        // Process terminal token
+    }
+    ParseNode::NonTerminal { name, start, end, children } => {
+        // Process non-terminal with children
+        for child in children {
+            // Recursively process
+        }
+    }
+}
+```
+
+### Advanced: Custom grammar rules
+
+You can also parse with custom PEG rules or different entry points:
+
+```rust
+use tersmu::camxes::peg::grammar::Peg;
+use tersmu::camxes::LOJBAN_GRAMMAR;
+
+// Parse only a word (morphology level)
+let (_, grammar) = LOJBAN_GRAMMAR;
+let word_parser = Peg::new("lojban_word", grammar)?;
+let result = word_parser.parse("klama");
+
+// Parse a specific syntactic construct
+let sumti_parser = Peg::new("sumti", grammar)?;
+let result = sumti_parser.parse("le zarci");
+```
+
+### Real-world example: Token extraction
+
+This example shows how to extract tokens with their text spans (similar to lensisku usage):
+
+```rust
+use tersmu::camxes::peg::grammar::Peg;
+use tersmu::camxes::peg::parsing::{ParseNode, ParseResult};
+use tersmu::camxes::LOJBAN_GRAMMAR;
+
+#[derive(Debug)]
+struct Token {
+    name: String,
+    text: String,
+    start: usize,
+    end: usize,
+    children: Vec<Token>,
+}
+
+impl Token {
+    fn from_parse_node(node: &ParseNode, input: &str) -> Self {
+        match node {
+            ParseNode::Terminal { name, start, end } => Token {
+                name: name.clone(),
+                text: input[*start..*end].to_string(),
+                start: *start,
+                end: *end,
+                children: vec![],
+            },
+            ParseNode::NonTerminal { name, start, end, children } => Token {
+                name: name.clone(),
+                text: input[*start..*end].to_string(),
+                start: *start,
+                end: *end,
+                children: children.iter().map(|c| Token::from_parse_node(c, input)).collect(),
+            },
+        }
+    }
+}
+
+fn parse_to_tokens(input: &str) -> Result<Vec<Token>, String> {
+    let (start_rule, grammar) = LOJBAN_GRAMMAR;
+    let parser = Peg::new(start_rule, grammar)
+        .map_err(|e| format!("Failed to build parser: {:?}", e))?;
+    
+    let ParseResult(_, _, _, result) = parser.parse(input);
+    
+    match result.as_ref() {
+        Ok(nodes) => Ok(nodes.iter().map(|n| Token::from_parse_node(n, input)).collect()),
+        Err(err) => Err(format!("Parse failed at position {}: {:?}", err.position, err)),
+    }
+}
+
+fn main() {
+    match parse_to_tokens("mi klama le zarci") {
+        Ok(tokens) => {
+            for token in tokens {
+                println!("{}: {} [{}-{}]", token.name, token.text, token.start, token.end);
+            }
+        }
+        Err(e) => eprintln!("Error: {}", e),
+    }
+}
+```
+
+### Multi-threaded usage
+
+For web servers or multi-threaded applications, create one `Peg` instance per thread (as in lensisku):
+
+```rust
+use std::collections::HashMap;
+use std::sync::Arc;
+use tersmu::camxes::peg::grammar::Peg;
+use tersmu::camxes::LOJBAN_GRAMMAR;
+
+// In your server initialization
+let grammar_texts: Arc<HashMap<i32, String>> = Arc::new({
+    let mut map = HashMap::new();
+    map.insert(1, LOJBAN_GRAMMAR.1.to_string()); // Language ID 1 = Lojban
+    map
+});
+
+// In each worker thread
+let mut parsers = HashMap::new();
+for (lang_id, grammar_text) in grammar_texts.iter() {
+    match Peg::new("text", grammar_text) {
+        Ok(parser) => {
+            parsers.insert(*lang_id, parser);
+        }
+        Err(e) => {
+            log::error!("Failed to initialize parser for language {}: {}", lang_id, e);
+        }
+    }
+}
+
+// Use the parser
+if let Some(parser) = parsers.get(&1) {
+    let result = parser.parse("mi klama");
+    // Process result...
+}
+```
+
 ## License
 
 GPL-3.0. See [../COPYING](../COPYING).
