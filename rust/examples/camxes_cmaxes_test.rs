@@ -1,5 +1,5 @@
-use tersmu::camxes::peg::grammar::Peg;
-use tersmu::camxes::peg::parsing::ParseNode;
+use camxes_rs::camxes::peg::grammar::Peg;
+use camxes_rs::camxes::peg::parsing::ParseNode;
 
 const CMAXES_GRAMMAR: (&str, &str) = (
     "text",

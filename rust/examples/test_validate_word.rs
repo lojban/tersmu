@@ -10,7 +10,7 @@ fn main() {
     ];
     
     for word in test_words {
-        let result = tersmu::morphology::morph(word);
+        let result = camxes_rs::morphology::morph(word);
         println!("{:20} -> {:?}", word, result);
     }
 }

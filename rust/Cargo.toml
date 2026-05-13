@@ -1,12 +1,18 @@
 [package]
-name = "tersmu"
-version = "0.2.3"
+name = "camxes-rs"
+version = "1.0.0"
 edition = "2021"
-description = "Semantic Lojban parser (Rust port of tersmu)"
+description = "Lojban PEG parser with semantic analysis - integrated camxes parser and tersmu semantic engine"
 license = "GPL-3.0"
+repository = "https://github.com/lojban/tersmu"
+homepage = "https://github.com/lojban/tersmu"
+documentation = "https://docs.rs/camxes-rs"
+keywords = ["lojban", "parser", "peg", "semantic", "linguistics"]
+categories = ["parsing", "text-processing"]
+authors = ["lagleki"]
 
 [[bin]]
-name = "tersmu"
+name = "camxes"
 path = "src/main.rs"
 
 [dependencies]
@@ -26,7 +32,7 @@ criterion = "0.5"
 env_logger = "0.11.8"
 
 [lib]
-name = "tersmu"
+name = "camxes_rs"
 path = "src/lib.rs"
 crate-type = ["rlib", "cdylib"]
 

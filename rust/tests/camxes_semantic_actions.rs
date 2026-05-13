@@ -1,8 +1,8 @@
 //! Integration tests for semantic actions — patterns aimed at a future tersmu Rust pipeline:
 //! parse → [`tersmu::camxes::peg::SemanticNode`] forest with per-rule reducers → downcast to app AST.
 
-use tersmu::camxes::peg::grammar::Peg;
-use tersmu::camxes::peg::{
+use camxes_rs::camxes::peg::grammar::Peg;
+use camxes_rs::camxes::peg::{
     downcast_ref, parse_with_semantics, single_root, span_slice, ReducerTable, SemanticNode,
 };
 

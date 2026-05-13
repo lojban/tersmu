@@ -1,5 +1,5 @@
-use tersmu::camxes::peg::grammar::Peg;
-use tersmu::camxes::LOJBAN_GRAMMAR;
+use camxes_rs::camxes::peg::grammar::Peg;
+use camxes_rs::camxes::LOJBAN_GRAMMAR;
 
 fn lojban_parser() -> Peg {
     let (start, grammar) = LOJBAN_GRAMMAR;

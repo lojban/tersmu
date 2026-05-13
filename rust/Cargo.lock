@@ -80,6 +80,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5d20789868f4b01b2f2caec9f5c4e0213b41e3e5702a50157d699ae31ced2fcb"
 
 [[package]]
+name = "camxes-rs"
+version = "1.0.0"
+dependencies = [
+ "console_error_panic_hook",
+ "criterion",
+ "env_logger",
+ "log",
+ "once_cell",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "cast"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -604,21 +619,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
-]
-
-[[package]]
-name = "tersmu"
-version = "0.2.3"
-dependencies = [
- "console_error_panic_hook",
- "criterion",
- "env_logger",
- "log",
- "once_cell",
- "rustc-hash",
- "serde",
- "serde_json",
- "wasm-bindgen",
 ]
 
 [[package]]

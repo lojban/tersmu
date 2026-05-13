@@ -2,7 +2,7 @@
 //!
 //! # Example
 //! ```rust
-//! use tersmu::camxes::peg::grammar::Peg;
+//! use camxes_rs::camxes::peg::grammar::Peg;
 //!
 //! let grammar = r#"
 //! start <- 'hello' 'world'

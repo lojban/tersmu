@@ -3,8 +3,8 @@
 //! This is a dev-UX shim used for diagnosing `Peg::new` failures and smoke-testing
 //! the grammar against short utterances (see `plan.md`, Phase 1).
 
-use tersmu::camxes::peg::grammar::Peg;
-use tersmu::camxes::LOJBAN_GRAMMAR;
+use camxes_rs::camxes::peg::grammar::Peg;
+use camxes_rs::camxes::LOJBAN_GRAMMAR;
 use std::io::Read;
 
 

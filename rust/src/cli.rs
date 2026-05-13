@@ -25,12 +25,12 @@ pub struct Options {
 }
 
 pub fn print_version() {
-    println!("0.2.3");
+    println!("1.0.0");
 }
 
 pub fn print_help() {
     eprintln!(
-        "Usage: tersmu [OPTION...] [in] [out]\n\
+        "Usage: camxes [OPTION...] [in] [out]\n\
          \t(use '-' for stdin/stdout)\n\
          Options:\n\
          \t-l  --loj      output logical form only\n\

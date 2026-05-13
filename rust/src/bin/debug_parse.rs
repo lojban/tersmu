@@ -1,4 +1,4 @@
-use tersmu::{morphology, parse_lojban::parse_text};
+use camxes_rs::{morphology, parse_lojban::parse_text};
 
 fn main() {
     env_logger::init();
