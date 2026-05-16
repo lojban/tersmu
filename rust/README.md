@@ -8,6 +8,7 @@ A comprehensive Lojban parser combining fast PEG parsing with semantic analysis 
 
 - **Fast PEG Parser**: Zero-copy parsing with span-based tokens
 - **Semantic Analysis**: Converts Lojban to logical forms and canonical representations
+- **Prolog Export**: Generates SWI-Prolog source code (facts, rules, and queries) from Lojban
 - **Rich Error Diagnostics**: Position tracking and detailed error messages
 - **WebAssembly Support**: Runs in browsers via WASM
 - **Thread-Safe**: Create parser instances per thread for concurrent usage
@@ -100,6 +101,9 @@ echo "mi klama le zarci" | camxes -l -L
 
 # Canonical Lojban only
 echo "mi klama le zarci" | camxes -j -L
+
+# Prolog (SWI-Prolog) source output
+echo "mi klama le zarci" | camxes -P -L
 ```
 
 ### Logging
@@ -116,6 +120,46 @@ RUST_LOG=camxes_rs=debug camxes -L input.jbo
 # Specific module logs
 RUST_LOG=camxes_rs::morphology=debug,camxes_rs::parse_lojban=trace camxes -L input.jbo
 ```
+
+## Prolog Export
+
+camxes-rs can convert Lojban sentences to SWI-Prolog source code — facts, rules, and queries.
+This feature achieves feature parity with "Logical English" project, enabling Lojban to be used as a logic
+programming front-end.
+
+### How It Works
+
+Lojban semantics are represented as propositions (`Prop<JboRel, JboTerm, ...>`), which are then
+translated into Prolog clauses:
+
+- **Facts**: `.i` sentences become Prolog facts ending with `.`
+- **Rules**: Implications (`.ijanai` etc.) become rules with `:-`
+- **Queries**: Question words (`ma`) produce `?-` query clauses
+- **Negation**: Logical negation becomes `\+`
+- **Conjunction/Disjunction**: Logical AND/OR become `,` / `;`
+
+### Programmatic Usage
+
+```rust
+use camxes_rs::eval_show::eval_text_to_prolog;
+use camxes_rs::parse_lojban::parse_text;
+use camxes_rs::morphology::morph;
+
+let text = morph(".i la .alis. cu ninmu").expect("morphology");
+let parsed = parse_text(&format!("{text} %%%END%%%")).expect("parse");
+let prolog = eval_text_to_prolog(&parsed);
+println!("{prolog}");
+```
+
+Prop-level control is also available via `jbo_prolog::prop_to_prolog()`, `props_to_prolog()`, and
+`semantic_results_to_prolog()` for constructing clauses from individual propositions.
+
+### References
+
+- **[lojysamban](https://github.com/YoshikuniJujo/lojysamban.git)** (Haskell, 2012) — original Lojban-to-Prolog translator that defined the conversion model
+- **[Prolog for Lojbanists](https://mw.lojban.org/papri/prolog_for_Lojbanists)** — wiki article on Lojban/Prolog correspondence
+- **[Natural-Language-Processing-in-Prolog](https://github.com/andreistirb/Natural-Language-Processing-in-Prolog.git)** — top-down and bottom-up Prolog NLP techniques informing the conversion
+- **[Logical English](//github.com/LogicalContracts/LogicalEnglish.git)** — logical English grammar with Prolog export, motivating feature parity for Lojban
 
 ## API Examples
 
@@ -300,6 +344,7 @@ rust/
 - **`morphology`**: Lojban morphology validation
 - **`jbo_tree`**, **`jbo_syntax`**, **`jbo_prop`**: Semantic tree structures
 - **`jbo_show`**: Output formatting (logical forms, canonical Lojban)
+- **`jbo_prolog`**: Prolog source code generation (SWI-Prolog compatible)
 - **`jbo_parse`**: Parse tree to semantic tree conversion
 - **`run`**: CLI orchestration and JSON output
 

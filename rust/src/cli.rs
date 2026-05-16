@@ -6,6 +6,7 @@ pub enum OutputType {
     Both,
     Jbo,
     Loj,
+    Prolog,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -35,6 +36,7 @@ pub fn print_help() {
          Options:\n\
          \t-l  --loj      output logical form only\n\
          \t-j  --jbo      output forethoughtful lojbanic form only\n\
+         \t-P  --prolog   output Prolog (SWI-Prolog) source\n\
          \t-L  --lines    interpret each line as a lojban text\n\
          \t-p  --paragraphs  interpret each blank-line-separated paragraph as a lojban text\n\
          \t-u  --utf8     output utf8 encoded text rather than ascii\n\
@@ -62,6 +64,7 @@ pub fn parse_args(args: &[String]) -> Result<(Options, Vec<String>), String> {
             }
             "-l" | "--loj" => opts.output = OutputType::Loj,
             "-j" | "--jbo" => opts.output = OutputType::Jbo,
+            "-P" | "--prolog" => opts.output = OutputType::Prolog,
             "-L" | "--lines" => opts.input = InputType::Lines,
             "-p" | "--paragraphs" => opts.input = InputType::Paras,
             "-u" | "--utf8" => opts.utf8 = true,

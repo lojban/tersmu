@@ -6,7 +6,10 @@
 //! context instead of `Bindful.hs` state.
 
 use crate::jbo_parse::{eval_text, SemanticResult};
-use crate::jbo_prop::{JboFragment, JboMex, JboModalOp, JboOperator, JboProp, JboQuantifier, JboRel, JboTerm, Texticule};
+use crate::jbo_prop::{
+    JboFragment, JboMex, JboModalOp, JboOperator, JboProp, JboQuantifier, JboRel, JboTerm,
+    Texticule,
+};
 use crate::jbo_syntax::{Lerfu, SumtiAtom, Text};
 use crate::logic::Prop;
 
@@ -38,7 +41,10 @@ fn format_lerfu(l: &Lerfu) -> String {
         Lerfu::LerfuChar(c) => c.to_string(),
         Lerfu::LerfuPA(p) | Lerfu::LerfuValsi(p) | Lerfu::LerfuShift(p) => format!("{{{}}}", p),
         Lerfu::LerfuShifted(lau, l) => format!("{{{}}}({})", lau, format_lerfu(l)),
-        Lerfu::LerfuComposite(ls) => format!("[{}]", ls.iter().map(format_lerfu).collect::<Vec<_>>().join(","))
+        Lerfu::LerfuComposite(ls) => format!(
+            "[{}]",
+            ls.iter().map(format_lerfu).collect::<Vec<_>>().join(",")
+        ),
     }
 }
 
@@ -49,8 +55,16 @@ fn format_lerfu_debug(l: &Lerfu) -> String {
         Lerfu::LerfuPA(p) => format!("LerfuPA {:?}", p),
         Lerfu::LerfuValsi(v) => format!("LerfuValsi {:?}", v),
         Lerfu::LerfuShift(s) => format!("LerfuShift {:?}", s),
-        Lerfu::LerfuShifted(lau, l) => format!("LerfuShifted {:?} ({})", lau, format_lerfu_debug(l)),
-        Lerfu::LerfuComposite(ls) => format!("LerfuComposite [{}]", ls.iter().map(format_lerfu_debug).collect::<Vec<_>>().join(",")),
+        Lerfu::LerfuShifted(lau, l) => {
+            format!("LerfuShifted {:?} ({})", lau, format_lerfu_debug(l))
+        }
+        Lerfu::LerfuComposite(ls) => format!(
+            "LerfuComposite [{}]",
+            ls.iter()
+                .map(format_lerfu_debug)
+                .collect::<Vec<_>>()
+                .join(",")
+        ),
     }
 }
 
@@ -66,7 +80,13 @@ fn format_lerfu_jbo(l: &Lerfu) -> String {
         Lerfu::LerfuValsi(v) => format!("{} bu", v),
         Lerfu::LerfuShift(s) => s.clone(),
         Lerfu::LerfuShifted(lau, l) => format!("{} {}", lau, format_lerfu_jbo(l)),
-        Lerfu::LerfuComposite(ls) => format!("tei {} foi", ls.iter().map(format_lerfu_jbo).collect::<Vec<_>>().join(" ")),
+        Lerfu::LerfuComposite(ls) => format!(
+            "tei {} foi",
+            ls.iter()
+                .map(format_lerfu_jbo)
+                .collect::<Vec<_>>()
+                .join(" ")
+        ),
     }
 }
 
@@ -117,7 +137,11 @@ fn format_syntax_operator(op: &crate::jbo_syntax::Operator) -> String {
 fn format_syntax_mex(mex: &crate::jbo_syntax::Mex) -> String {
     match mex {
         crate::jbo_syntax::Mex::Operation(op, args) => {
-            let args = args.iter().map(format_syntax_mex).collect::<Vec<_>>().join(",");
+            let args = args
+                .iter()
+                .map(format_syntax_mex)
+                .collect::<Vec<_>>()
+                .join(",");
             format!("Operation ({}) [{}]", format_syntax_operator(op), args)
         }
         crate::jbo_syntax::Mex::MexNumeralString(ns) => {
@@ -144,7 +168,13 @@ fn format_syntax_mex(mex: &crate::jbo_syntax::Mex) -> String {
             }
         }
         crate::jbo_syntax::Mex::MexInt(n) => format!("MexInt {}", n),
-        crate::jbo_syntax::Mex::MexLerfuString(ls) => format!("MexLerfuString [{}]", ls.iter().map(format_lerfu_debug).collect::<Vec<_>>().join(",")),
+        crate::jbo_syntax::Mex::MexLerfuString(ls) => format!(
+            "MexLerfuString [{}]",
+            ls.iter()
+                .map(format_lerfu_debug)
+                .collect::<Vec<_>>()
+                .join(",")
+        ),
         _ => format!("{:?}", mex),
     }
 }
@@ -152,16 +182,24 @@ fn format_syntax_mex(mex: &crate::jbo_syntax::Mex) -> String {
 // Ported from: JboShow.hs :: instance JboShow JboMex (logshow method)
 fn format_mex(mex: &JboMex) -> String {
     match mex {
-        JboMex::MexNumeralString(ns) => format!("({})", ns
-            .iter()
-            .map(|n| match n {
-                crate::jbo_syntax::Numeral::PA(s) => s.clone(),
-                crate::jbo_syntax::Numeral::NumeralLerfu(l) => format_lerfu(l),
-            })
-            .collect::<Vec<_>>()
-            .join(" ")),
+        JboMex::MexNumeralString(ns) => format!(
+            "({})",
+            ns.iter()
+                .map(|n| match n {
+                    crate::jbo_syntax::Numeral::PA(s) => s.clone(),
+                    crate::jbo_syntax::Numeral::NumeralLerfu(l) => format_lerfu(l),
+                })
+                .collect::<Vec<_>>()
+                .join(" ")
+        ),
         JboMex::MexInt(n) => n.to_string(),
-        JboMex::MexLerfuString(ls) => format!("({})", ls.iter().map(format_lerfu_jbo).collect::<Vec<_>>().join(" ")),
+        JboMex::MexLerfuString(ls) => format!(
+            "({})",
+            ls.iter()
+                .map(format_lerfu_jbo)
+                .collect::<Vec<_>>()
+                .join(" ")
+        ),
         JboMex::Operation(op, args) => {
             let args = args.iter().map(format_mex).collect::<Vec<_>>().join(",");
             format!("{}({})", format_operator(op), args)
@@ -191,15 +229,23 @@ fn format_mex(mex: &JboMex) -> String {
 // Ported from: JboShow.hs :: instance JboShow JboMex (logshow method for numeric cases)
 fn format_mex_number_for_rel(mex: &JboMex) -> String {
     match mex {
-        JboMex::MexNumeralString(ns) => format!("({})", ns
-            .iter()
-            .map(|n| match n {
-                crate::jbo_syntax::Numeral::PA(s) => s.clone(),
-                crate::jbo_syntax::Numeral::NumeralLerfu(l) => format_lerfu(l),
-            })
-            .collect::<Vec<_>>()
-            .join(" ")),
-        JboMex::MexLerfuString(ls) => format!("({})", ls.iter().map(format_lerfu_jbo).collect::<Vec<_>>().join(" ")),
+        JboMex::MexNumeralString(ns) => format!(
+            "({})",
+            ns.iter()
+                .map(|n| match n {
+                    crate::jbo_syntax::Numeral::PA(s) => s.clone(),
+                    crate::jbo_syntax::Numeral::NumeralLerfu(l) => format_lerfu(l),
+                })
+                .collect::<Vec<_>>()
+                .join(" ")
+        ),
+        JboMex::MexLerfuString(ls) => format!(
+            "({})",
+            ls.iter()
+                .map(format_lerfu_jbo)
+                .collect::<Vec<_>>()
+                .join(" ")
+        ),
         JboMex::MexInt(n) => n.to_string(),
         _ => format_mex(mex),
     }
@@ -230,7 +276,10 @@ fn format_quantified_prefix(q: &JboQuantifier, name: &str) -> String {
 fn format_texticule(texticule: &Texticule) -> String {
     match texticule {
         Texticule::TexticuleFrag(fragment) => match fragment {
-            JboFragment::JboFragTerms(terms) => format!("[Fragment: {}]", terms.iter().map(format_term).collect::<Vec<_>>().join(",")),
+            JboFragment::JboFragTerms(terms) => format!(
+                "[Fragment: {}]",
+                terms.iter().map(format_term).collect::<Vec<_>>().join(",")
+            ),
             JboFragment::JboFragUnparsed(_) => "[Fragment]".to_string(),
         },
         Texticule::TexticuleProp(prop) => format_prop(prop),
@@ -291,7 +340,9 @@ fn format_term(term: &JboTerm) -> String {
             format!("{{{}}}({})", qualifier, format_term(t))
         }
         JboTerm::TheMex(m) => format!("[MEX: {}]", format_syntax_mex(m)),
-        JboTerm::JoikedTerms(joik, t1, t2) => format!("({} {{{}}} {})", format_term(t1), joik, format_term(t2)),
+        JboTerm::JoikedTerms(joik, t1, t2) => {
+            format!("({} {{{}}} {})", format_term(t1), joik, format_term(t2))
+        }
         JboTerm::JboQuote(text) => format!("«{}»", format_text(text)),
         JboTerm::JboErrorQuote(words) => format!("<{{< {} >}}>", words.join(" ")),
         JboTerm::JboNonJboQuote(s) => format!("<[< {} >]>", s),
@@ -320,10 +371,16 @@ fn format_log_connective(prefix: &str, con: &crate::jbo_syntax::LogJboConnective
 // Ported from: JboShow.hs :: instance JboShow Connective (logshow method)
 fn format_connective(prefix: &str, con: &crate::jbo_syntax::Connective) -> String {
     let (mut lojban, mtag) = match con {
-        crate::jbo_syntax::Connective::JboConnLog(mtag, lcon) => (format_log_connective(prefix, lcon), mtag.as_deref()),
+        crate::jbo_syntax::Connective::JboConnLog(mtag, lcon) => {
+            (format_log_connective(prefix, lcon), mtag.as_deref())
+        }
         crate::jbo_syntax::Connective::JboConnJoik(mtag, joik) => {
             let base = if joik == "??" {
-                if prefix == "." { "ji".to_string() } else { "je'i".to_string() }
+                if prefix == "." {
+                    "ji".to_string()
+                } else {
+                    "je'i".to_string()
+                }
             } else {
                 joik.clone()
             };
@@ -349,8 +406,14 @@ fn format_tag_syntax(tag: &crate::jbo_syntax::Tag) -> String {
                 | crate::jbo_syntax::TagUnit::CAhA(s)
                 | crate::jbo_syntax::TagUnit::CUhE(s) => s.clone(),
                 crate::jbo_syntax::TagUnit::FAhA { faha_cmavo, .. } => faha_cmavo.clone(),
-                crate::jbo_syntax::TagUnit::TAhE_ZAhO { tahe_zaho_cmavo, .. } => tahe_zaho_cmavo.clone(),
-                crate::jbo_syntax::TagUnit::ROI { roiroi, roi_quantifier, .. } => format!("{} {}", format_syntax_mex(roi_quantifier), roiroi),
+                crate::jbo_syntax::TagUnit::TAhE_ZAhO {
+                    tahe_zaho_cmavo, ..
+                } => tahe_zaho_cmavo.clone(),
+                crate::jbo_syntax::TagUnit::ROI {
+                    roiroi,
+                    roi_quantifier,
+                    ..
+                } => format!("{} {}", format_syntax_mex(roi_quantifier), roiroi),
                 crate::jbo_syntax::TagUnit::FIhO(_) => "fi'o".to_string(),
                 crate::jbo_syntax::TagUnit::KI => "ki".to_string(),
             })
@@ -374,10 +437,14 @@ fn format_operator(op: &JboOperator) -> String {
             format_connective(".", con),
             format_operator(o2)
         ),
-        JboOperator::OpPermuted(s, op) => format!("{} {}", crate::jbo_show::se_to_str(*s), format_operator(op)),
+        JboOperator::OpPermuted(s, op) => {
+            format!("{} {}", crate::jbo_show::se_to_str(*s), format_operator(op))
+        }
         JboOperator::OpScalarNegated(n, op) => format!("{{{}}}({})", n, format_operator(op)),
         JboOperator::OpMex(m) => format!("[{}]", format_mex(m)),
-        JboOperator::OpSelbri(s) => format!("[{}]", format_seltau_prop(&s(&[JboTerm::BoundVar(0)]))),
+        JboOperator::OpSelbri(s) => {
+            format!("[{}]", format_seltau_prop(&s(&[JboTerm::BoundVar(0)])))
+        }
         JboOperator::OpVUhU(s) => format!("{{{}}}", s),
     }
 }
@@ -387,13 +454,21 @@ fn format_prop_log_connective(prefix: &str, con: &crate::jbo_syntax::LogJboConne
     format!(
         "{}{}{}",
         if con.b1 { "" } else { "na " },
-        if con.c == 'U' { format!("se {}u", prefix) } else { format!("{}{}", prefix, con.c) },
+        if con.c == 'U' {
+            format!("se {}u", prefix)
+        } else {
+            format!("{}{}", prefix, con.c)
+        },
         if con.b2 { "" } else { " nai" }
     )
 }
 
 // Ported from: JboShow.hs :: instance JboShow JboConnective (logshow method for semantic connectives)
-fn format_prop_connective(prefix: &str, con: &crate::jbo_prop::JboConnective, logical: bool) -> String {
+fn format_prop_connective(
+    prefix: &str,
+    con: &crate::jbo_prop::JboConnective,
+    logical: bool,
+) -> String {
     let shown = match con {
         crate::jbo_prop::JboConnective::JboConnLog(mtag, lcon) => {
             let mut s = format_prop_log_connective(prefix, lcon);
@@ -422,7 +497,11 @@ fn format_prop_connective(prefix: &str, con: &crate::jbo_prop::JboConnective, lo
             s
         }
     };
-    if logical { format!("{{{}}}", shown) } else { shown }
+    if logical {
+        format!("{{{}}}", shown)
+    } else {
+        shown
+    }
 }
 
 // Ported from: JboShow.hs :: instance JboShow JboTag (logshow/jboshow method with mode parameter)
@@ -440,15 +519,25 @@ fn format_tag_with_mode(tag: &crate::jbo_prop::JboTag, logical: bool) -> String 
                     crate::jbo_prop::JboTagUnit::FAhA(_, s) => s.clone(),
                     crate::jbo_prop::JboTagUnit::TAhE_ZAhO(true, s) => format!("fe'e {}", s),
                     crate::jbo_prop::JboTagUnit::TAhE_ZAhO(_, s) => s.clone(),
-                    crate::jbo_prop::JboTagUnit::ROI(s, true, q) => format!("fe'e {} {}", format_mex(q), s),
+                    crate::jbo_prop::JboTagUnit::ROI(s, true, q) => {
+                        format!("fe'e {} {}", format_mex(q), s)
+                    }
                     crate::jbo_prop::JboTagUnit::ROI(s, _, q) => format!("{} {}", format_mex(q), s),
-                    crate::jbo_prop::JboTagUnit::FIhO(p) => format!("fi'o {}", format_seltau_prop(&p(&[crate::jbo_prop::JboTerm::BoundVar(0)]))),
+                    crate::jbo_prop::JboTagUnit::FIhO(p) => format!(
+                        "fi'o {}",
+                        format_seltau_prop(&p(&[crate::jbo_prop::JboTerm::BoundVar(0)]))
+                    ),
                     crate::jbo_prop::JboTagUnit::KI => "ki".to_string(),
                 };
                 format!(
                     "{}{}{}{}",
-                    dtu.nahe.as_ref().map(|s| format!("{} ", s)).unwrap_or_default(),
-                    dtu.se.map(|se| format!("{} ", crate::jbo_show::se_to_str(se))).unwrap_or_default(),
+                    dtu.nahe
+                        .as_ref()
+                        .map(|s| format!("{} ", s))
+                        .unwrap_or_default(),
+                    dtu.se
+                        .map(|se| format!("{} ", crate::jbo_show::se_to_str(se)))
+                        .unwrap_or_default(),
                     unit,
                     if dtu.nai { " nai" } else { "" }
                 )
@@ -498,7 +587,10 @@ fn format_restriction_term(term: &JboTerm, var: i32) -> String {
         JboTerm::TermWithSides(inner, _) => format_restriction_term(inner, var),
         JboTerm::BoundVar(n) if *n == var => "_".to_string(),
         JboTerm::Constant(n, args) if !args.is_empty() => {
-            let arg_strs: Vec<String> = args.iter().map(|t| format_restriction_term(t, var)).collect();
+            let arg_strs: Vec<String> = args
+                .iter()
+                .map(|t| format_restriction_term(t, var))
+                .collect();
             format!("f{}({})", n, arg_strs.join(","))
         }
         JboTerm::QualifiedTerm(qual, t) => {
@@ -530,7 +622,15 @@ fn format_lambda_term(term: &JboTerm) -> String {
 fn format_lambda_rel(rel: &JboRel) -> String {
     match rel {
         JboRel::AppliedRel(r, terms) => {
-            format!("{}({})", format_rel(r), terms.iter().map(format_lambda_term).collect::<Vec<_>>().join(","))
+            format!(
+                "{}({})",
+                format_rel(r),
+                terms
+                    .iter()
+                    .map(format_lambda_term)
+                    .collect::<Vec<_>>()
+                    .join(",")
+            )
         }
         _ => format_rel(rel),
     }
@@ -545,9 +645,19 @@ fn format_lambda_restriction_term(term: &JboTerm, var: i32) -> String {
 }
 
 // Ported from: JboShow.hs :: instance JboShow JboProp (logshow method for lambda restriction propositions)
-fn format_lambda_restriction_prop(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, crate::jbo_prop::JboQuantifier>, var: i32) -> String {
+fn format_lambda_restriction_prop(
+    prop: &Prop<
+        JboRel,
+        JboTerm,
+        String,
+        crate::jbo_prop::JboModalOp,
+        crate::jbo_prop::JboQuantifier,
+    >,
+    var: i32,
+) -> String {
     match prop {
-        Prop::Rel(JboRel::Among(t), terms) if matches!(terms.as_slice(), [JboTerm::BoundVar(n)] if *n == var) => {
+        Prop::Rel(JboRel::Among(t), terms) if matches!(terms.as_slice(), [JboTerm::BoundVar(n)] if *n == var) =>
+        {
             format!("(_ ≤ {})", format_lambda_restriction_term(t, var))
         }
         Prop::Rel(JboRel::AppliedRel(r, applied_terms), terms)
@@ -562,7 +672,15 @@ fn format_lambda_restriction_prop(prop: &Prop<JboRel, JboTerm, String, crate::jb
             }
         }
         Prop::Rel(rel, terms) => {
-            format!("{}({})", format_lambda_rel(rel), terms.iter().map(|t| format_lambda_restriction_term(t, var)).collect::<Vec<_>>().join(","))
+            format!(
+                "{}({})",
+                format_lambda_rel(rel),
+                terms
+                    .iter()
+                    .map(|t| format_lambda_restriction_term(t, var))
+                    .collect::<Vec<_>>()
+                    .join(",")
+            )
         }
         _ => format_lambda_prop(prop),
     }
@@ -574,29 +692,55 @@ fn format_restriction_rel(rel: &JboRel, var: i32) -> String {
         JboRel::AppliedRel(r, terms) => format!(
             "{}({})",
             format_rel(r),
-            terms.iter().map(|t| format_restriction_term(t, var)).collect::<Vec<_>>().join(",")
+            terms
+                .iter()
+                .map(|t| format_restriction_term(t, var))
+                .collect::<Vec<_>>()
+                .join(",")
         ),
         _ => format_rel(rel),
     }
 }
 
 // Ported from: JboShow.hs :: instance JboShow JboProp (logshow method for restriction propositions)
-fn format_restriction_prop(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, crate::jbo_prop::JboQuantifier>, var: i32) -> String {
+fn format_restriction_prop(
+    prop: &Prop<
+        JboRel,
+        JboTerm,
+        String,
+        crate::jbo_prop::JboModalOp,
+        crate::jbo_prop::JboQuantifier,
+    >,
+    var: i32,
+) -> String {
     match prop {
         Prop::Rel(rel, terms) => {
             if matches!(rel, JboRel::Equal) {
-                return format!("({})", terms.iter().map(|t| format_restriction_term(t, var)).collect::<Vec<_>>().join(" == "));
+                return format!(
+                    "({})",
+                    terms
+                        .iter()
+                        .map(|t| format_restriction_term(t, var))
+                        .collect::<Vec<_>>()
+                        .join(" == ")
+                );
             }
             if let JboRel::Among(t) = rel {
                 if matches!(terms.as_slice(), [JboTerm::BoundVar(n)] if *n == var) {
                     return format!("(_ ≤ {})", format_restriction_term(t, var));
                 }
-                let terms_str = terms.iter().map(|term| format_restriction_term(term, var)).collect::<Vec<_>>().join(",");
+                let terms_str = terms
+                    .iter()
+                    .map(|term| format_restriction_term(term, var))
+                    .collect::<Vec<_>>()
+                    .join(",");
                 return format!("({} ≤ {})", terms_str, format_restriction_term(t, var));
             }
             if let JboRel::AppliedRel(r, applied_terms) = rel {
                 if let JboRel::Among(t) = r.as_ref() {
-                    if terms.is_empty() && matches!(applied_terms.as_slice(), [JboTerm::BoundVar(n)] if *n == var) {
+                    if terms.is_empty()
+                        && matches!(applied_terms.as_slice(), [JboTerm::BoundVar(n)] if *n == var)
+                    {
                         return format!("(_ ≤ {})", format_restriction_term(t, var));
                     }
                 }
@@ -604,33 +748,61 @@ fn format_restriction_prop(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop:
             format!(
                 "{}({})",
                 format_restriction_rel(rel, var),
-                terms.iter().map(|t| format_restriction_term(t, var)).collect::<Vec<_>>().join(",")
+                terms
+                    .iter()
+                    .map(|t| format_restriction_term(t, var))
+                    .collect::<Vec<_>>()
+                    .join(",")
             )
         }
         Prop::Modal(crate::jbo_prop::JboModalOp::NonVeridical, inner) => {
             format!("non-veridical: {}", format_restriction_prop(inner, var))
         }
         Prop::Modal(crate::jbo_prop::JboModalOp::Tagged(tag, mt), inner) => {
-            let term = mt.as_ref().map(|t| format_restriction_term(t, var)).unwrap_or_default();
-            format!("({})({}). {}", format_tag(tag), term, format_restriction_prop(inner, var))
+            let term = mt
+                .as_ref()
+                .map(|t| format_restriction_term(t, var))
+                .unwrap_or_default();
+            format!(
+                "({})({}). {}",
+                format_tag(tag),
+                term,
+                format_restriction_prop(inner, var)
+            )
         }
         Prop::Modal(crate::jbo_prop::JboModalOp::WithEventAs(t), inner) => {
-            format!("{}=. {}", format_restriction_term(t, var), format_restriction_prop(inner, var))
+            format!(
+                "{}=. {}",
+                format_restriction_term(t, var),
+                format_restriction_prop(inner, var)
+            )
         }
         Prop::Modal(crate::jbo_prop::JboModalOp::QTruthModal, inner) => {
             format!("?. {}", format_restriction_prop(inner, var))
         }
         Prop::Not(inner) => format!("¬{}", format_restriction_prop(inner, var)),
         Prop::Connected(conn, p1, p2) => {
-            format!("({} {} {})", format_restriction_prop(p1, var), conn, format_restriction_prop(p2, var))
+            format!(
+                "({} {} {})",
+                format_restriction_prop(p1, var),
+                conn,
+                format_restriction_prop(p2, var)
+            )
         }
         Prop::NonLogConnected(joik, p1, p2) => {
-            format!("({} {{{}}} {})", format_restriction_prop(p1, var), joik, format_restriction_prop(p2, var))
+            format!(
+                "({} {{{}}} {})",
+                format_restriction_prop(p1, var),
+                joik,
+                format_restriction_prop(p2, var)
+            )
         }
         Prop::Quantified(q, restriction, body) => {
             let n = var + 1;
             let mut prefix = match q {
-                JboQuantifier::RelQuantifier(inner_q) => format_quantified_prefix(inner_q, &format!("R{}", n)),
+                JboQuantifier::RelQuantifier(inner_q) => {
+                    format_quantified_prefix(inner_q, &format!("R{}", n))
+                }
                 _ => format_quantified_prefix(q, &format!("x{}", n)),
             };
             if let Some(r) = restriction {
@@ -647,41 +819,89 @@ fn format_restriction_prop(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop:
 }
 
 // Ported from: JboShow.hs :: instance JboShow JboProp (logshow method for lambda propositions)
-fn format_lambda_prop(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, crate::jbo_prop::JboQuantifier>) -> String {
+fn format_lambda_prop(
+    prop: &Prop<
+        JboRel,
+        JboTerm,
+        String,
+        crate::jbo_prop::JboModalOp,
+        crate::jbo_prop::JboQuantifier,
+    >,
+) -> String {
     format_lambda_prop_at(prop, 1)
 }
 
 // Ported from: JboShow.hs :: instance JboShow JboProp (logshow method for lambda propositions with variable tracking)
-fn format_lambda_prop_at(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, crate::jbo_prop::JboQuantifier>, next_var: i32) -> String {
+fn format_lambda_prop_at(
+    prop: &Prop<
+        JboRel,
+        JboTerm,
+        String,
+        crate::jbo_prop::JboModalOp,
+        crate::jbo_prop::JboQuantifier,
+    >,
+    next_var: i32,
+) -> String {
     match prop {
         Prop::Rel(rel, terms) => {
-            format!("{}({})", format_lambda_rel(rel), terms.iter().map(format_lambda_term).collect::<Vec<_>>().join(","))
+            format!(
+                "{}({})",
+                format_lambda_rel(rel),
+                terms
+                    .iter()
+                    .map(format_lambda_term)
+                    .collect::<Vec<_>>()
+                    .join(",")
+            )
         }
         Prop::Modal(crate::jbo_prop::JboModalOp::Tagged(tag, mt), inner) => {
             if let Some(expanded) = expand_connected_tag_modal(tag, mt, inner) {
                 return format_lambda_prop_at(&expanded, next_var);
             }
             let term = mt.as_ref().map(format_lambda_term).unwrap_or_default();
-            format!("({})({}). {}", format_tag(tag), term, format_lambda_prop_at(inner, next_var))
+            format!(
+                "({})({}). {}",
+                format_tag(tag),
+                term,
+                format_lambda_prop_at(inner, next_var)
+            )
         }
         Prop::Modal(crate::jbo_prop::JboModalOp::WithEventAs(term), inner) => {
-            format!("{}=. {}", format_lambda_term(term), format_lambda_prop_at(inner, next_var))
+            format!(
+                "{}=. {}",
+                format_lambda_term(term),
+                format_lambda_prop_at(inner, next_var)
+            )
         }
-        Prop::Modal(crate::jbo_prop::JboModalOp::QTruthModal, inner) => format!("?. {}", format_lambda_prop_at(inner, next_var)),
+        Prop::Modal(crate::jbo_prop::JboModalOp::QTruthModal, inner) => {
+            format!("?. {}", format_lambda_prop_at(inner, next_var))
+        }
         Prop::Modal(crate::jbo_prop::JboModalOp::NonVeridical, inner) => {
             format!("non-veridical: {}", format_lambda_prop_at(inner, next_var))
         }
         Prop::Not(inner) => format!("¬{}", format_lambda_prop_at(inner, next_var)),
         Prop::Connected(conn, p1, p2) => {
-            format!("({} {} {})", format_lambda_prop_at(p1, next_var), conn, format_lambda_prop_at(p2, next_var))
+            format!(
+                "({} {} {})",
+                format_lambda_prop_at(p1, next_var),
+                conn,
+                format_lambda_prop_at(p2, next_var)
+            )
         }
         Prop::NonLogConnected(joik, p1, p2) => {
-            format!("({} {{{}}} {})", format_lambda_prop_at(p1, next_var), joik, format_lambda_prop_at(p2, next_var))
+            format!(
+                "({} {{{}}} {})",
+                format_lambda_prop_at(p1, next_var),
+                joik,
+                format_lambda_prop_at(p2, next_var)
+            )
         }
         Prop::Quantified(q, restriction, body) => {
             let n = next_var;
             let mut prefix = match q {
-                JboQuantifier::RelQuantifier(inner_q) => format_quantified_prefix(inner_q, &format!("R{}", n)),
+                JboQuantifier::RelQuantifier(inner_q) => {
+                    format_quantified_prefix(inner_q, &format!("R{}", n))
+                }
                 _ => format_quantified_prefix(q, &format!("x{}", n)),
             };
             if let Some(r) = restriction {
@@ -691,8 +911,16 @@ fn format_lambda_prop_at(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::J
             } else {
                 prefix.push_str(". ");
             }
-            let body_next_var = if matches!(q, JboQuantifier::RelQuantifier(_)) { n } else { n + 1 };
-            format!("{}{}", prefix, format_lambda_prop_at(&body(n), body_next_var))
+            let body_next_var = if matches!(q, JboQuantifier::RelQuantifier(_)) {
+                n
+            } else {
+                n + 1
+            };
+            format!(
+                "{}{}",
+                prefix,
+                format_lambda_prop_at(&body(n), body_next_var)
+            )
         }
         Prop::Eet => "_|_".to_string(),
     }
@@ -702,11 +930,17 @@ fn format_lambda_prop_at(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::J
 // Mirrors scalar NAhE display after parsedSelbriToNewSelbri creates applied rel with skipped x2
 fn format_scalar_negated_rel_inner(rel: &JboRel) -> String {
     match rel {
-        JboRel::AppliedRel(r, terms) if terms.len() > 2 && matches!(terms.get(1), Some(JboTerm::Unfilled)) => {
+        JboRel::AppliedRel(r, terms)
+            if terms.len() > 2 && matches!(terms.get(1), Some(JboTerm::Unfilled)) =>
+        {
             let terms = std::iter::once(terms[0].clone())
                 .chain(terms.iter().skip(2).cloned())
                 .collect::<Vec<_>>();
-            format!("{}({})", format_rel(r), terms.iter().map(format_term).collect::<Vec<_>>().join(","))
+            format!(
+                "{}({})",
+                format_rel(r),
+                terms.iter().map(format_term).collect::<Vec<_>>().join(",")
+            )
         }
         _ => format_rel(rel),
     }
@@ -724,12 +958,23 @@ fn format_rel(rel: &JboRel) -> String {
             format!("<{}><{}>", seltau_str, tertau_str)
         }
         JboRel::AppliedRel(r, terms) => {
-            format!("{}({})", format_rel(r), terms.iter().map(format_term).collect::<Vec<_>>().join(","))
+            format!(
+                "{}({})",
+                format_rel(r),
+                terms.iter().map(format_term).collect::<Vec<_>>().join(",")
+            )
         }
         JboRel::TanruConnective(con, r1, r2) => {
-            format!("<{}>{}<{}>", format_seltau(r1), format_connective("j", con), format_seltau(r2))
+            format!(
+                "<{}>{}<{}>",
+                format_seltau(r1),
+                format_connective("j", con),
+                format_seltau(r2)
+            )
         }
-        JboRel::PermutedRel(n, r) => format!("{} {}", crate::jbo_show::se_to_str(*n), format_rel(r)),
+        JboRel::PermutedRel(n, r) => {
+            format!("{} {}", crate::jbo_show::se_to_str(*n), format_rel(r))
+        }
         JboRel::RVar(_) => "[UNBOUND RVar]".to_string(),
         JboRel::BoundRVar(n) => format!("R{}", n),
         JboRel::RAss(n) => format!("R{}", n),
@@ -745,14 +990,20 @@ fn format_rel(rel: &JboRel) -> String {
             _ => format!("unbound({:?})", tu),
         },
         JboRel::Moi(t, moi) => match t.as_ref() {
-            JboTerm::Value(m @ (JboMex::MexInt(_) | JboMex::MexNumeralString(_) | JboMex::MexLerfuString(_))) => format!("{} {}", format_mex_number_for_rel(m), moi),
+            JboTerm::Value(
+                m @ (JboMex::MexInt(_) | JboMex::MexNumeralString(_) | JboMex::MexLerfuString(_)),
+            ) => format!("{} {}", format_mex_number_for_rel(m), moi),
             _ => format!("[{}] {}", format_term(t), moi),
         },
         JboRel::OperatorRel(op) => format!("[{}]", format_operator(op)),
-        JboRel::ScalarNegatedRel(nahe, r) => format!("{{{}}}({})", nahe, format_scalar_negated_rel_inner(r)),
+        JboRel::ScalarNegatedRel(nahe, r) => {
+            format!("{{{}}}({})", nahe, format_scalar_negated_rel_inner(r))
+        }
         JboRel::VPredRel(vpred) => format_seltau_prop(&vpred(&[JboTerm::BoundVar(0)])),
         JboRel::AbsPred(abs, npred) => {
-            let args: Vec<JboTerm> = (1..=npred.arity as i32).map(|n| JboTerm::BoundVar(-n)).collect();
+            let args: Vec<JboTerm> = (1..=npred.arity as i32)
+                .map(|n| JboTerm::BoundVar(-n))
+                .collect();
             format!("{}[{}]", abs, format_lambda_prop(&(npred.pred)(&args)))
         }
         JboRel::AbsProp(abs, prop) => format!("{}[{}]", abs, format_prop(prop)),
@@ -789,22 +1040,38 @@ fn format_seltau_prop(prop: &JboProp) -> String {
             }
         }
         Prop::Rel(rel, terms) if terms.is_empty() => format!("{}(_)", format_rel(rel)),
-        Prop::Rel(rel, terms) => format!("{}({})", format_rel(rel), terms.iter().map(|term| {
-            if matches!(term, JboTerm::BoundVar(0)) {
-                "_".to_string()
-            } else {
-                format_term(term)
-            }
-        }).collect::<Vec<_>>().join(",")),
+        Prop::Rel(rel, terms) => format!(
+            "{}({})",
+            format_rel(rel),
+            terms
+                .iter()
+                .map(|term| {
+                    if matches!(term, JboTerm::BoundVar(0)) {
+                        "_".to_string()
+                    } else {
+                        format_term(term)
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join(",")
+        ),
         Prop::Modal(crate::jbo_prop::JboModalOp::Tagged(tag, mt), inner) => {
-            let term = mt.as_ref().map(|term| {
-                if matches!(term, JboTerm::BoundVar(0)) {
-                    "_".to_string()
-                } else {
-                    format_term(term)
-                }
-            }).unwrap_or_default();
-            format!("({})({}). {}", format_tag(tag), term, format_modal_seltau_inner_prop(inner))
+            let term = mt
+                .as_ref()
+                .map(|term| {
+                    if matches!(term, JboTerm::BoundVar(0)) {
+                        "_".to_string()
+                    } else {
+                        format_term(term)
+                    }
+                })
+                .unwrap_or_default();
+            format!(
+                "({})({}). {}",
+                format_tag(tag),
+                term,
+                format_modal_seltau_inner_prop(inner)
+            )
         }
         Prop::Modal(crate::jbo_prop::JboModalOp::WithEventAs(t), inner) => {
             format!("{}=. {}", format_term(t), format_seltau_prop(inner))
@@ -819,9 +1086,7 @@ fn format_seltau_prop(prop: &JboProp) -> String {
 fn format_seltau(rel: &JboRel) -> String {
     match rel {
         JboRel::Among(t) => format!("(_ ≤ {})", format_term(t)),
-        JboRel::AppliedRel(r, _terms)
-            if matches!(r.as_ref(), JboRel::Among(_)) =>
-        {
+        JboRel::AppliedRel(r, _terms) if matches!(r.as_ref(), JboRel::Among(_)) => {
             if let JboRel::Among(t) = r.as_ref() {
                 format!("(_ ≤ {})", format_term(t))
             } else {
@@ -830,13 +1095,21 @@ fn format_seltau(rel: &JboRel) -> String {
         }
         JboRel::ModalRel(_, _) => format_rel(rel),
         JboRel::AppliedRel(r, terms) => {
-            format!("{}({})", format_rel(r), terms.iter().map(|term| {
-                if matches!(term, JboTerm::BoundVar(0)) {
-                    "_".to_string()
-                } else {
-                    format_term(term)
-                }
-            }).collect::<Vec<_>>().join(","))
+            format!(
+                "{}({})",
+                format_rel(r),
+                terms
+                    .iter()
+                    .map(|term| {
+                        if matches!(term, JboTerm::BoundVar(0)) {
+                            "_".to_string()
+                        } else {
+                            format_term(term)
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join(",")
+            )
         }
         JboRel::VPredRel(vpred) => format_seltau_prop(&vpred(&[JboTerm::BoundVar(0)])),
         JboRel::Tanru(_, _) => {
@@ -848,7 +1121,15 @@ fn format_seltau(rel: &JboRel) -> String {
 }
 
 // Ported from: JboShow.hs :: instance JboShow JboProp (logshow method)
-fn format_prop(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, crate::jbo_prop::JboQuantifier>) -> String {
+fn format_prop(
+    prop: &Prop<
+        JboRel,
+        JboTerm,
+        String,
+        crate::jbo_prop::JboModalOp,
+        crate::jbo_prop::JboQuantifier,
+    >,
+) -> String {
     format_prop_at(prop, 1)
 }
 
@@ -857,8 +1138,16 @@ fn format_prop(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp,
 fn expand_connected_tag_modal(
     tag: &crate::jbo_prop::JboTag,
     mt: &Option<JboTerm>,
-    inner: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, crate::jbo_prop::JboQuantifier>,
-) -> Option<Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, crate::jbo_prop::JboQuantifier>> {
+    inner: &Prop<
+        JboRel,
+        JboTerm,
+        String,
+        crate::jbo_prop::JboModalOp,
+        crate::jbo_prop::JboQuantifier,
+    >,
+) -> Option<
+    Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, crate::jbo_prop::JboQuantifier>,
+> {
     if let crate::jbo_prop::JboTag::ConnectedTag(con, tag1, tag2) = tag {
         if let crate::jbo_prop::JboConnective::JboConnLog(_, lcon) = con.as_ref() {
             let left = Prop::Modal(
@@ -891,10 +1180,23 @@ fn scalar_negated_terms(terms: &[JboTerm]) -> Vec<JboTerm> {
 }
 
 // Ported from: JboShow.hs :: logjboshow' Prop (main proposition formatting with variable tracking)
-fn format_prop_at(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModalOp, crate::jbo_prop::JboQuantifier>, next_var: i32) -> String {
+fn format_prop_at(
+    prop: &Prop<
+        JboRel,
+        JboTerm,
+        String,
+        crate::jbo_prop::JboModalOp,
+        crate::jbo_prop::JboQuantifier,
+    >,
+    next_var: i32,
+) -> String {
     match prop {
         Prop::Rel(rel, terms) => {
-            let terms = if matches!(rel, JboRel::ScalarNegatedRel(_, _)) { scalar_negated_terms(terms) } else { terms.clone() };
+            let terms = if matches!(rel, JboRel::ScalarNegatedRel(_, _)) {
+                scalar_negated_terms(terms)
+            } else {
+                terms.clone()
+            };
             // Special handling for fragments
             if let JboRel::Brivla(s) = rel {
                 if s == "fragment" {
@@ -908,7 +1210,14 @@ fn format_prop_at(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModal
 
             // Ported from: JboShow.hs lines 598-604
             if matches!(rel, JboRel::Equal) {
-                return format!("({})", terms.iter().map(format_term).collect::<Vec<_>>().join(" == "));
+                return format!(
+                    "({})",
+                    terms
+                        .iter()
+                        .map(format_term)
+                        .collect::<Vec<_>>()
+                        .join(" == ")
+                );
             }
             if let JboRel::Among(t) = rel {
                 if matches!(terms.as_slice(), [JboTerm::BoundVar(0)]) {
@@ -919,7 +1228,9 @@ fn format_prop_at(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModal
             }
             if let JboRel::AppliedRel(r, applied_terms) = rel {
                 if let JboRel::Among(t) = r.as_ref() {
-                    if terms.is_empty() && matches!(applied_terms.as_slice(), [JboTerm::BoundVar(0)]) {
+                    if terms.is_empty()
+                        && matches!(applied_terms.as_slice(), [JboTerm::BoundVar(0)])
+                    {
                         return format!("(_ ≤ {})", format_term(t));
                     }
                 }
@@ -938,7 +1249,9 @@ fn format_prop_at(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModal
             if let Prop::Quantified(q, restriction, body) = inner.as_ref() {
                 let n = next_var;
                 let mut prefix = match q {
-                    JboQuantifier::RelQuantifier(inner_q) => format_quantified_prefix(inner_q, &format!("R{}", n)),
+                    JboQuantifier::RelQuantifier(inner_q) => {
+                        format_quantified_prefix(inner_q, &format!("R{}", n))
+                    }
                     _ => format_quantified_prefix(q, &format!("x{}", n)),
                 };
                 if let Some(r) = restriction {
@@ -948,8 +1261,16 @@ fn format_prop_at(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModal
                 } else {
                     prefix.push_str(". ");
                 }
-                let body_next_var = if matches!(q, JboQuantifier::QuestionQuantifier) { n } else { n + 1 };
-                format!("non-veridical: {}{}", prefix, format_prop_at(&body(n), body_next_var))
+                let body_next_var = if matches!(q, JboQuantifier::QuestionQuantifier) {
+                    n
+                } else {
+                    n + 1
+                };
+                format!(
+                    "non-veridical: {}{}",
+                    prefix,
+                    format_prop_at(&body(n), body_next_var)
+                )
             } else {
                 format!("non-veridical: {}", format_prop_at(inner, next_var))
             }
@@ -959,7 +1280,12 @@ fn format_prop_at(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModal
                 return format_prop_at(&expanded, next_var);
             }
             let term = mt.as_ref().map(format_term).unwrap_or_default();
-            format!("({})({}). {}", format_tag(tag), term, format_prop_at(inner, next_var))
+            format!(
+                "({})({}). {}",
+                format_tag(tag),
+                term,
+                format_prop_at(inner, next_var)
+            )
         }
         Prop::Modal(crate::jbo_prop::JboModalOp::WithEventAs(t), inner) => {
             format!("{}=. {}", format_term(t), format_prop_at(inner, next_var))
@@ -969,15 +1295,27 @@ fn format_prop_at(prop: &Prop<JboRel, JboTerm, String, crate::jbo_prop::JboModal
         }
         Prop::Not(inner) => format!("¬{}", format_prop_at(inner, next_var)),
         Prop::Connected(conn, p1, p2) => {
-            format!("({} {} {})", format_prop_at(p1, next_var), conn, format_prop_at(p2, next_var))
+            format!(
+                "({} {} {})",
+                format_prop_at(p1, next_var),
+                conn,
+                format_prop_at(p2, next_var)
+            )
         }
         Prop::NonLogConnected(joik, p1, p2) => {
-            format!("({} {{{}}} {})", format_prop_at(p1, next_var), joik, format_prop_at(p2, next_var))
+            format!(
+                "({} {{{}}} {})",
+                format_prop_at(p1, next_var),
+                joik,
+                format_prop_at(p2, next_var)
+            )
         }
         Prop::Quantified(q, restriction, body) => {
             let n = next_var;
             let mut prefix = match q {
-                JboQuantifier::RelQuantifier(inner_q) => format_quantified_prefix(inner_q, &format!("R{}", n)),
+                JboQuantifier::RelQuantifier(inner_q) => {
+                    format_quantified_prefix(inner_q, &format!("R{}", n))
+                }
                 _ => format_quantified_prefix(q, &format!("x{}", n)),
             };
             let body_prop = body(n);
@@ -1019,7 +1357,9 @@ fn collect_term_side_texticules_from_texticule(texticule: &Texticule, out: &mut 
             }
         }
         Texticule::TexticuleProp(prop) => collect_term_side_texticules(prop, out),
-        Texticule::TexticuleSide(_, inner) => collect_term_side_texticules_from_texticule(inner, out),
+        Texticule::TexticuleSide(_, inner) => {
+            collect_term_side_texticules_from_texticule(inner, out)
+        }
         Texticule::TexticuleFrag(JboFragment::JboFragUnparsed(_)) => {}
     }
 }
@@ -1051,7 +1391,9 @@ fn collect_term_side_texticules_from_term(term: &JboTerm, out: &mut Vec<Texticul
 // Rust adaptation: Helper for collect_term_side_texticules_from_term
 fn collect_term_side_texticules_from_rel(rel: &JboRel, out: &mut Vec<Texticule>) {
     match rel {
-        JboRel::Among(term) | JboRel::Moi(term, _) => collect_term_side_texticules_from_term(term, out),
+        JboRel::Among(term) | JboRel::Moi(term, _) => {
+            collect_term_side_texticules_from_term(term, out)
+        }
         JboRel::Tanru(left, right) | JboRel::TanruConnective(_, left, right) => {
             collect_term_side_texticules_from_rel(left, out);
             collect_term_side_texticules_from_rel(right, out);
@@ -1062,12 +1404,16 @@ fn collect_term_side_texticules_from_rel(rel: &JboRel, out: &mut Vec<Texticule>)
                 collect_term_side_texticules_from_term(term, out);
             }
         }
-        JboRel::PermutedRel(_, rel) | JboRel::ScalarNegatedRel(_, rel) | JboRel::ModalRel(_, rel) => {
+        JboRel::PermutedRel(_, rel)
+        | JboRel::ScalarNegatedRel(_, rel)
+        | JboRel::ModalRel(_, rel) => {
             collect_term_side_texticules_from_rel(rel, out);
         }
         JboRel::OperatorRel(op) => collect_term_side_texticules_from_operator(op, out),
         JboRel::TagRel(tag) => collect_term_side_texticules_from_tag(tag, out),
-        JboRel::AbsPred(_, npred) => collect_term_side_texticules(&(npred.pred)(&vec![JboTerm::Unfilled; npred.arity]), out),
+        JboRel::AbsPred(_, npred) => {
+            collect_term_side_texticules(&(npred.pred)(&vec![JboTerm::Unfilled; npred.arity]), out)
+        }
         JboRel::AbsProp(_, prop) => collect_term_side_texticules(prop, out),
         JboRel::VPredRel(vpred) => collect_term_side_texticules(&vpred(&[JboTerm::Unfilled]), out),
         _ => {}
@@ -1087,9 +1433,15 @@ fn collect_term_side_texticules_from_mex(mex: &crate::jbo_prop::JboMex, out: &mu
             collect_term_side_texticules_from_mex(left, out);
             collect_term_side_texticules_from_mex(right, out);
         }
-        crate::jbo_prop::JboMex::QualifiedMex(_, inner) => collect_term_side_texticules_from_mex(inner, out),
-        crate::jbo_prop::JboMex::MexSelbri(vpred) => collect_term_side_texticules(&vpred(&[JboTerm::Unfilled]), out),
-        crate::jbo_prop::JboMex::MexSumti(term) => collect_term_side_texticules_from_term(term, out),
+        crate::jbo_prop::JboMex::QualifiedMex(_, inner) => {
+            collect_term_side_texticules_from_mex(inner, out)
+        }
+        crate::jbo_prop::JboMex::MexSelbri(vpred) => {
+            collect_term_side_texticules(&vpred(&[JboTerm::Unfilled]), out)
+        }
+        crate::jbo_prop::JboMex::MexSumti(term) => {
+            collect_term_side_texticules_from_term(term, out)
+        }
         crate::jbo_prop::JboMex::MexArray(ms) => {
             for m in ms {
                 collect_term_side_texticules_from_mex(m, out);
@@ -1100,17 +1452,23 @@ fn collect_term_side_texticules_from_mex(mex: &crate::jbo_prop::JboMex, out: &mu
 }
 
 // Rust adaptation: Helper for collect_term_side_texticules_from_mex
-fn collect_term_side_texticules_from_operator(op: &crate::jbo_prop::JboOperator, out: &mut Vec<Texticule>) {
+fn collect_term_side_texticules_from_operator(
+    op: &crate::jbo_prop::JboOperator,
+    out: &mut Vec<Texticule>,
+) {
     match op {
         crate::jbo_prop::JboOperator::ConnectedOperator(_, _, left, right) => {
             collect_term_side_texticules_from_operator(left, out);
             collect_term_side_texticules_from_operator(right, out);
         }
-        crate::jbo_prop::JboOperator::OpPermuted(_, op) | crate::jbo_prop::JboOperator::OpScalarNegated(_, op) => {
+        crate::jbo_prop::JboOperator::OpPermuted(_, op)
+        | crate::jbo_prop::JboOperator::OpScalarNegated(_, op) => {
             collect_term_side_texticules_from_operator(op, out);
         }
         crate::jbo_prop::JboOperator::OpMex(mex) => collect_term_side_texticules_from_mex(mex, out),
-        crate::jbo_prop::JboOperator::OpSelbri(vpred) => collect_term_side_texticules(&vpred(&[JboTerm::Unfilled]), out),
+        crate::jbo_prop::JboOperator::OpSelbri(vpred) => {
+            collect_term_side_texticules(&vpred(&[JboTerm::Unfilled]), out)
+        }
         crate::jbo_prop::JboOperator::OpVUhU(_) => {}
     }
 }
@@ -1121,8 +1479,12 @@ fn collect_term_side_texticules_from_tag(tag: &crate::jbo_prop::JboTag, out: &mu
         crate::jbo_prop::JboTag::DecoratedTagUnits(units) => {
             for unit in units {
                 match &unit.tag_unit {
-                    crate::jbo_prop::JboTagUnit::ROI(_, _, mex) => collect_term_side_texticules_from_mex(mex, out),
-                    crate::jbo_prop::JboTagUnit::FIhO(vpred) => collect_term_side_texticules(&vpred(&[JboTerm::Unfilled]), out),
+                    crate::jbo_prop::JboTagUnit::ROI(_, _, mex) => {
+                        collect_term_side_texticules_from_mex(mex, out)
+                    }
+                    crate::jbo_prop::JboTagUnit::FIhO(vpred) => {
+                        collect_term_side_texticules(&vpred(&[JboTerm::Unfilled]), out)
+                    }
                     _ => {}
                 }
             }
@@ -1151,7 +1513,9 @@ fn jboshow_side_texticule(texticule: &Texticule) -> String {
 fn is_leading_nonveridical_prop(prop: &JboProp) -> bool {
     match prop {
         Prop::Modal(crate::jbo_prop::JboModalOp::NonVeridical, _) => true,
-        Prop::Connected(crate::logic::Connective::And, left, _) => is_leading_nonveridical_prop(left),
+        Prop::Connected(crate::logic::Connective::And, left, _) => {
+            is_leading_nonveridical_prop(left)
+        }
         _ => false,
     }
 }
@@ -1232,7 +1596,10 @@ fn format_result(result: &SemanticResult, preserve_term_side_markers: bool) -> (
             Prop::Rel(JboRel::Brivla(name), terms) if name == "fragment" => {
                 push_fragment_terms_line(&mut canonical_lines, terms);
             }
-            _ => push_canonical_line(&mut canonical_lines, &crate::jbo_show::prop_to_lojban(&result.prop)),
+            _ => push_canonical_line(
+                &mut canonical_lines,
+                &crate::jbo_show::prop_to_lojban(&result.prop),
+            ),
         }
     } else {
         push_canonical_line(&mut canonical_lines, &result.lojban_output);
@@ -1271,7 +1638,10 @@ fn format_result(result: &SemanticResult, preserve_term_side_markers: bool) -> (
 
 // Ported from: Main.hs :: evalText output formatting
 /// Return `(logical, canonical, graph_json)` for CLI/JSON output.
-pub fn eval_text_to_outputs_with_options(text: &Text, include_term_sides: bool) -> (String, String, String) {
+pub fn eval_text_to_outputs_with_options(
+    text: &Text,
+    include_term_sides: bool,
+) -> (String, String, String) {
     let results = eval_text(text);
 
     if results.is_empty() {
@@ -1300,10 +1670,14 @@ pub fn eval_text_to_outputs_with_options(text: &Text, include_term_sides: bool) 
         props.extend(result.side_props.iter().cloned());
         let mut term_sides = Vec::new();
         collect_term_side_texticules(&result.prop, &mut term_sides);
-        props.extend(term_sides.into_iter().filter_map(|texticule| match texticule {
-            Texticule::TexticuleProp(prop) => Some(prop),
-            _ => None,
-        }));
+        props.extend(
+            term_sides
+                .into_iter()
+                .filter_map(|texticule| match texticule {
+                    Texticule::TexticuleProp(prop) => Some(prop),
+                    _ => None,
+                }),
+        );
         props.push(result.prop.clone());
     }
     let graph = crate::jbo_tree::jbo_props_to_graph(&props);
@@ -1315,4 +1689,10 @@ pub fn eval_text_to_outputs_with_options(text: &Text, include_term_sides: bool) 
 // Ported from: Main.hs :: evalText output formatting
 pub fn eval_text_to_outputs(text: &Text) -> (String, String, String) {
     eval_text_to_outputs_with_options(text, false)
+}
+
+/// Return Prolog source code for the parsed text.
+pub fn eval_text_to_prolog(text: &Text) -> String {
+    let results = eval_text(text);
+    crate::jbo_prolog::semantic_results_to_prolog(&results)
 }

@@ -5,7 +5,7 @@ use std::io::{self, Read, Write};
 use std::path::Path;
 
 use crate::cli::{InputType, Options, OutputType};
-use crate::eval_show::eval_text_to_outputs_with_options;
+use crate::eval_show::{eval_text_to_outputs_with_options, eval_text_to_prolog};
 use crate::morphology;
 
 /// ASCII fallback for logical output when `--utf8` is not set ([JboShow.hs](../JboShow.hs) `asciifyJboShown`).
@@ -89,7 +89,7 @@ fn morph_append_end(text: &str) -> String {
     format!("{text} %%%END%%%")
 }
 
-pub fn parse_line_to_result(line: &str) -> Result<(String, String, String), String> {
+pub fn parse_line_to_result(line: &str) -> Result<(String, String, String, String), String> {
     let text = match morphology::morph(line) {
         Ok(t) => t,
         Err(p) => return Err(error_message("Morphology error", p, line)),
@@ -98,7 +98,8 @@ pub fn parse_line_to_result(line: &str) -> Result<(String, String, String), Stri
     match crate::parse_lojban::parse_text(&with_end) {
         Ok(parsed) => {
             let (logical, canonical, graph) = eval_text_to_outputs_with_options(&parsed, true);
-            Ok((logical, canonical, graph))
+            let prolog = eval_text_to_prolog(&parsed);
+            Ok((logical, canonical, graph, prolog))
         }
         Err(p) => Err(error_message("Parse error", p, &text)),
     }
@@ -136,7 +137,7 @@ fn json_escape(s: &str) -> String {
     out
 }
 
-pub fn json_one_line(opts: &Options, input: &str, result: &Result<(String, String, String), String>) -> String {
+pub fn json_one_line(opts: &Options, input: &str, result: &Result<(String, String, String, String), String>) -> String {
     let enc = if opts.utf8 {
         |s: String| s
     } else {
@@ -144,16 +145,17 @@ pub fn json_one_line(opts: &Options, input: &str, result: &Result<(String, Strin
     };
     match result {
         Err(e) => format!(
-            "{{\"input\":\"{}\",\"logical\":null,\"canonical\":null,\"graph\":null,\"error\":\"{}\"}}",
+            "{{\"input\":\"{}\",\"logical\":null,\"canonical\":null,\"graph\":null,\"prolog\":null,\"error\":\"{}\"}}",
             json_escape(&trim_str(input)),
             json_escape(&trim_str(&enc(e.clone())))
         ),
-        Ok((loj, jbo, graph)) => format!(
-            "{{\"input\":\"{}\",\"logical\":\"{}\",\"canonical\":\"{}\",\"graph\":{},\"error\":null}}",
+        Ok((loj, jbo, graph, prolog)) => format!(
+            "{{\"input\":\"{}\",\"logical\":\"{}\",\"canonical\":\"{}\",\"graph\":{},\"prolog\":\"{}\",\"error\":null}}",
             json_escape(&trim_str(input)),
             json_escape(&trim_str(&enc(loj.clone()))),
             json_escape(&trim_str(&enc(jbo.clone()))),
-            graph
+            graph,
+            json_escape(prolog)
         ),
     }
 }
@@ -169,26 +171,32 @@ pub fn do_parse(opts: &Options, h: &mut dyn Write, herr: &mut dyn Write, s: &str
     let with_end = morph_append_end(&text);
     match crate::parse_lojban::parse_text(&with_end) {
         Ok(parsed) => {
-            let (logical, canonical, _graph) = eval_text_to_outputs_with_options(&parsed, opts.utf8);
-            let (logical, canonical) = if opts.utf8 {
-                (logical, canonical)
+            if opts.output == OutputType::Prolog {
+                let prolog = eval_text_to_prolog(&parsed);
+                writeln!(h, "{}", prolog)?;
             } else {
-                (asciify_jbo_shown(&logical), asciify_jbo_shown(&canonical))
-            };
-            if opts.json {
-                let _ = canonical;
-                let _ = logical;
-            } else if !logical.is_empty() || !canonical.is_empty() {
-                match opts.output {
-                    OutputType::Both => {
-                        write!(h, "{logical}\n\n")?;
-                        write!(h, "{canonical}\n\n")?;
-                    }
-                    OutputType::Loj => {
-                        write!(h, "{logical}\n\n")?;
-                    }
-                    OutputType::Jbo => {
-                        write!(h, "{canonical}\n\n")?;
+                let (logical, canonical, _graph) = eval_text_to_outputs_with_options(&parsed, opts.utf8);
+                let (logical, canonical) = if opts.utf8 {
+                    (logical, canonical)
+                } else {
+                    (asciify_jbo_shown(&logical), asciify_jbo_shown(&canonical))
+                };
+                if opts.json {
+                    let _ = canonical;
+                    let _ = logical;
+                } else if !logical.is_empty() || !canonical.is_empty() {
+                    match opts.output {
+                        OutputType::Both => {
+                            write!(h, "{logical}\n\n")?;
+                            write!(h, "{canonical}\n\n")?;
+                        }
+                        OutputType::Loj => {
+                            write!(h, "{logical}\n\n")?;
+                        }
+                        OutputType::Jbo => {
+                            write!(h, "{canonical}\n\n")?;
+                        }
+                        OutputType::Prolog => unreachable!(),
                     }
                 }
             }

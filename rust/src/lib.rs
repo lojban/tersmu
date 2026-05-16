@@ -73,6 +73,7 @@ pub mod cli;
 pub mod eval_show;
 pub mod grammar_parity;
 pub mod jbo_parse;
+pub mod jbo_prolog;
 pub mod jbo_prop;
 pub mod jbo_show;
 pub mod jbo_syntax;
