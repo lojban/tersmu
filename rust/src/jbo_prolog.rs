@@ -646,21 +646,9 @@ fn can_be_unquoted_atom(s: &str) -> bool {
 
 /// Generate a Prolog header comment.
 pub fn prolog_header(source: &str) -> String {
-    format!("% Generated from camxes-rs\n% Source: {}\n% Date: {}\n\n", source, chrono_or_empty())
+    format!("% Generated from camxes-rs\n% Source: {}\n\n", source)
 }
 
-fn chrono_or_empty() -> String {
-    // Simple date without external dependency
-    std::env::var("SOURCE_DATE_EPOCH")
-        .ok()
-        .and_then(|s| {
-            let secs: i64 = s.parse().ok()?;
-            let days = secs / 86400;
-            // Rough ISO date from epoch days
-            Some(format!("day {}", days))
-        })
-        .unwrap_or_else(|| "unknown".to_string())
-}
 
 // ============================================================================
 // Text-level conversion (for use with eval_show / CLI pipeline)

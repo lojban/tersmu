@@ -280,7 +280,24 @@
                         </div>
                     </div>
                 </div>
-            </div>
+
+                <!-- Prolog Card (Rust mode only) -->
+                <div id="prolog-card" class="hidden bg-white rounded-2xl shadow-md border border-slate-300 flex flex-col group overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-200 bg-slate-100 flex justify-between items-center">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="terminal" class="w-4 h-4 text-emerald-500"></i>
+                            <h3 class="font-bold text-slate-700 uppercase tracking-wider text-xs">Prolog</h3>
+                        </div>
+                        <button onclick="copyToClipboard('prolog-output', event)" class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all" title="Copy to clipboard">
+                            <i data-lucide="copy" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div class="relative flex-grow">
+                        <pre id="prolog-output" class="p-6 text-sm font-mono leading-relaxed bg-white text-slate-800 whitespace-pre-wrap min-h-[100px] select-all"></pre>
+                    </div>
+                </div>
+
+                </div>
         </div>
     </main>
 
@@ -358,6 +375,10 @@
 
             // Re-parse with new implementation if there's input
             const input = document.getElementById('lojban-input').value.trim();
+            // Hide prolog card when switching away from Rust
+            if (impl !== 'rust') {
+                document.getElementById('prolog-card').classList.add('hidden');
+            }
             if (input && wasmInstance) {
                 handleParse();
             }
@@ -656,6 +677,16 @@
 
                     document.getElementById('logical-output').textContent = json.logical;
                     document.getElementById('canonical-output').textContent = json.canonical;
+
+                    // Prolog card — show only in Rust mode
+                    const prologCard = document.getElementById('prolog-card');
+                    const prologOutput = document.getElementById('prolog-output');
+                    if (currentImplementation === 'rust' && json.prolog) {
+                        prologOutput.textContent = json.prolog;
+                        prologCard.classList.remove('hidden');
+                    } else {
+                        prologCard.classList.add('hidden');
+                    }
 
                     resultsArea.classList.remove('hidden');
                     // Refresh Lucide icons for new content
