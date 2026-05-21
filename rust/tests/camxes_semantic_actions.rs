@@ -5,6 +5,7 @@ use camxes_rs::camxes::peg::grammar::Peg;
 use camxes_rs::camxes::peg::{
     downcast_ref, parse_with_semantics, single_root, span_slice, ReducerTable, SemanticNode,
 };
+use camxes_rs::run::{parse_line_to_result, parse_line_to_result_with_options};
 
 #[derive(Debug, PartialEq, Eq)]
 struct PreparsedChunk {
@@ -117,4 +118,44 @@ fn forest_shape_matches_parse_roots() {
     let v = parse_with_semantics(&peg, "x", &table).unwrap();
     assert_eq!(v.len(), 1);
     assert!(matches!(v[0], SemanticNode::NonTerminal { .. }));
+}
+
+#[test]
+fn indicator_texticules_are_default_off() {
+    let without_indicator = parse_line_to_result("mi klama").expect("parse baseline");
+    let with_indicator = parse_line_to_result(".ui mi klama").expect("parse indicator");
+
+    assert_eq!(with_indicator.0, without_indicator.0);
+    assert_eq!(with_indicator.1, without_indicator.1);
+    assert_eq!(with_indicator.2, without_indicator.2);
+}
+
+#[test]
+fn ui_indicator_can_be_discursive_texticule() {
+    let baseline = parse_line_to_result("mi klama").expect("parse baseline");
+    let transformed = parse_line_to_result_with_options(".ui mi klama", true).expect("parse indicator");
+
+    assert_ne!(transformed.0, baseline.0);
+    assert!(transformed.0.contains("gleki"));
+    assert!(transformed.1.contains("mi gleki"));
+    assert!(transformed.1.contains("mi klama"));
+}
+
+#[test]
+fn ua_indicator_can_be_discursive_texticule() {
+    let transformed = parse_line_to_result_with_options(".ua mi klama", true).expect("parse indicator");
+
+    assert!(transformed.0.contains("facki"));
+    assert!(transformed.1.contains("mi facki"));
+    assert!(transformed.1.contains("mi klama"));
+}
+
+#[test]
+fn nai_indicators_are_ignored_by_initial_mapping() {
+    let baseline = parse_line_to_result("mi klama").expect("parse baseline");
+    let transformed = parse_line_to_result_with_options(".ui nai mi klama", true).expect("parse indicator");
+
+    assert_eq!(transformed.0, baseline.0);
+    assert_eq!(transformed.1, baseline.1);
+    assert_eq!(transformed.2, baseline.2);
 }

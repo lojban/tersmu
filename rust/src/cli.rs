@@ -23,6 +23,7 @@ pub struct Options {
     pub input: InputType,
     pub utf8: bool,
     pub json: bool,
+    pub indicator_texticules: bool,
 }
 
 pub fn print_version() {
@@ -42,7 +43,8 @@ pub fn print_help() {
          \t-u  --utf8     output utf8 encoded text rather than ascii\n\
          \t-v  --version  show version\n\
          \t-h  --help     show help\n\
-         \t    --json     output one JSON object per line (NDJSON)\n"
+         \t    --json     output one JSON object per line (NDJSON)\n\
+         \t    --indicator-texticules  turn supported attitudinals into side texticules\n"
     );
 }
 
@@ -69,6 +71,7 @@ pub fn parse_args(args: &[String]) -> Result<(Options, Vec<String>), String> {
             "-p" | "--paragraphs" => opts.input = InputType::Paras,
             "-u" | "--utf8" => opts.utf8 = true,
             "--json" => opts.json = true,
+            "--indicator-texticules" => opts.indicator_texticules = true,
             // Match Haskell GetOpt: bare `-` is stdin/stdout, not a flag (see `examples/tersmuLines`).
             "-" => rest.push(a.clone()),
             s if s.starts_with('-') => {
@@ -89,5 +92,12 @@ mod tests {
     fn bare_dash_is_stdin_not_unknown_option() {
         let (_opts, rest) = parse_args(&["-".to_string()]).expect("parse");
         assert_eq!(rest, vec!["-".to_string()]);
+    }
+
+    #[test]
+    fn indicator_texticules_flag_is_opt_in() {
+        let (opts, rest) = parse_args(&["--indicator-texticules".to_string(), "in.loj".to_string()]).expect("parse");
+        assert!(opts.indicator_texticules);
+        assert_eq!(rest, vec!["in.loj".to_string()]);
     }
 }

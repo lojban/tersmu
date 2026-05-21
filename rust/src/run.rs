@@ -5,7 +5,7 @@ use std::io::{self, Read, Write};
 use std::path::Path;
 
 use crate::cli::{InputType, Options, OutputType};
-use crate::eval_show::{eval_text_to_outputs_with_options, eval_text_to_prolog};
+use crate::eval_show::{eval_text_to_outputs_with_runtime_options, eval_text_to_prolog};
 use crate::morphology;
 
 /// ASCII fallback for logical output when `--utf8` is not set ([JboShow.hs](../JboShow.hs) `asciifyJboShown`).
@@ -90,6 +90,13 @@ fn morph_append_end(text: &str) -> String {
 }
 
 pub fn parse_line_to_result(line: &str) -> Result<(String, String, String, String), String> {
+    parse_line_to_result_with_options(line, false)
+}
+
+pub fn parse_line_to_result_with_options(
+    line: &str,
+    indicator_texticules: bool,
+) -> Result<(String, String, String, String), String> {
     let text = match morphology::morph(line) {
         Ok(t) => t,
         Err(p) => return Err(error_message("Morphology error", p, line)),
@@ -97,7 +104,8 @@ pub fn parse_line_to_result(line: &str) -> Result<(String, String, String, Strin
     let with_end = morph_append_end(&text);
     match crate::parse_lojban::parse_text(&with_end) {
         Ok(parsed) => {
-            let (logical, canonical, graph) = eval_text_to_outputs_with_options(&parsed, true);
+            let (logical, canonical, graph) =
+                eval_text_to_outputs_with_runtime_options(&parsed, true, indicator_texticules);
             let prolog = eval_text_to_prolog(&parsed);
             Ok((logical, canonical, graph, prolog))
         }
@@ -175,7 +183,8 @@ pub fn do_parse(opts: &Options, h: &mut dyn Write, herr: &mut dyn Write, s: &str
                 let prolog = eval_text_to_prolog(&parsed);
                 writeln!(h, "{}", prolog)?;
             } else {
-                let (logical, canonical, _graph) = eval_text_to_outputs_with_options(&parsed, opts.utf8);
+                let (logical, canonical, _graph) =
+                    eval_text_to_outputs_with_runtime_options(&parsed, opts.utf8, opts.indicator_texticules);
                 let (logical, canonical) = if opts.utf8 {
                     (logical, canonical)
                 } else {
@@ -239,7 +248,7 @@ pub fn repl(opts: Options) -> io::Result<()> {
             break;
         }
         if opts.json {
-            let r = parse_line_to_result(line.trim_end());
+            let r = parse_line_to_result_with_options(line.trim_end(), opts.indicator_texticules);
             writeln!(stdout, "{}", json_one_line(&opts, line.trim_end(), &r))?;
         } else {
             do_parse(&opts, &mut stdout, &mut stderr, line.trim_end())?;
@@ -277,7 +286,7 @@ pub fn main_with_args(opts: Options, args: Vec<String>) -> io::Result<()> {
 
     if opts.json {
         for line in mangle_input(opts.input, &s) {
-            let r = parse_line_to_result(&line);
+            let r = parse_line_to_result_with_options(&line, opts.indicator_texticules);
             writeln!(out_handle, "{}", json_one_line(&opts, &line, &r))?;
         }
     } else {

@@ -44,6 +44,7 @@ pub struct ParseState {
     pub non_veridical_props: Vec<JboProp>,
     pub var_bindings: VarBindings,
     pub rvar_bindings: RVarBindings,
+    pub indicator_texticules: bool,
 }
 
 impl std::fmt::Debug for ParseState {
@@ -64,6 +65,7 @@ impl std::fmt::Debug for ParseState {
             .field("non_veridical_props", &self.non_veridical_props)
             .field("var_bindings", &self.var_bindings)
             .field("rvar_bindings", &self.rvar_bindings)
+            .field("indicator_texticules", &self.indicator_texticules)
             .finish()
     }
 }
@@ -142,6 +144,7 @@ impl ParseState {
             non_veridical_props: Vec::new(),
             var_bindings: HashMap::new(),
             rvar_bindings: HashMap::new(),
+            indicator_texticules: false,
         }
     }
 

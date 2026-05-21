@@ -5,7 +5,7 @@
 //! Display helpers mirror the `JboShow`/`LogShow` instances while using explicit Rust formatter
 //! context instead of `Bindful.hs` state.
 
-use crate::jbo_parse::{eval_text, SemanticResult};
+use crate::jbo_parse::{eval_text, eval_text_with_options, SemanticResult};
 use crate::jbo_prop::{
     JboFragment, JboMex, JboModalOp, JboOperator, JboProp, JboQuantifier, JboRel, JboTerm,
     Texticule,
@@ -1642,7 +1642,15 @@ pub fn eval_text_to_outputs_with_options(
     text: &Text,
     include_term_sides: bool,
 ) -> (String, String, String) {
-    let results = eval_text(text);
+    eval_text_to_outputs_with_runtime_options(text, include_term_sides, false)
+}
+
+pub fn eval_text_to_outputs_with_runtime_options(
+    text: &Text,
+    include_term_sides: bool,
+    indicator_texticules: bool,
+) -> (String, String, String) {
+    let results = eval_text_with_options(text, indicator_texticules);
 
     if results.is_empty() {
         return (String::new(), String::new(), "{}".to_string());

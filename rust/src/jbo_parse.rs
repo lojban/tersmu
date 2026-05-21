@@ -322,13 +322,17 @@ pub struct SemanticResult {
 // Ported from: JboParse.hs :: evalText
 /// Parse a Text into semantic representation
 pub fn eval_text(text: &Text) -> Vec<SemanticResult> {
-    // Use the full parser with quantification support
-    eval_text_with_full_parser(text)
+    eval_text_with_options(text, false)
+}
+
+pub fn eval_text_with_options(text: &Text, indicator_texticules: bool) -> Vec<SemanticResult> {
+    eval_text_with_full_parser(text, indicator_texticules)
 }
 
 // Rust adaptation: Full parser version with quantification support
-fn eval_text_with_full_parser(text: &Text) -> Vec<SemanticResult> {
+fn eval_text_with_full_parser(text: &Text, indicator_texticules: bool) -> Vec<SemanticResult> {
     let mut state = ParseState::new();
+    state.indicator_texticules = indicator_texticules;
     let mut results = vec![];
     let all_items: Vec<&FragmentOrStatement> = text.text_paras.iter().flat_map(|p| p.iter()).collect();
 
@@ -3028,23 +3032,51 @@ enum FreeReturn {
 ///   evalFree (Bracketed text) = FRSides SideBracketed <$> evalText text
 ///   evalFree (TruthQ kau) = return $ FRTruthQ kau
 ///   evalFree _ = return FRIgnored
+fn eval_discursive_bridi_tail(bt: &BridiTail, state: &mut ParseState) -> Result<FreeReturn, String> {
+    let outer_transforms = std::mem::take(&mut state.pending_prop_transforms);
+    let mut bridi_state = crate::parse_m::BridiParseState::new();
+    let bridi = parse_bridi_tail(bt, &mut bridi_state, state)?;
+    let transforms = std::mem::take(&mut state.pending_prop_transforms);
+    state.pending_prop_transforms = outer_transforms;
+    let bridi = crate::parse_m::apply_transform_list_to_bridi(bridi, transforms);
+    let bridi = crate::parse_m::partially_resolve_bridi(bridi, &bridi_state.arglist.args);
+    let prop = bridi(&crate::parse_m::Args::new());
+    let texticule = crate::jbo_prop::Texticule::TexticuleProp(prop);
+    Ok(FreeReturn::FRSides(
+        crate::jbo_prop::SideType::SideDiscursive,
+        vec![texticule],
+    ))
+}
+
+fn indicator_bridi_tail(indicator_cmavo: &str, indicator_nai: bool) -> Option<BridiTail> {
+    if indicator_nai {
+        return None;
+    }
+    let selbri = match indicator_cmavo {
+        "ui" => "gleki",
+        "ua" => "facki",
+        _ => return None,
+    };
+    let mi = Sumti::QAtom {
+        frees: vec![],
+        quant: None,
+        rels: vec![],
+        atom: Box::new(SumtiAtom::NonAnaphoricProsumti("mi".to_string())),
+    };
+    let selbri = sb3_to_sb(Selbri3::TanruHead(
+        vec![],
+        Box::new(TanruUnit::TUBrivla(selbri.to_string())),
+        vec![],
+    ));
+    Some(BridiTail::BridiTail3(
+        selbri,
+        vec![Term::Sumti(Tagged::FATagged(1), mi)],
+    ))
+}
+
 fn eval_free(free: &Free, state: &mut ParseState) -> Result<FreeReturn, String> {
     match free {
-        Free::Discursive(bt) => {
-            let outer_transforms = std::mem::take(&mut state.pending_prop_transforms);
-            let mut bridi_state = crate::parse_m::BridiParseState::new();
-            let bridi = parse_bridi_tail(bt, &mut bridi_state, state)?;
-            let transforms = std::mem::take(&mut state.pending_prop_transforms);
-            state.pending_prop_transforms = outer_transforms;
-            let bridi = crate::parse_m::apply_transform_list_to_bridi(bridi, transforms);
-            let bridi = crate::parse_m::partially_resolve_bridi(bridi, &bridi_state.arglist.args);
-            let prop = bridi(&crate::parse_m::Args::new());
-            let texticule = crate::jbo_prop::Texticule::TexticuleProp(prop);
-            Ok(FreeReturn::FRSides(
-                crate::jbo_prop::SideType::SideDiscursive,
-                vec![texticule],
-            ))
-        }
+        Free::Discursive(bt) => eval_discursive_bridi_tail(bt, state),
         Free::Bracketed(text) => {
             Ok(FreeReturn::FRSides(
                 crate::jbo_prop::SideType::SideBracketed,
@@ -3054,6 +3086,13 @@ fn eval_free(free: &Free, state: &mut ParseState) -> Result<FreeReturn, String> 
         Free::TruthQ(kau) => {
             // Truth question
             Ok(FreeReturn::FRTruthQ(*kau))
+        }
+        Free::Indicator { indicator_nai, indicator_cmavo } if state.indicator_texticules => {
+            if let Some(bt) = indicator_bridi_tail(indicator_cmavo, *indicator_nai) {
+                eval_discursive_bridi_tail(&bt, state)
+            } else {
+                Ok(FreeReturn::FRIgnored)
+            }
         }
         _ => {
             // Ignore other frees
